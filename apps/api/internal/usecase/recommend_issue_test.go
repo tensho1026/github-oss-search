@@ -289,6 +289,53 @@ func TestNewRecommendIssueRejectsMissingDependencies(t *testing.T) {
 	}
 }
 
+func TestRecommendIssueKeepsGitHubAnalysisWhenOpenSSFFails(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.August, 13, 0, 0, 0, 0, time.UTC)
+	cache, err := memory.NewIssueDetail(1, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contract, err := NewRecommendIssue(
+		&issueDetailReaderStub{result: issueDetailUsecaseFixture(now)},
+		cache,
+		&repositoryHealthReaderStub{err: errors.New("upstream unavailable")},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	implementation, valid := contract.(*recommendIssue)
+	if !valid {
+		t.Fatal("NewRecommendIssue() returned an unexpected implementation")
+	}
+	implementation.now = func() time.Time { return now }
+	reference, err := issue.NewReference("acme", "rocket", 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := contract.Execute(context.Background(), RecommendIssueInput{Reference: reference, IncludeRepositoryHealth: true})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if len(output.RepositoryHealth.Categories) != 4 ||
+		output.RepositoryHealth.Categories[0].Score == nil ||
+		output.RepositoryHealth.Categories[3].Status != "unavailable" ||
+		len(output.RepositoryHealth.Categories[3].Warnings) < 2 {
+		t.Fatalf("health = %+v", output.RepositoryHealth)
+	}
+}
+
+type repositoryHealthReaderStub struct {
+	snapshot issue.OpenSSFSnapshot
+	err      error
+}
+
+func (stub *repositoryHealthReaderStub) GetOpenSSFScorecard(
+	context.Context, string, string,
+) (issue.OpenSSFSnapshot, error) {
+	return stub.snapshot, stub.err
+}
+
 type issueDetailReaderStub struct {
 	mu     sync.Mutex
 	result port.GitHubIssueDetailResult

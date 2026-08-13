@@ -164,6 +164,199 @@
         }
       }
     },
+    "healthDashboard": {
+      "analyzedAt": "2026-07-30T00:00:00Z",
+      "categories": [
+        {
+          "analyzedAt": "2026-07-30T00:00:00Z",
+          "components": [
+            {
+              "description": "Days since the latest meaningful update.",
+              "key": "recency",
+              "score": 100,
+              "source": "github",
+              "status": "available",
+              "weight": 50
+            },
+            {
+              "description": "Latest default-branch CI state.",
+              "key": "ci",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 25
+            },
+            {
+              "description": "Merged pull requests in a bounded public sample.",
+              "key": "pull_request_merge",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 25
+            }
+          ],
+          "confidence": "medium",
+          "name": "activity",
+          "score": 100,
+          "status": "partial",
+          "warnings": []
+        },
+        {
+          "analyzedAt": "2026-07-30T00:00:00Z",
+          "components": [
+            {
+              "description": "Distinct contributors in the bounded sample.",
+              "key": "contributors",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 35
+            },
+            {
+              "description": "Median maintainer first response time.",
+              "key": "issue_response",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 25
+            },
+            {
+              "description": "Median maintainer review time.",
+              "key": "pull_request_review",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 25
+            },
+            {
+              "description": "Contribution guidance inspection.",
+              "key": "contributing_guide",
+              "score": 100,
+              "source": "github",
+              "status": "available",
+              "weight": 15
+            }
+          ],
+          "confidence": "medium",
+          "name": "community",
+          "score": 100,
+          "status": "partial",
+          "warnings": []
+        },
+        {
+          "analyzedAt": "2026-07-30T00:00:00Z",
+          "components": [
+            {
+              "description": "Contribution guidance inspection.",
+              "key": "contributing_guide",
+              "score": 100,
+              "source": "github",
+              "status": "available",
+              "weight": 30
+            },
+            {
+              "description": "README inspection.",
+              "key": "readme",
+              "score": 100,
+              "source": "github",
+              "status": "available",
+              "weight": 20
+            },
+            {
+              "description": "Code of conduct inspection.",
+              "key": "code_of_conduct",
+              "score": 0,
+              "source": "github",
+              "status": "available",
+              "weight": 15
+            },
+            {
+              "description": "Test configuration inspection.",
+              "key": "tests",
+              "score": 100,
+              "source": "github",
+              "status": "available",
+              "weight": 15
+            },
+            {
+              "description": "Latest default-branch CI state.",
+              "key": "ci",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 10
+            },
+            {
+              "description": "Median maintainer first response time.",
+              "key": "issue_response",
+              "score": null,
+              "source": "github",
+              "status": "unavailable",
+              "weight": 10
+            }
+          ],
+          "confidence": "medium",
+          "name": "beginner_friendly",
+          "score": 81,
+          "status": "partial",
+          "warnings": []
+        },
+        {
+          "analyzedAt": "2026-07-30T00:00:00Z",
+          "components": [
+            {
+              "description": "Heuristic OpenSSF Scorecard check: Maintained.",
+              "key": "maintained",
+              "score": null,
+              "source": "openssf_scorecard",
+              "status": "unavailable",
+              "weight": 25
+            },
+            {
+              "description": "Heuristic OpenSSF Scorecard check: Code-Review.",
+              "key": "code_review",
+              "score": null,
+              "source": "openssf_scorecard",
+              "status": "unavailable",
+              "weight": 25
+            },
+            {
+              "description": "Heuristic OpenSSF Scorecard check: Contributors.",
+              "key": "contributors",
+              "score": null,
+              "source": "openssf_scorecard",
+              "status": "unavailable",
+              "weight": 15
+            },
+            {
+              "description": "Heuristic OpenSSF Scorecard check: CI-Tests.",
+              "key": "ci_tests",
+              "score": null,
+              "source": "openssf_scorecard",
+              "status": "unavailable",
+              "weight": 20
+            },
+            {
+              "description": "Heuristic OpenSSF Scorecard check: Vulnerabilities.",
+              "key": "vulnerabilities",
+              "score": null,
+              "source": "openssf_scorecard",
+              "status": "unavailable",
+              "weight": 15
+            }
+          ],
+          "confidence": "low",
+          "name": "security",
+          "score": null,
+          "status": "unavailable",
+          "warnings": [
+            "OpenSSF Scorecard observations are heuristics, not a security certification.",
+            "OpenSSF Scorecard evidence is unavailable."
+          ]
+        }
+      ],
+      "scoreVersion": "2026-08-01"
+    },
     "inspection": {
       "incomplete": false
     },

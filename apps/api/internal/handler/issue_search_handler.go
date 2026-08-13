@@ -174,11 +174,18 @@ type issueSearchResponse struct {
 }
 
 type issueSearchItemResponse struct {
-	Repository     repositorySearchResponse `json:"repository"`
-	Issue          issueSummaryResponse     `json:"issue"`
-	Difficulty     searchDifficultyResponse `json:"difficulty"`
-	Effort         searchEffortResponse     `json:"effort"`
-	Recommendation recommendationResponse   `json:"recommendation"`
+	Repository     repositorySearchResponse          `json:"repository"`
+	Issue          issueSummaryResponse              `json:"issue"`
+	Difficulty     searchDifficultyResponse          `json:"difficulty"`
+	Effort         searchEffortResponse              `json:"effort"`
+	Recommendation recommendationResponse            `json:"recommendation"`
+	HealthSummary  []repositoryHealthSummaryResponse `json:"healthSummary"`
+}
+
+type repositoryHealthSummaryResponse struct {
+	Name   string `json:"name"`
+	Score  *int   `json:"score"`
+	Status string `json:"status"`
 }
 
 type searchDifficultyResponse struct {
@@ -280,6 +287,7 @@ func newIssueSearchResponse(
 				Label:      ranked.Analysis.Effort.Label,
 				Confidence: ranked.Analysis.Effort.Confidence,
 			},
+			HealthSummary: newRepositoryHealthSummaryResponses(ranked.RepositoryHealth),
 			Recommendation: newRecommendationResponse(
 				ranked.Recommendation,
 			),
@@ -332,4 +340,16 @@ func newIssueSearchResponse(
 		},
 		Warnings: warnings,
 	}
+}
+
+func newRepositoryHealthSummaryResponses(
+	dashboard issue.RepositoryHealthDashboard,
+) []repositoryHealthSummaryResponse {
+	result := make([]repositoryHealthSummaryResponse, 0, len(dashboard.Categories))
+	for _, category := range dashboard.Categories {
+		result = append(result, repositoryHealthSummaryResponse{
+			Name: category.Name, Score: category.Score, Status: category.Status,
+		})
+	}
+	return result
 }

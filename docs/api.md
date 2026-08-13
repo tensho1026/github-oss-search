@@ -100,6 +100,7 @@ Profile evidence distinguishes `exact`, `sampled`, and `unavailable` values.
 Its 365-day contribution window, repository caps, privacy behavior, and
 deterministic five-level rules are defined in
 [Public profile and OSS analysis](profile-analysis.md).
+[OSS health dashboard methodology](repository-health.md).
 
 Repository discovery supports bounded language, technology, SPDX license,
 category, popularity, activity, fork, Japanese README, difficulty, and

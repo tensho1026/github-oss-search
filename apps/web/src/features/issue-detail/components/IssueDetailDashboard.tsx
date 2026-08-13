@@ -58,6 +58,13 @@ type Sample = Pick<
   "confidence" | "sampleSize" | "truncated" | "windowDays"
 >;
 
+const healthCategoryLabels = {
+  activity: "Activity",
+  community: "Community",
+  beginner_friendly: "Beginner friendly",
+  security: "Security",
+} as const;
+
 function Section({ children, title }: { children: ReactNode; title: string }) {
   return (
     <Card className="min-w-0 overflow-hidden">
@@ -91,6 +98,72 @@ function Facts({ items }: { items: Array<[string, ReactNode]> }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function RepositoryHealthDashboard({
+  dashboard,
+}: {
+  dashboard: IssueDetailEnvelope["data"]["healthDashboard"];
+}) {
+  return (
+    <Section title="OSS health dashboard">
+      <p className="mb-4 text-sm text-muted-foreground">
+        Independent heuristic indicators · version {dashboard.scoreVersion}.
+        Expand a category to inspect its evidence and weights.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {dashboard.categories.map((category) => (
+          <details
+            className="rounded-xl border border-border bg-muted/25 p-3"
+            key={category.name}
+          >
+            <summary className="cursor-pointer font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {healthCategoryLabels[category.name]}{" "}
+              {category.score === null ? "Unavailable" : category.score}
+              <Badge className="ml-2" variant="neutral">
+                {category.status} · {category.confidence}
+              </Badge>
+            </summary>
+            <ul className="mt-3 grid gap-2 text-xs">
+              {category.components.map((component) => (
+                <li key={component.key}>
+                  <span className="font-semibold">
+                    {component.key.replaceAll("_", " ")} · weight{" "}
+                    {component.weight}%
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ·{" "}
+                    {component.score === null
+                      ? "Unavailable"
+                      : component.score}{" "}
+                    · {component.source}
+                  </span>
+                  <p className="text-muted-foreground">
+                    {component.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {category.warnings.map((warning) => (
+              <p className="mt-2 text-xs text-warning" key={warning}>
+                {warning}
+              </p>
+            ))}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Analyzed {formatDate(category.analyzedAt)}
+              {category.sourceVersion
+                ? ` · upstream ${category.sourceVersion}`
+                : ""}
+            </p>
+          </details>
+        ))}
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">
+        A high Security indicator does not guarantee that a repository is safe.
+      </p>
+    </Section>
   );
 }
 
@@ -597,6 +670,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
           aria-label="Repository and maintainer signals"
           className="grid gap-6"
         >
+          <RepositoryHealthDashboard dashboard={data.healthDashboard} />
           <Section title="Repository snapshot">
             <Facts
               items={[

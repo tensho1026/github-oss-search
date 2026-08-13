@@ -34,6 +34,13 @@ type RecommendationCardProps = {
   rank: number;
 };
 
+const healthLabels = {
+  activity: "Activity",
+  community: "Community",
+  beginner_friendly: "Beginner friendly",
+  security: "Security",
+} as const;
+
 export function RecommendationCard({ item, rank }: RecommendationCardProps) {
   const location = useLocation();
   const score = scorePresentation(item.recommendation.score);
@@ -121,6 +128,17 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           {item.repository.isArchived ? (
             <Badge variant="warning">Archived repository</Badge>
           ) : null}
+        </div>
+        <div
+          aria-label="Repository health summary"
+          className="mt-2 flex flex-wrap gap-2"
+        >
+          {item.healthSummary.map((category) => (
+            <Badge key={category.name} variant="neutral">
+              {healthLabels[category.name]}{" "}
+              {category.score === null ? "?" : category.score}
+            </Badge>
+          ))}
         </div>
       </CardHeader>
 

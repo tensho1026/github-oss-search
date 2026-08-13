@@ -113,6 +113,18 @@ type GitHubIssueDetailResult struct {
 	Incomplete                  bool
 }
 
+// RepositoryHealthReader retrieves optional normalized third-party repository
+// health evidence. Failures must never make GitHub issue detail unusable.
+type RepositoryHealthReader interface {
+	// GetOpenSSFScorecard returns a bounded normalized published analysis and
+	// honors request cancellation.
+	GetOpenSSFScorecard(
+		ctx context.Context,
+		owner string,
+		repositoryName string,
+	) (issue.OpenSSFSnapshot, error)
+}
+
 // GitHubUserReader is the application-facing port for user profile reads.
 type GitHubUserReader interface {
 	// GetUser retrieves one normalized public profile, honors ctx, and returns a

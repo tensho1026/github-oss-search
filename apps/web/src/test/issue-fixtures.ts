@@ -23,6 +23,12 @@ export const issueSearchFixture: IssueSearchEnvelope = {
           confidence: "medium",
           label: "Half a day",
         },
+        healthSummary: [
+          { name: "activity", score: 92, status: "available" },
+          { name: "community", score: 81, status: "partial" },
+          { name: "beginner_friendly", score: 74, status: "partial" },
+          { name: "security", score: null, status: "unavailable" },
+        ],
         issue: {
           comments: 4,
           createdAt: "2026-07-01T00:00:00Z",
@@ -441,6 +447,87 @@ export const issueDetailFixture: IssueDetailEnvelope = {
           minimum: 3,
         },
       },
+    },
+    healthDashboard: {
+      analyzedAt: "2026-07-30T00:00:00Z",
+      categories: [
+        {
+          analyzedAt: "2026-07-30T00:00:00Z",
+          components: [
+            {
+              description: "Recent repository updates.",
+              key: "recency",
+              score: 100,
+              source: "github",
+              status: "available",
+              weight: 50,
+            },
+          ],
+          confidence: "high",
+          name: "activity",
+          score: 94,
+          status: "available",
+          warnings: [],
+        },
+        {
+          analyzedAt: "2026-07-30T00:00:00Z",
+          components: [
+            {
+              description: "Observed contributors.",
+              key: "contributors",
+              score: 80,
+              source: "github",
+              status: "available",
+              weight: 35,
+            },
+          ],
+          confidence: "medium",
+          name: "community",
+          score: 81,
+          status: "partial",
+          warnings: [],
+        },
+        {
+          analyzedAt: "2026-07-30T00:00:00Z",
+          components: [
+            {
+              description: "Contribution guidance.",
+              key: "contributing_guide",
+              score: 100,
+              source: "github",
+              status: "available",
+              weight: 30,
+            },
+          ],
+          confidence: "high",
+          name: "beginner_friendly",
+          score: 86,
+          status: "available",
+          warnings: [],
+        },
+        {
+          analyzedAt: "2026-07-29T00:00:00Z",
+          components: [
+            {
+              description: "Heuristic OpenSSF Scorecard check: Maintained.",
+              key: "maintained",
+              score: 90,
+              source: "openssf_scorecard",
+              status: "available",
+              weight: 25,
+            },
+          ],
+          confidence: "medium",
+          name: "security",
+          score: 82,
+          sourceVersion: "v5.2.1",
+          status: "partial",
+          warnings: [
+            "OpenSSF Scorecard observations are heuristics, not a security certification.",
+          ],
+        },
+      ],
+      scoreVersion: "2026-08-01",
     },
     inspection: {
       incomplete: false,

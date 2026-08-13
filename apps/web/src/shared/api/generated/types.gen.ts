@@ -769,6 +769,18 @@ export type IssueSearchItem = {
   difficulty: IssueSearchDifficultySummary;
   effort: IssueSearchEffortSummary;
   recommendation: Recommendation;
+  healthSummary: [
+    RepositoryHealthSummary,
+    RepositoryHealthSummary,
+    RepositoryHealthSummary,
+    RepositoryHealthSummary,
+  ];
+};
+
+export type RepositoryHealthSummary = {
+  name: RepositoryHealthCategoryName;
+  score: number | null;
+  status: RepositoryHealthStatus;
 };
 
 export type IssueSearchDifficultySummary = {
@@ -994,6 +1006,7 @@ export type IssueDetail = {
     RepositorySignal,
     RepositorySignal,
   ];
+  healthDashboard: RepositoryHealthDashboard;
   activity: ActivityMetrics;
   inspection: {
     /**
@@ -1003,6 +1016,42 @@ export type IssueDetail = {
      */
     incomplete: boolean;
   };
+};
+
+export type RepositoryHealthStatus = "available" | "partial" | "unavailable";
+
+export type RepositoryHealthCategoryName =
+  "activity" | "community" | "beginner_friendly" | "security";
+
+export type RepositoryHealthComponent = {
+  key: string;
+  weight: number;
+  score: number | null;
+  status: "available" | "unavailable";
+  source: "github" | "openssf_scorecard";
+  description: string;
+};
+
+export type RepositoryHealthCategory = {
+  name: RepositoryHealthCategoryName;
+  score: number | null;
+  status: RepositoryHealthStatus;
+  confidence: Confidence;
+  analyzedAt: string;
+  sourceVersion?: string;
+  components: Array<RepositoryHealthComponent>;
+  warnings: Array<string>;
+};
+
+export type RepositoryHealthDashboard = {
+  scoreVersion: string;
+  analyzedAt: string;
+  categories: [
+    RepositoryHealthCategory,
+    RepositoryHealthCategory,
+    RepositoryHealthCategory,
+    RepositoryHealthCategory,
+  ];
 };
 
 export type IssueDetailRepository = {

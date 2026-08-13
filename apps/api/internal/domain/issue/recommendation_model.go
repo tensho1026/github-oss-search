@@ -273,9 +273,10 @@ type Recommendation struct {
 // RankedIssue is the shared evaluated shape used by both list and detail
 // application flows.
 type RankedIssue struct {
-	Candidate      Candidate
-	Analysis       Analysis
-	Recommendation Recommendation
+	Candidate        Candidate
+	Analysis         Analysis
+	Recommendation   Recommendation
+	RepositoryHealth RepositoryHealthDashboard
 }
 
 // CommentObservation contains only the bounded public fields needed for
