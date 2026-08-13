@@ -62,6 +62,7 @@ func (handler IssueSearchHandler) Search(ctx *gin.Context) {
 		IncludeDocumentation: request.IncludeDocumentation,
 		IncludeEnglish:       request.IncludeEnglish,
 		ExcludeArchived:      request.ExcludeArchived,
+		IncludeStale:         request.IncludeStale,
 	})
 	if err != nil {
 		handler.invalidRequest(ctx, err)
@@ -126,6 +127,7 @@ type issueSearchRequest struct {
 	IncludeDocumentation *bool    `json:"includeDocumentation"`
 	IncludeEnglish       *bool    `json:"includeEnglish"`
 	ExcludeArchived      *bool    `json:"excludeArchived"`
+	IncludeStale         *bool    `json:"includeStale"`
 }
 
 func decodeIssueSearchRequest(ctx *gin.Context) (issueSearchRequest, error) {

@@ -520,6 +520,64 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               </Badge>
               <EvidenceList items={data.recommendation.claim.evidence} />
             </div>
+            <div className="mt-5 rounded-xl border border-border bg-muted/25 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">Stale Issue Detector</h3>
+                <Badge
+                  variant={
+                    data.recommendation.stale.state === "fresh"
+                      ? "success"
+                      : data.recommendation.stale.state === "stale"
+                        ? "warning"
+                        : "neutral"
+                  }
+                >
+                  {data.recommendation.stale.state} ·{" "}
+                  {data.recommendation.stale.confidence}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Policy {data.recommendation.stale.policyVersion} · fresh within{" "}
+                {data.recommendation.stale.freshWithinDays}d · stale after{" "}
+                {data.recommendation.stale.staleAfterDays}d ·{" "}
+                {data.recommendation.stale.sampleSize} sampled
+                {data.recommendation.stale.truncated ? " · bounded" : ""}
+              </p>
+              <Facts
+                items={[
+                  [
+                    "Last meaningful issue activity",
+                    data.recommendation.stale.lastMeaningfulIssueActivityAt
+                      ? formatDate(
+                          data.recommendation.stale
+                            .lastMeaningfulIssueActivityAt,
+                        )
+                      : "Unknown",
+                  ],
+                  [
+                    "Last maintainer activity",
+                    data.recommendation.stale.lastMaintainerActivityAt
+                      ? formatDate(
+                          data.recommendation.stale.lastMaintainerActivityAt,
+                        )
+                      : "Unknown",
+                  ],
+                  [
+                    "Last linked pull request",
+                    data.recommendation.stale.lastLinkedPullRequestAt
+                      ? formatDate(
+                          data.recommendation.stale.lastLinkedPullRequestAt,
+                        )
+                      : "Unknown",
+                  ],
+                  [
+                    "Analyzed",
+                    formatDate(data.recommendation.stale.analyzedAt),
+                  ],
+                ]}
+              />
+              <EvidenceList items={data.recommendation.stale.evidence} />
+            </div>
             <div className="mt-4 grid gap-2">
               {data.recommendation.warnings.map((warning) => (
                 <Alert

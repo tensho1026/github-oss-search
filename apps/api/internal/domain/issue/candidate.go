@@ -55,6 +55,7 @@ const (
 	ExclusionArchivedRepository      ExclusionReason = "archived_repository"
 	ExclusionAlreadyAssigned         ExclusionReason = "already_assigned"
 	ExclusionStale                   ExclusionReason = "stale"
+	ExclusionOutsideUpdateWindow     ExclusionReason = "outside_update_window"
 	ExclusionBotGenerated            ExclusionReason = "bot_generated"
 	ExclusionSensitiveContent        ExclusionReason = "suspected_sensitive_content"
 	ExclusionInsufficientDescription ExclusionReason = "insufficient_description"
@@ -100,7 +101,7 @@ func ExclusionReasons(
 	cutoff := now.UTC().AddDate(0, 0, -criteria.UpdatedWithinDays())
 	if candidate.Issue.UpdatedAt.Before(cutoff) ||
 		candidate.Repository.UpdatedAt.Before(cutoff) {
-		reasons = append(reasons, ExclusionStale)
+		reasons = append(reasons, ExclusionOutsideUpdateWindow)
 	}
 	if IsBotGenerated(candidate.Issue) {
 		reasons = append(reasons, ExclusionBotGenerated)

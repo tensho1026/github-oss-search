@@ -39,6 +39,9 @@ describe("IssueSearchResults", () => {
     ).toHaveTextContent("★★★★★");
     expect(screen.getByText("6 hrs")).toBeInTheDocument();
     expect(screen.getByText("2 days")).toBeInTheDocument();
+    expect(screen.getByLabelText("Stale status: fresh")).toHaveTextContent(
+      "Stale check: fresh",
+    );
     expect(
       screen.getByText("The primary language matches your profile."),
     ).toBeInTheDocument();

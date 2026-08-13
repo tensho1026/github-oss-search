@@ -57,6 +57,16 @@ func TestIssueSearchHandlerReturnsNormalizedSearchResponse(t *testing.T) {
 			},
 			Recommendation: issue.Recommendation{
 				Score: 88,
+				Stale: issue.StaleAssessment{
+					State:           issue.StaleFresh,
+					PolicyVersion:   issue.StalePolicyVersion,
+					Confidence:      issue.ConfidenceHigh,
+					AnalyzedAt:      now,
+					FreshWithinDays: issue.StaleFreshWithinDays,
+					StaleAfterDays:  issue.StaleAfterDays,
+					IssueCreatedAt:  now.Add(-time.Hour),
+					IssueUpdatedAt:  now,
+				},
 				SkillMatch: issue.SkillMatchAssessment{
 					Percentage:  100,
 					Matched:     1,
@@ -100,7 +110,8 @@ func TestIssueSearchHandlerReturnsNormalizedSearchResponse(t *testing.T) {
 			"updatedWithinDays":30,
 			"includeDocumentation":false,
 			"includeEnglish":true,
-			"excludeArchived":true
+			"excludeArchived":true,
+			"includeStale":true
 		}`),
 	)
 	ctx.Request.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -120,6 +131,8 @@ func TestIssueSearchHandlerReturnsNormalizedSearchResponse(t *testing.T) {
 		`"effort":{"band":"two_hours","label":"About two hours","confidence":"medium"}`,
 		`"score":88`,
 		`"percentage":100`,
+		`"state":"fresh"`,
+		`"policyVersion":"stale-v1"`,
 		`"page":2`,
 		`"totalPages":2`,
 		`"candidatesChecked":8`,
@@ -140,7 +153,8 @@ func TestIssueSearchHandlerReturnsNormalizedSearchResponse(t *testing.T) {
 	if search.input.Pagination.Page != 2 ||
 		search.input.Pagination.PerPage != 1 ||
 		search.input.Criteria.Username() != "octocat" ||
-		search.input.Criteria.MinimumStars() != 0 {
+		search.input.Criteria.MinimumStars() != 0 ||
+		!search.input.Criteria.IncludesStale() {
 		t.Fatalf("usecase input = %+v", search.input)
 	}
 	if maximumEffort, configured := search.input.Criteria.MaximumEffort(); !configured || maximumEffort != issue.EffortTwoHours {

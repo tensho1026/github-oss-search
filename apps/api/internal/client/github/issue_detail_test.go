@@ -41,7 +41,8 @@ func TestGetIssueDetailPostsBoundedGraphQLAndNormalizesResult(t *testing.T) {
 			payload.Variables.Number != 42 ||
 			payload.Variables.SampleSize != issueDetailSampleSize ||
 			payload.Variables.CommentSize != issueDetailCommentSize ||
-			!strings.Contains(payload.Query, "history(first: $sampleSize)") {
+			!strings.Contains(payload.Query, "history(first: $sampleSize)") ||
+			!strings.Contains(payload.Query, "closedByPullRequestsReferences") {
 			t.Errorf("GraphQL request = %+v", payload)
 		}
 		writer.Header().Set("Content-Type", "application/json")
@@ -68,6 +69,8 @@ func TestGetIssueDetailPostsBoundedGraphQLAndNormalizesResult(t *testing.T) {
 		result.Candidate.Repository.MainLanguage != "Go" ||
 		result.Candidate.Issue.Number != 42 ||
 		result.Candidate.Issue.Comments != 2 ||
+		len(result.LinkedPullRequests) != 1 ||
+		result.LinkedPullRequests[0].Number != 91 ||
 		!slices.Equal(result.Dependencies, []string{
 			"github.com/gin-gonic/gin",
 			"react",
@@ -105,6 +108,30 @@ func TestGetIssueDetailPostsBoundedGraphQLAndNormalizesResult(t *testing.T) {
 		result.CommentsTruncated,
 	); !claim.Claimed {
 		t.Fatalf("claim = %+v", claim)
+	}
+}
+
+func TestGraphQLDetailIssueNormalizesLinkedPullRequests(t *testing.T) {
+	t.Parallel()
+	updatedAt := time.Date(2026, time.August, 10, 12, 0, 0, 0, time.UTC)
+	mergedAt := updatedAt.Add(-time.Hour)
+	detail := graphQLDetailIssue{
+		ClosingPullRequests: graphQLClosingPullRequestWindow{
+			TotalCount: 1,
+			Nodes: []graphQLClosingPullRequest{{
+				Number:    91,
+				State:     "MERGED",
+				UpdatedAt: updatedAt,
+				MergedAt:  &mergedAt,
+			}},
+		},
+	}
+
+	got := detail.linkedPullRequestObservations()
+
+	if len(got) != 1 || got[0].Number != 91 || got[0].State != "merged" ||
+		got[0].MergedAt != mergedAt {
+		t.Fatalf("linkedPullRequestObservations() = %+v", got)
 	}
 }
 
@@ -490,6 +517,17 @@ func issueDetailFixture(suffix string) string {
               "author": {"login": "helper", "__typename": "User"}
             }
           ]
+        },
+        "closedByPullRequestsReferences": {
+          "totalCount": 1,
+          "pageInfo": {"hasNextPage": false},
+          "nodes": [{
+            "number": 91,
+            "state": "OPEN",
+            "isDraft": false,
+            "updatedAt": "2026-07-28T00:00:00Z",
+            "mergedAt": null
+          }]
         },
         "author": {"login": "maintainer", "__typename": "User"},
         "labels": {"nodes": [{"name": "help wanted"}]},

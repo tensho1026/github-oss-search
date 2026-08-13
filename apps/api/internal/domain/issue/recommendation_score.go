@@ -23,6 +23,7 @@ func Recommend(input RecommendationInput) Recommendation {
 	)
 	signals := normalizeRepositorySignals(input.RepositorySignals)
 	maintainerResponse := AssessMaintainerResponse(input.Activity)
+	stale := AssessStaleness(input)
 	breakdown := ScoreBreakdown{
 		SkillMatch:        scoreSkillMatch(skillMatch),
 		IssueQuality:      scoreIssueQuality(input.Analysis.Quality),
@@ -55,8 +56,9 @@ func Recommend(input RecommendationInput) Recommendation {
 		Activity:           input.Activity,
 		MaintainerResponse: maintainerResponse,
 		Claim:              cloneClaimEvidence(input.Claim),
+		Stale:              stale,
 		Reasons:            reasons,
-		Warnings:           recommendationWarnings(input, signals, now),
+		Warnings:           recommendationWarnings(input, signals, stale, now),
 	}
 }
 
@@ -351,6 +353,7 @@ func scoreAvailability(
 func recommendationWarnings(
 	input RecommendationInput,
 	signals []RepositorySignal,
+	stale StaleAssessment,
 	now time.Time,
 ) []Warning {
 	warnings := make([]Warning, 0, 8)
@@ -362,6 +365,29 @@ func recommendationWarnings(
 			Severity: SeverityWarning,
 			Message:  "A contributor explicitly indicated that they are working on this issue",
 			Evidence: append([]Evidence(nil), input.Claim.Evidence...),
+		})
+	}
+	switch stale.State {
+	case StaleStale:
+		warnings = append(warnings, Warning{
+			Code:     "stale_issue",
+			Severity: SeverityWarning,
+			Message:  "This issue appears stale under the bounded stale-v1 policy",
+			Evidence: append([]Evidence(nil), stale.Evidence...),
+		})
+	case StaleAging:
+		warnings = append(warnings, Warning{
+			Code:     "aging_issue",
+			Severity: SeverityInfo,
+			Message:  "This issue is aging; review recent activity before starting",
+			Evidence: append([]Evidence(nil), stale.Evidence...),
+		})
+	case StaleUnknown:
+		warnings = append(warnings, Warning{
+			Code:     "stale_status_unknown",
+			Severity: SeverityInfo,
+			Message:  "Stale status is unknown because bounded history was incomplete",
+			Evidence: append([]Evidence(nil), stale.Evidence...),
 		})
 	}
 	if !input.Activity.LastMeaningfulUpdate.IsZero() &&

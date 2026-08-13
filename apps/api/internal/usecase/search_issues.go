@@ -242,6 +242,7 @@ func (usecase *searchIssues) issueSearchOutput(
 	if err != nil {
 		return SearchIssuesOutput{}, mapIssueSearchError(err)
 	}
+	ranked, staleExcluded := filterRankedIssuesByStale(ranked, input.Criteria)
 	ranked = filterRankedIssuesByEffort(ranked, input.Criteria)
 	total := len(ranked)
 	totalPages := 0
@@ -261,6 +262,10 @@ func (usecase *searchIssues) issueSearchOutput(
 	}
 
 	rateLimit := mergeRateLimits(entry.RateLimit, recommendationMeta.rateLimit)
+	exclusionCounts := cloneExclusionCounts(entry.ExclusionCounts)
+	if staleExcluded > 0 {
+		exclusionCounts[issue.ExclusionStale] += staleExcluded
+	}
 	return SearchIssuesOutput{
 		Items: items,
 		Pagination: SearchIssuesPagination{
@@ -270,7 +275,7 @@ func (usecase *searchIssues) issueSearchOutput(
 			TotalPages: totalPages,
 			HasNext:    input.Pagination.Page < totalPages,
 		},
-		ExclusionCounts:      cloneExclusionCounts(entry.ExclusionCounts),
+		ExclusionCounts:      exclusionCounts,
 		CandidatesChecked:    entry.CandidatesChecked,
 		UpstreamTotal:        entry.UpstreamTotal,
 		EnrichmentAttempted:  recommendationMeta.attempted,
@@ -280,6 +285,25 @@ func (usecase *searchIssues) issueSearchOutput(
 		RateLimit:            rateLimit,
 		CacheHit:             cacheHit,
 	}, nil
+}
+
+func filterRankedIssuesByStale(
+	ranked []issue.RankedIssue,
+	criteria issue.SearchCriteria,
+) ([]issue.RankedIssue, int) {
+	if criteria.IncludesStale() {
+		return ranked, 0
+	}
+	filtered := make([]issue.RankedIssue, 0, len(ranked))
+	excluded := 0
+	for _, candidate := range ranked {
+		if candidate.Recommendation.Stale.State == issue.StaleStale {
+			excluded++
+			continue
+		}
+		filtered = append(filtered, candidate)
+	}
+	return filtered, excluded
 }
 
 func filterRankedIssuesByEffort(
@@ -427,6 +451,10 @@ func sharedRepositoryRecommendation(
 		repositoryRecommendation.RepositorySignals,
 		repositoryRecommendation.Activity,
 		issue.DetectClaim(nil, true),
+		issue.IssueHistory{
+			CommentsTruncated:           true,
+			LinkedPullRequestsTruncated: true,
+		},
 		desiredSkills,
 		now,
 	)
@@ -469,6 +497,10 @@ func fallbackRecommendation(
 				CI:                   issue.CIStateUnknown,
 			},
 			issue.DetectClaim(nil, true),
+			issue.IssueHistory{
+				CommentsTruncated:           true,
+				LinkedPullRequestsTruncated: true,
+			},
 			desiredSkills,
 			recommender.now(),
 		)

@@ -281,6 +281,34 @@
         "percentage": 0,
         "skills": []
       },
+      "stale": {
+        "analyzedAt": "2026-07-30T00:00:00Z",
+        "confidence": "high",
+        "evidence": [
+          {
+            "description": "stale-v1 uses bounded human, maintainer, linked pull request, and repository activity",
+            "ruleId": "stale.policy.version",
+            "source": "derived"
+          },
+          {
+            "description": "recent maintainer activity was observed on the issue",
+            "ruleId": "stale.maintainer.recent",
+            "source": "derived"
+          }
+        ],
+        "freshWithinDays": 30,
+        "issueCreatedAt": "2026-07-01T00:00:00Z",
+        "issueUpdatedAt": "2026-07-29T00:00:00Z",
+        "lastLinkedPullRequestAt": null,
+        "lastMaintainerActivityAt": "2026-07-29T00:00:00Z",
+        "lastMeaningfulIssueActivityAt": "2026-07-29T00:00:00Z",
+        "policyVersion": "stale-v1",
+        "repositoryActivityAt": "2026-07-29T10:00:00Z",
+        "sampleSize": 4,
+        "staleAfterDays": 180,
+        "state": "fresh",
+        "truncated": false
+      },
       "warnings": []
     },
     "repository": {

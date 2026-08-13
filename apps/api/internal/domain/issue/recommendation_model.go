@@ -157,6 +157,55 @@ type ClaimEvidence struct {
 	Evidence   []Evidence
 }
 
+// StaleState distinguishes active opportunities from aging, stale, and
+// insufficiently observed issues.
+type StaleState string
+
+// StaleState values are stable API classifications.
+const (
+	StaleFresh   StaleState = "fresh"
+	StaleAging   StaleState = "aging"
+	StaleStale   StaleState = "stale"
+	StaleUnknown StaleState = "unknown"
+)
+
+// LinkedPullRequestObservation is one bounded closing-reference observation.
+type LinkedPullRequestObservation struct {
+	Number    int
+	State     string
+	IsDraft   bool
+	UpdatedAt time.Time
+	MergedAt  time.Time
+}
+
+// IssueHistory contains bounded issue-level events used only for stale
+// classification. Truncation preserves uncertainty when absence is unknown.
+type IssueHistory struct {
+	Comments                    []CommentObservation
+	CommentsTruncated           bool
+	LinkedPullRequests          []LinkedPullRequestObservation
+	LinkedPullRequestsTruncated bool
+}
+
+// StaleAssessment is an explainable result from the versioned stale policy.
+type StaleAssessment struct {
+	State                         StaleState
+	PolicyVersion                 string
+	Confidence                    Confidence
+	AnalyzedAt                    time.Time
+	FreshWithinDays               int
+	StaleAfterDays                int
+	IssueCreatedAt                time.Time
+	IssueUpdatedAt                time.Time
+	RepositoryActivityAt          time.Time
+	LastMeaningfulIssueActivityAt time.Time
+	LastMaintainerActivityAt      time.Time
+	LastLinkedPullRequestAt       time.Time
+	SampleSize                    int
+	Truncated                     bool
+	Evidence                      []Evidence
+}
+
 // Severity orders warning presentation and allows clients to style risk.
 type Severity string
 
@@ -202,6 +251,7 @@ type RecommendationInput struct {
 	RepositorySignals []RepositorySignal
 	Activity          ActivityMetrics
 	Claim             ClaimEvidence
+	History           IssueHistory
 	Now               time.Time
 }
 
@@ -215,6 +265,7 @@ type Recommendation struct {
 	Activity           ActivityMetrics
 	MaintainerResponse MaintainerResponseAssessment
 	Claim              ClaimEvidence
+	Stale              StaleAssessment
 	Reasons            []string
 	Warnings           []Warning
 }

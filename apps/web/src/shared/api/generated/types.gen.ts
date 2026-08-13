@@ -736,6 +736,12 @@ export type IssueSearchRequest = {
    * Excludes issues from archived repositories.
    */
   excludeArchived?: boolean;
+  /**
+   * Includes issues classified as stale by the versioned stale policy.
+   * Fresh, aging, and unknown assessments are always retained.
+   *
+   */
+  includeStale?: boolean;
 };
 
 /**
@@ -851,6 +857,7 @@ export type ExclusionCount = {
     | "label_mismatch"
     | "language_mismatch"
     | "not_open"
+    | "outside_update_window"
     | "pull_request"
     | "stale"
     | "suspected_sensitive_content";
@@ -877,6 +884,25 @@ export type Recommendation = {
   reasons: Array<string>;
   warnings: Array<RecommendationWarning>;
   claim: ClaimEvidence;
+  stale: StaleAssessment;
+};
+
+export type StaleAssessment = {
+  state: "fresh" | "aging" | "stale" | "unknown";
+  policyVersion: "stale-v1";
+  confidence: Confidence;
+  analyzedAt: string;
+  freshWithinDays: 30;
+  staleAfterDays: 180;
+  issueCreatedAt: string;
+  issueUpdatedAt: string;
+  repositoryActivityAt: string | null;
+  lastMeaningfulIssueActivityAt: string | null;
+  lastMaintainerActivityAt: string | null;
+  lastLinkedPullRequestAt: string | null;
+  sampleSize: number;
+  truncated: boolean;
+  evidence: Array<Evidence>;
 };
 
 export type MaintainerResponseAssessment = {

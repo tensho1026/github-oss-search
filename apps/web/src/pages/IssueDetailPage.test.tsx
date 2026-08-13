@@ -98,6 +98,8 @@ describe("IssueDetailPage", () => {
         "Historical samples do not guarantee a future response or merge.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Stale Issue Detector")).toBeInTheDocument();
+    expect(screen.getByText(/Policy stale-v1/)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Back to search results" }),
     ).toHaveAttribute("href", route.from);

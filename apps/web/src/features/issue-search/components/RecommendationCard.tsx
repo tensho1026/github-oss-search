@@ -104,6 +104,12 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           <Badge variant="neutral">
             Difficulty {item.difficulty.level}: {item.difficulty.label}
           </Badge>
+          <Badge
+            aria-label={`Stale status: ${item.recommendation.stale.state}`}
+            variant={staleBadgeVariant(item.recommendation.stale.state)}
+          >
+            Stale check: {item.recommendation.stale.state}
+          </Badge>
           <Badge variant="neutral">
             <Icon className="size-3.5" icon={Clock3} />
             {item.effort.label}
@@ -295,4 +301,15 @@ function durationValue(metric: {
   return metric.status === "available"
     ? formatDuration(metric.medianSeconds)
     : "Unavailable";
+}
+
+function staleBadgeVariant(state: string) {
+  switch (state) {
+    case "fresh":
+      return "success" as const;
+    case "stale":
+      return "warning" as const;
+    default:
+      return "neutral" as const;
+  }
 }

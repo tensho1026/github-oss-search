@@ -33,7 +33,7 @@ sequenceDiagram
         Detail-->>Search: Recommendation
     end
     Search->>Rules: Candidate-only fallback when needed
-    Search->>Search: Stable sort, then pagination
+    Search->>Search: Stable sort, stale/effort filters, then pagination
     Search-->>Browser: Ranked list with evidence and warnings
 ```
 
@@ -170,6 +170,9 @@ evidence. Arbitrary issue/comment text is never copied into evidence.
 | `repository_signal_unavailable` | Conventional-path inspection is incomplete        |
 | `detail_enrichment_unavailable` | Search used candidate-only fallback               |
 | `claim_evidence_unavailable`    | Repository evidence reused without issue comments |
+| `stale_issue`                   | `stale-v1` classified the issue as stale          |
+| `aging_issue`                   | Issue is outside the fresh window                 |
+| `stale_status_unknown`          | Bounded history cannot support a conclusion       |
 
 “Can I work on this?” is intentionally not a claim. Bots are excluded. A
 truncated comment window with no claim produces low-confidence negative
@@ -193,6 +196,33 @@ Effort-only changes reuse the canonical GitHub candidate cache because effort
 does not alter discovery qualifiers. Every search item includes compact
 difficulty and effort summaries (label, confidence, and level or band) derived
 from the same `RankedIssue.Analysis` used by the detail endpoint.
+
+## Stale Issue Detector
+
+Every recommendation exposes a `stale` assessment from policy `stale-v1`:
+`fresh`, `aging`, `stale`, or `unknown`. The policy records its analysis time,
+confidence, 30-day fresh window, 180-day stale threshold, observed activity
+dates, bounded sample count, truncation, and normalized evidence.
+
+The detector evaluates issue creation, human comments, maintainer comments
+from `OWNER`, `MEMBER`, and `COLLABORATOR` associations, explicit claims,
+assignees, repository activity, archival status, and up to ten GitHub closing
+pull request references. Bot comments and draft PRs cannot make an issue fresh.
+A recent maintainer comment or active linked PR can keep an old issue fresh;
+an archived repository or merged closing PR is stale. A timestamp-only update
+is not treated as meaningful human activity.
+
+Absence is conclusive only when both the comment and linked-PR windows are
+complete. An old issue with truncated or partial history becomes `unknown`,
+not stale. The default `includeStale: false` removes only explicit `stale`
+assessments after ranking but before totals and pagination; `unknown` remains
+visible. `includeStale: true` retains stale results. The separate
+`updatedWithinDays` discovery filter still controls how old the bounded
+upstream candidate window may be.
+
+Stale inclusion, like effort, reuses the canonical candidate cache because it
+does not alter GitHub discovery qualifiers. It only changes post-analysis
+filtering.
 
 ## Cache and failure behavior
 

@@ -20,6 +20,7 @@ type recommendationResponse struct {
 	Reasons            []string                             `json:"reasons"`
 	Warnings           []recommendationWarningResponse      `json:"warnings"`
 	Claim              claimEvidenceResponse                `json:"claim"`
+	Stale              staleAssessmentResponse              `json:"stale"`
 }
 
 type maintainerResponseAssessmentResponse struct {
@@ -66,6 +67,24 @@ type claimEvidenceResponse struct {
 	Claimed    bool               `json:"claimed"`
 	Confidence issue.Confidence   `json:"confidence"`
 	Evidence   []evidenceResponse `json:"evidence"`
+}
+
+type staleAssessmentResponse struct {
+	State                         issue.StaleState   `json:"state"`
+	PolicyVersion                 string             `json:"policyVersion"`
+	Confidence                    issue.Confidence   `json:"confidence"`
+	AnalyzedAt                    time.Time          `json:"analyzedAt"`
+	FreshWithinDays               int                `json:"freshWithinDays"`
+	StaleAfterDays                int                `json:"staleAfterDays"`
+	IssueCreatedAt                time.Time          `json:"issueCreatedAt"`
+	IssueUpdatedAt                time.Time          `json:"issueUpdatedAt"`
+	RepositoryActivityAt          *time.Time         `json:"repositoryActivityAt"`
+	LastMeaningfulIssueActivityAt *time.Time         `json:"lastMeaningfulIssueActivityAt"`
+	LastMaintainerActivityAt      *time.Time         `json:"lastMaintainerActivityAt"`
+	LastLinkedPullRequestAt       *time.Time         `json:"lastLinkedPullRequestAt"`
+	SampleSize                    int                `json:"sampleSize"`
+	Truncated                     bool               `json:"truncated"`
+	Evidence                      []evidenceResponse `json:"evidence"`
 }
 
 type issueAnalysisResponse struct {
@@ -258,7 +277,38 @@ func newRecommendationResponse(
 			Confidence: recommendation.Claim.Confidence,
 			Evidence:   newEvidenceResponses(recommendation.Claim.Evidence),
 		},
+		Stale: newStaleAssessmentResponse(recommendation.Stale),
 	}
+}
+
+func newStaleAssessmentResponse(
+	assessment issue.StaleAssessment,
+) staleAssessmentResponse {
+	return staleAssessmentResponse{
+		State:                         assessment.State,
+		PolicyVersion:                 assessment.PolicyVersion,
+		Confidence:                    assessment.Confidence,
+		AnalyzedAt:                    assessment.AnalyzedAt.UTC(),
+		FreshWithinDays:               assessment.FreshWithinDays,
+		StaleAfterDays:                assessment.StaleAfterDays,
+		IssueCreatedAt:                assessment.IssueCreatedAt.UTC(),
+		IssueUpdatedAt:                assessment.IssueUpdatedAt.UTC(),
+		RepositoryActivityAt:          optionalResponseTime(assessment.RepositoryActivityAt),
+		LastMeaningfulIssueActivityAt: optionalResponseTime(assessment.LastMeaningfulIssueActivityAt),
+		LastMaintainerActivityAt:      optionalResponseTime(assessment.LastMaintainerActivityAt),
+		LastLinkedPullRequestAt:       optionalResponseTime(assessment.LastLinkedPullRequestAt),
+		SampleSize:                    assessment.SampleSize,
+		Truncated:                     assessment.Truncated,
+		Evidence:                      newEvidenceResponses(assessment.Evidence),
+	}
+}
+
+func optionalResponseTime(value time.Time) *time.Time {
+	if value.IsZero() {
+		return nil
+	}
+	normalized := value.UTC()
+	return &normalized
 }
 
 func newIssueAnalysisResponse(
