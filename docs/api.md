@@ -74,7 +74,7 @@ Profile analysis, search, and detail success responses also expose
 | GET `/api/health`                                        | Liveness/readiness and request-correlation check                | No upstream or database access                             |
 | GET `/api/health/database`                               | Separate authenticated-storage readiness probe                  | One bounded ping; does not gate anonymous routes           |
 | GET `/api/github/users/{username}`                       | Normalized public user and repository summaries                 | At most 20 repositories                                    |
-| GET `/api/github/users/{username}/profile-analysis`      | Public technology, OSS activity, samples, proficiency, warnings | One GraphQL snapshot; 20 repositories per collection       |
+| GET `/api/github/users/{username}/profile-analysis`      | Public technology, daily calendar, OSS activity, proficiency    | One GraphQL snapshot; 20 repositories; at most 54 weeks    |
 | POST `/api/repositories/search`                          | Filtered public repositories with OSS readiness evidence        | 50 candidates, one 20-repository enrichment batch          |
 | POST `/api/issues/search`                                | Eligible, ranked, paginated public issues                       | 50 candidates, 20 detail enrichments, page size at most 50 |
 | GET `/api/issues/{owner}/{repository}/{issueNumber}`     | Complete issue recommendation and bounded repository evidence   | One canonical issue; every activity collection is bounded  |

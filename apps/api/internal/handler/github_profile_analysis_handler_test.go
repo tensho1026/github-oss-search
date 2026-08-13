@@ -64,6 +64,20 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 						Status: profile.EvidenceSampled,
 					},
 				},
+				ContributionCalendar: profile.ContributionCalendar{
+					Status: profile.EvidenceExact,
+					Total:  2,
+					From:   time.Date(2026, time.July, 26, 0, 0, 0, 0, time.UTC),
+					To:     time.Date(2026, time.July, 27, 0, 0, 0, 0, time.UTC),
+					Weeks: []profile.ContributionWeek{{
+						Index:    0,
+						FirstDay: time.Date(2026, time.July, 26, 0, 0, 0, 0, time.UTC),
+						Days: []profile.ContributionDay{
+							{Date: time.Date(2026, time.July, 26, 0, 0, 0, 0, time.UTC), Weekday: 0, Level: profile.ContributionNone},
+							{Date: time.Date(2026, time.July, 27, 0, 0, 0, 0, time.UTC), Weekday: 1, Count: 2, Level: profile.ContributionSecond},
+						},
+					}},
+				},
 				OSSExperience: profile.OSSExperience{
 					Level:      "active",
 					Confidence: profile.ConfidenceHigh,
@@ -161,6 +175,8 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 		`"repositorySources":["contributed","owned"]`,
 		`"commits":{"value":10,"status":"sampled"}`,
 		`"pullRequestsOpened":{"value":5,"status":"exact"}`,
+		`"contributionCalendar":{"status":"exact","total":2,"from":"2026-07-26","to":"2026-07-27","weeks":[{"index":0,"firstDay":"2026-07-26"`,
+		`"date":"2026-07-27","weekday":1,"count":2,"level":"second_quartile"`,
 		`"ossExperience":{"level":"active","confidence":"high","publicOnly":true`,
 		`"owned":{"status":"sampled","observed":2,"total":5`,
 		`"starred":{"status":"sampled","observed":1,"total":null`,

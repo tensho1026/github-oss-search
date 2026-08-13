@@ -392,6 +392,43 @@ func findProficiency(
 	return TechnologyProficiency{}
 }
 
+func TestAnalyzeSnapshotPreservesLeapDayCalendarOrdering(t *testing.T) {
+	t.Parallel()
+	leapDay := time.Date(2024, time.February, 29, 0, 0, 0, 0, time.UTC)
+	snapshot := ProfileSnapshot{
+		WindowFrom: leapDay.AddDate(-1, 0, 0),
+		WindowTo:   leapDay,
+		Contributions: ContributionSnapshot{
+			Calendar: ContributionCalendar{
+				Status: EvidenceExact,
+				Total:  2,
+				From:   leapDay.AddDate(0, 0, -1),
+				To:     leapDay.AddDate(0, 0, 1),
+				Weeks: []ContributionWeek{{
+					Index:    0,
+					FirstDay: leapDay.AddDate(0, 0, -1),
+					Days: []ContributionDay{
+						{Date: leapDay.AddDate(0, 0, -1), Weekday: 3, Level: ContributionNone},
+						{Date: leapDay, Weekday: 4, Count: 2, Level: ContributionSecond},
+						{Date: leapDay.AddDate(0, 0, 1), Weekday: 5, Level: ContributionNone},
+					},
+				}},
+			},
+		},
+	}
+
+	analysis := AnalyzeSnapshot(snapshot)
+	days := analysis.ContributionCalendar.Weeks[0].Days
+	if len(days) != 3 || days[1].Date.Day() != 29 ||
+		days[1].Weekday != 4 || analysis.ContributionCalendar.Total != 2 {
+		t.Fatalf("calendar = %+v", analysis.ContributionCalendar)
+	}
+	snapshot.Contributions.Calendar.Weeks[0].Days[1].Count = 99
+	if days[1].Count != 2 {
+		t.Fatal("analysis calendar aliases the input snapshot")
+	}
+}
+
 func BenchmarkAnalyzeProfileSnapshotBounded(b *testing.B) {
 	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
 	owned := make([]RepositoryObservation, 0, 20)

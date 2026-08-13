@@ -70,6 +70,7 @@ type githubProfileAnalysisResponse struct {
 	Frameworks           []string                        `json:"frameworks"`
 	RecentTechnologies   []recentTechnologyResponse      `json:"recentTechnologies"`
 	Contributions        contributionAnalysisResponse    `json:"contributions"`
+	ContributionCalendar contributionCalendarResponse    `json:"contributionCalendar"`
 	OSSExperience        ossExperienceResponse           `json:"ossExperience"`
 	RepositoryEvidence   repositoryEvidenceResponse      `json:"repositoryEvidence"`
 	Proficiency          []technologyProficiencyResponse `json:"proficiency"`
@@ -110,6 +111,27 @@ type contributionAnalysisResponse struct {
 	PullRequestsOpened  countMetricResponse `json:"pullRequestsOpened"`
 	PullRequestReviews  countMetricResponse `json:"pullRequestReviews"`
 	RepositoriesTouched countMetricResponse `json:"repositoriesTouched"`
+}
+
+type contributionCalendarResponse struct {
+	Status string                     `json:"status"`
+	Total  int                        `json:"total"`
+	From   string                     `json:"from,omitempty"`
+	To     string                     `json:"to,omitempty"`
+	Weeks  []contributionWeekResponse `json:"weeks"`
+}
+
+type contributionWeekResponse struct {
+	Index    int                       `json:"index"`
+	FirstDay string                    `json:"firstDay"`
+	Days     []contributionDayResponse `json:"days"`
+}
+
+type contributionDayResponse struct {
+	Date    string `json:"date"`
+	Weekday int    `json:"weekday"`
+	Count   int    `json:"count"`
+	Level   string `json:"level"`
 }
 
 type technologyEvidenceResponse struct {
@@ -183,6 +205,9 @@ func newGitHubProfileAnalysisResponse(
 		Contributions: newContributionAnalysisResponse(
 			analysis.Contributions,
 		),
+		ContributionCalendar: newContributionCalendarResponse(
+			analysis.ContributionCalendar,
+		),
 		OSSExperience: newOSSExperienceResponse(analysis.OSSExperience),
 		RepositoryEvidence: newRepositoryEvidenceResponse(
 			analysis.RepositoryEvidence,
@@ -199,6 +224,40 @@ func newGitHubProfileAnalysisResponse(
 		RepositoriesAnalyzed: analysis.RepositoriesAnalyzed,
 		Warnings:             warnings,
 	}
+}
+
+func newContributionCalendarResponse(
+	calendar profile.ContributionCalendar,
+) contributionCalendarResponse {
+	weeks := make([]contributionWeekResponse, 0, len(calendar.Weeks))
+	for _, week := range calendar.Weeks {
+		days := make([]contributionDayResponse, 0, len(week.Days))
+		for _, day := range week.Days {
+			days = append(days, contributionDayResponse{
+				Date:    day.Date.Format(time.DateOnly),
+				Weekday: day.Weekday,
+				Count:   day.Count,
+				Level:   string(day.Level),
+			})
+		}
+		weeks = append(weeks, contributionWeekResponse{
+			Index:    week.Index,
+			FirstDay: week.FirstDay.Format(time.DateOnly),
+			Days:     days,
+		})
+	}
+	response := contributionCalendarResponse{
+		Status: string(calendar.Status),
+		Total:  calendar.Total,
+		Weeks:  weeks,
+	}
+	if !calendar.From.IsZero() {
+		response.From = calendar.From.Format(time.DateOnly)
+	}
+	if !calendar.To.IsZero() {
+		response.To = calendar.To.Format(time.DateOnly)
+	}
+	return response
 }
 
 func newLanguageShareResponses(

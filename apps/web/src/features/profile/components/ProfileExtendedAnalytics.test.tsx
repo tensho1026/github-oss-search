@@ -11,6 +11,17 @@ describe("ProfileExtendedAnalytics", () => {
     expect(
       screen.getByRole("heading", { name: "Public contribution activity" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Public contribution calendar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "2 public contributions on 2026-07-22",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Contribution intensity legend from less to more"),
+    ).toHaveTextContent("LessMore");
     expect(screen.getByText("18")).toBeInTheDocument();
     expect(screen.getAllByText("Sampled").length).toBeGreaterThan(0);
     expect(
@@ -40,6 +51,11 @@ describe("ProfileExtendedAnalytics", () => {
             ...profileAnalysisFixture.data.contributions,
             commits: { status: "unavailable", value: 0 },
           },
+          contributionCalendar: {
+            status: "unavailable",
+            total: 0,
+            weeks: [],
+          },
           proficiency: [],
           recentTechnologies: [],
           repositoryEvidence: {
@@ -55,6 +71,9 @@ describe("ProfileExtendedAnalytics", () => {
     );
 
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(1);
+    expect(
+      screen.getByText(/did not provide a public daily calendar/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/No five-level diagnostic could be supported/i),
     ).toBeInTheDocument();

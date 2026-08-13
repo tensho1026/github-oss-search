@@ -1,12 +1,4 @@
-import {
-  Activity,
-  GitCommitHorizontal,
-  GitPullRequest,
-  Layers3,
-  MessageSquareText,
-  Radar,
-  Star,
-} from "lucide-react";
+import { Activity, GitPullRequest, Radar, Star } from "lucide-react";
 
 import { Badge } from "../../../components/ui/badge";
 import {
@@ -26,6 +18,7 @@ import type {
   TechnologyEvidence,
 } from "../../../shared/api/generated";
 import { formatCompactNumber, formatDate } from "../../../shared/lib/format";
+import { ContributionCalendar } from "./ContributionCalendar";
 
 type ProfileExtendedAnalyticsProps = {
   analysis: ProfileAnalysis;
@@ -171,52 +164,55 @@ export function ProfileExtendedAnalytics({
   return (
     <>
       <section aria-labelledby="contribution-activity-heading" className="mt-5">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle id="contribution-activity-heading">
-                  Public contribution activity
-                </CardTitle>
-                <CardDescription>
-                  Evidence from {formatDate(analysis.analysisWindow.from)} to{" "}
-                  {formatDate(analysis.analysisWindow.to)}. Sampled counts are
-                  observations, never presented as lifetime totals.
-                </CardDescription>
+        <div className="grid gap-5">
+          <ContributionCalendar calendar={analysis.contributionCalendar} />
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle id="contribution-activity-heading">
+                    Public contribution activity
+                  </CardTitle>
+                  <CardDescription>
+                    Evidence from {formatDate(analysis.analysisWindow.from)} to{" "}
+                    {formatDate(analysis.analysisWindow.to)}. Sampled counts are
+                    observations, never presented as lifetime totals.
+                  </CardDescription>
+                </div>
+                <Badge variant="neutral">
+                  {contributions.windowDays}-day window · public only
+                </Badge>
               </div>
-              <Badge variant="neutral">
-                {contributions.windowDays}-day window · public only
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <EvidenceMetric
-              count={contributions.commits}
-              icon={GitCommitHorizontal}
-              label="Observed commits"
-            />
-            <EvidenceMetric
-              count={contributions.pullRequestsOpened}
-              icon={GitPullRequest}
-              label="Pull requests opened"
-            />
-            <EvidenceMetric
-              count={contributions.pullRequestReviews}
-              icon={MessageSquareText}
-              label="Observed PR reviews"
-            />
-            <EvidenceMetric
-              count={contributions.issuesOpened}
-              icon={Activity}
-              label="Issues opened"
-            />
-            <EvidenceMetric
-              count={contributions.repositoriesTouched}
-              icon={Layers3}
-              label="Repositories touched"
-            />
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <EvidenceMetric
+                count={contributions.commits}
+                icon={Activity}
+                label="Observed commits"
+              />
+              <EvidenceMetric
+                count={contributions.pullRequestsOpened}
+                icon={GitPullRequest}
+                label="Pull requests opened"
+              />
+              <EvidenceMetric
+                count={contributions.pullRequestReviews}
+                icon={Activity}
+                label="Observed PR reviews"
+              />
+              <EvidenceMetric
+                count={contributions.issuesOpened}
+                icon={Activity}
+                label="Issues opened"
+              />
+              <EvidenceMetric
+                count={contributions.repositoriesTouched}
+                icon={Activity}
+                label="Repositories touched"
+              />
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <section

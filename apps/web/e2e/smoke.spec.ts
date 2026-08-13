@@ -108,6 +108,14 @@ test("analyzes a valid username through the production profile route", async ({
     page.getByRole("heading", { name: "Public contribution activity" }),
   ).toBeVisible();
   await expect(
+    page.getByRole("heading", { name: "Public contribution calendar" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", {
+      name: "2 public contributions on 2026-07-22",
+    }),
+  ).toBeVisible();
+  await expect(
     page.getByRole("progressbar", {
       name: "TypeScript diagnostic level 2 of 5",
     }),
