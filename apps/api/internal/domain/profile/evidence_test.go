@@ -429,6 +429,32 @@ func TestAnalyzeSnapshotPreservesLeapDayCalendarOrdering(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSnapshotBuildsReproducibleContributionPortfolio(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	analysis := AnalyzeSnapshot(ProfileSnapshot{
+		WindowTo: now,
+		Portfolio: PortfolioSnapshot{
+			Available:   true,
+			TotalMerged: 3,
+			HasMore:     true,
+			Items: []PortfolioContribution{
+				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 2, MergedAt: now.Add(-time.Hour), Language: "Go"},
+				{RepositoryOwner: "alpha", RepositoryName: "web", Number: 1, MergedAt: now.Add(-2 * time.Hour), Language: "TypeScript"},
+				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 1, MergedAt: now.Add(-3 * time.Hour), Language: "Go"},
+			},
+		},
+	})
+	portfolio := analysis.Portfolio
+	if portfolio.Status != EvidenceSampled || portfolio.TotalMerged != 3 ||
+		portfolio.DisplayedMerged != 3 || portfolio.RepositoryCount != 2 ||
+		len(portfolio.Languages) != 2 || portfolio.Languages[0].Name != "Go" ||
+		portfolio.Languages[0].Count != 2 ||
+		portfolio.Contributions[0].Number != 2 {
+		t.Fatalf("portfolio = %+v", portfolio)
+	}
+}
+
 func BenchmarkAnalyzeProfileSnapshotBounded(b *testing.B) {
 	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
 	owned := make([]RepositoryObservation, 0, 20)

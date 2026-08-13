@@ -51,9 +51,11 @@ func TestGetProfileAnalysisUsesOnePublicBoundedGraphQLSnapshot(
 			"created:>=2025-07-30T12:00:00+00:00",
 			"created:<=2026-07-30T12:00:00+00:00",
 			"contributionCalendar",
+			"is:merged",
 		} {
 			if !strings.Contains(
 				payload.Query+payload.Variables.PullRequestQuery+
+					payload.Variables.MergedPullRequestQuery+
 					payload.Variables.IssueQuery,
 				required,
 			) {
@@ -145,6 +147,13 @@ func TestGetProfileAnalysisUsesOnePublicBoundedGraphQLSnapshot(
 		result.Snapshot.Warnings[0].Code !=
 			"private_starred_repositories_excluded" {
 		t.Fatalf("warnings = %+v", result.Snapshot.Warnings)
+	}
+	if result.Snapshot.Portfolio.TotalMerged != 2 ||
+		len(result.Snapshot.Portfolio.Items) != 1 ||
+		result.Snapshot.Portfolio.Items[0].RepositoryOwner != "community" ||
+		result.Snapshot.Portfolio.Items[0].Language != "Go" ||
+		!result.Snapshot.Portfolio.HasMore {
+		t.Fatalf("portfolio = %+v", result.Snapshot.Portfolio)
 	}
 }
 
@@ -466,6 +475,45 @@ func TestNormalizeContributionCalendarRejectsMalformedDailyEvidence(t *testing.T
 	}
 }
 
+func TestNormalizeProfilePortfolioDeduplicatesAndRejectsUnsafeEvidence(
+	t *testing.T,
+) {
+	t.Parallel()
+	mergedAt := time.Date(2026, time.July, 20, 12, 0, 0, 0, time.UTC)
+	node := &graphQLProfilePullRequest{
+		TypeName: "PullRequest",
+		Number:   42,
+		Title:    "Add bounded retries",
+		URL:      "https://github.com/community/project/pull/42",
+		MergedAt: &mergedAt,
+	}
+	node.Repository.Owner.Login = "community"
+	node.Repository.Name = "project"
+	node.Repository.Visibility = "PUBLIC"
+	node.Repository.PrimaryLanguage = &graphQLRepositoryName{Name: "Go"}
+	portfolio, warnings, err := normalizeProfilePortfolio(
+		&graphQLProfileSearch{
+			IssueCount: 2,
+			PageInfo:   graphQLPageInfo{HasNextPage: true},
+			Nodes:      []*graphQLProfilePullRequest{node, node},
+		},
+		20,
+	)
+	if err != nil || len(warnings) != 0 || len(portfolio.Items) != 1 ||
+		!portfolio.HasMore {
+		t.Fatalf("portfolio = %+v, warnings = %+v, err = %v", portfolio, warnings, err)
+	}
+
+	unsafe := *node
+	unsafe.URL = "https://example.com/community/project/pull/42"
+	if _, _, err := normalizeProfilePortfolio(
+		&graphQLProfileSearch{IssueCount: 1, Nodes: []*graphQLProfilePullRequest{&unsafe}},
+		20,
+	); err == nil {
+		t.Fatal("unsafe portfolio URL was accepted")
+	}
+}
+
 func containsString(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {
@@ -627,6 +675,23 @@ const completeProfileAnalysisFixture = `{
 			}
 		},
 		"authoredPullRequests":{"issueCount":4},
+		"mergedPullRequests":{
+			"issueCount":2,
+			"pageInfo":{"hasNextPage":true},
+			"nodes":[{
+				"__typename":"PullRequest",
+				"number":42,
+				"title":"Add bounded retries",
+				"url":"https://github.com/community/project/pull/42",
+				"mergedAt":"2026-07-20T12:00:00Z",
+				"repository":{
+					"owner":{"login":"community"},
+					"name":"project",
+					"visibility":"PUBLIC",
+					"primaryLanguage":{"name":"Go"}
+				}
+			}]
+		},
 		"authoredIssues":{"issueCount":2},
 		"rateLimit":{
 			"limit":5000,

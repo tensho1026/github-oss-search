@@ -22,6 +22,7 @@ import { ContributionCalendar } from "./ContributionCalendar";
 
 type ProfileExtendedAnalyticsProps = {
   analysis: ProfileAnalysis;
+  showPortfolio?: boolean;
 };
 
 function enumLabel(value: string): string {
@@ -152,6 +153,7 @@ function RepositorySample({
 
 export function ProfileExtendedAnalytics({
   analysis,
+  showPortfolio = false,
 }: ProfileExtendedAnalyticsProps) {
   const contributions = analysis.contributions;
   const repositorySamples = [
@@ -163,6 +165,9 @@ export function ProfileExtendedAnalytics({
 
   return (
     <>
+      {showPortfolio ? (
+        <ContributionPortfolioPreview analysis={analysis} />
+      ) : null}
       <section aria-labelledby="contribution-activity-heading" className="mt-5">
         <div className="grid gap-5">
           <ContributionCalendar calendar={analysis.contributionCalendar} />
@@ -398,5 +403,103 @@ export function ProfileExtendedAnalytics({
         </Card>
       </section>
     </>
+  );
+}
+
+function ContributionPortfolioPreview({
+  analysis,
+}: {
+  analysis: ProfileAnalysis;
+}) {
+  const portfolio = analysis.contributionPortfolio;
+  return (
+    <section aria-labelledby="portfolio-heading" className="mt-5">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle id="portfolio-heading">
+                Private contribution portfolio preview
+              </CardTitle>
+              <CardDescription>
+                Bounded public merged-PR facts for your account. Nothing here is
+                published automatically.
+              </CardDescription>
+            </div>
+            <EvidenceBadge status={portfolio.status} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {portfolio.status === "unavailable" ? (
+            <p className="text-sm text-muted-foreground">
+              Public merged pull-request evidence is unavailable.
+            </p>
+          ) : (
+            <>
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ["Merged PRs", portfolio.totalMerged],
+                  ["Displayed", portfolio.displayedMerged],
+                  ["Repositories", portfolio.repositoryCount],
+                  ["Languages", portfolio.languages.length],
+                ].map(([label, value]) => (
+                  <div className="rounded-xl bg-muted p-3" key={label}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="mt-1 text-xl font-semibold">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <ul
+                className="mt-4 flex flex-wrap gap-2"
+                aria-label="Portfolio languages"
+              >
+                {portfolio.languages.map((language) => (
+                  <li key={language.name}>
+                    <Badge variant="accent">
+                      {language.name} {language.count}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+              <ul className="mt-4 grid gap-3">
+                {portfolio.contributions.map((item) => (
+                  <li
+                    className="rounded-xl border border-border bg-muted/30 p-4"
+                    key={`${item.repositoryOwner}/${item.repositoryName}#${item.number}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {item.repositoryOwner}/{item.repositoryName}#
+                          {item.number}
+                        </p>
+                        <p className="mt-1 font-semibold">{item.title}</p>
+                      </div>
+                      <Badge variant="success">Observed merged</Badge>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {item.summary}
+                    </p>
+                    <a
+                      className="mt-3 inline-flex rounded-md text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                      href={item.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      View canonical PR
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Analyzed {formatDate(portfolio.analyzedAt)}. Titles are observed
+                GitHub facts; summaries only restate repository, merge, and
+                title metadata.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }

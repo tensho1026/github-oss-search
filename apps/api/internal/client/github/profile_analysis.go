@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/issue"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/profile"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/repository"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/user"
@@ -28,6 +29,7 @@ const (
   $windowFrom: DateTime!
   $windowTo: DateTime!
   $pullRequestQuery: String!
+  $mergedPullRequestQuery: String!
   $issueQuery: String!
 ) {
   repositoryOwner(login: $login) {
@@ -143,6 +145,29 @@ const (
   ) {
     issueCount
   }
+  mergedPullRequests: search(
+    query: $mergedPullRequestQuery
+    type: ISSUE
+    first: $repositoryLimit
+  ) {
+    issueCount
+    pageInfo { hasNextPage }
+    nodes {
+      __typename
+      ... on PullRequest {
+        number
+        title
+        url
+        mergedAt
+        repository {
+          owner { login }
+          name
+          visibility
+          primaryLanguage { name }
+        }
+      }
+    }
+  }
   authoredIssues: search(query: $issueQuery, type: ISSUE, first: 1) {
     issueCount
   }
@@ -249,6 +274,11 @@ func (c *Client) GetProfileAnalysis(
 			windowFrom,
 			windowTo,
 		),
+		MergedPullRequestQuery: publicMergedPullRequestQuery(
+			username,
+			windowFrom,
+			windowTo,
+		),
 		IssueQuery: publicAuthoredQuery(
 			username,
 			false,
@@ -351,6 +381,14 @@ func publicAuthoredQuery(
 		"created:>=" + from.UTC().Format(searchTimestamp),
 		"created:<=" + to.UTC().Format(searchTimestamp),
 	}, " ")
+}
+
+func publicMergedPullRequestQuery(
+	username user.Username,
+	from time.Time,
+	to time.Time,
+) string {
+	return publicAuthoredQuery(username, true, from, to) + " is:merged"
 }
 
 func decodeGraphQLProfileAnalysis(
@@ -486,9 +524,11 @@ func normalizeGraphQLProfileAnalysis(
 
 	pullRequestSearch := payload.Data.AuthoredPullRequests
 	issueSearch := payload.Data.AuthoredIssues
+	mergedPullRequestSearch := payload.Data.MergedPullRequests
 	if payload.Data.Owner.TypeName == "Organization" {
 		pullRequestSearch = nil
 		issueSearch = nil
+		mergedPullRequestSearch = nil
 	}
 	contributions, contributionWarnings, err := normalizeProfileContributions(
 		payload.Data.Owner.Contributions,
@@ -502,6 +542,14 @@ func normalizeGraphQLProfileAnalysis(
 		return port.GitHubProfileAnalysisResult{}, err
 	}
 	warnings = append(warnings, contributionWarnings...)
+	portfolio, portfolioWarnings, err := normalizeProfilePortfolio(
+		mergedPullRequestSearch,
+		repositoryLimit,
+	)
+	if err != nil {
+		return port.GitHubProfileAnalysisResult{}, err
+	}
+	warnings = append(warnings, portfolioWarnings...)
 	if len(payload.Errors) > 0 {
 		warnings = append(warnings, profile.Warning{
 			Code:    "github_partial_response",
@@ -519,10 +567,83 @@ func normalizeGraphQLProfileAnalysis(
 			Starred:       starred,
 			Forked:        forked,
 			Contributions: contributions,
+			Portfolio:     portfolio,
 			Warnings:      warnings,
 		},
 		RateLimit: rateLimit,
 	}, nil
+}
+
+func normalizeProfilePortfolio(
+	search *graphQLProfileSearch,
+	limit int,
+) (profile.PortfolioSnapshot, []profile.Warning, error) {
+	if search == nil {
+		return profile.PortfolioSnapshot{}, []profile.Warning{{
+			Code:    "contribution_portfolio_unavailable",
+			Message: "Public merged pull-request evidence is unavailable",
+		}}, nil
+	}
+	if search.IssueCount < 0 || len(search.Nodes) > limit ||
+		search.IssueCount < len(search.Nodes) {
+		return profile.PortfolioSnapshot{}, nil, upstreamDecodeError(
+			"GitHub GraphQL contribution portfolio response",
+			errors.New("contains invalid pull-request result counts"),
+		)
+	}
+	items := make([]profile.PortfolioContribution, 0, len(search.Nodes))
+	seen := make(map[string]struct{}, len(search.Nodes))
+	for index, node := range search.Nodes {
+		if node == nil || node.TypeName != "PullRequest" || node.MergedAt == nil ||
+			node.Repository.Visibility != "PUBLIC" || len([]rune(node.Title)) > 256 {
+			return profile.PortfolioSnapshot{}, nil, upstreamDecodeError(
+				"GitHub GraphQL contribution portfolio response",
+				fmt.Errorf("contains invalid pull-request node %d", index),
+			)
+		}
+		reference, err := issue.NewReference(
+			node.Repository.Owner.Login,
+			node.Repository.Name,
+			node.Number,
+		)
+		expectedURL := fmt.Sprintf(
+			"https://github.com/%s/%s/pull/%d",
+			reference.Owner(),
+			reference.RepositoryName(),
+			reference.Number(),
+		)
+		if err != nil || node.URL != expectedURL {
+			return profile.PortfolioSnapshot{}, nil, upstreamDecodeError(
+				"GitHub GraphQL contribution portfolio response",
+				fmt.Errorf("contains unsafe pull-request reference %d", index),
+			)
+		}
+		key := reference.CacheKey()
+		if _, duplicate := seen[key]; duplicate {
+			continue
+		}
+		seen[key] = struct{}{}
+		language := ""
+		if node.Repository.PrimaryLanguage != nil {
+			language = strings.TrimSpace(node.Repository.PrimaryLanguage.Name)
+		}
+		items = append(items, profile.PortfolioContribution{
+			RepositoryOwner: reference.Owner(),
+			RepositoryName:  reference.RepositoryName(),
+			Number:          reference.Number(),
+			Title:           strings.TrimSpace(node.Title),
+			URL:             node.URL,
+			MergedAt:        node.MergedAt.UTC(),
+			Language:        language,
+		})
+	}
+	return profile.PortfolioSnapshot{
+		Available:   true,
+		TotalMerged: search.IssueCount,
+		Complete:    !search.PageInfo.HasNextPage && search.IssueCount == len(items),
+		HasMore:     search.PageInfo.HasNextPage || search.IssueCount > len(items),
+		Items:       items,
+	}, nil, nil
 }
 
 func normalizeProfileRepositoryConnection(
@@ -898,18 +1019,20 @@ type graphQLProfileAnalysisRequest struct {
 }
 
 type graphQLProfileAnalysisVariables struct {
-	Login            string    `json:"login"`
-	RepositoryLimit  int       `json:"repositoryLimit"`
-	WindowFrom       time.Time `json:"windowFrom"`
-	WindowTo         time.Time `json:"windowTo"`
-	PullRequestQuery string    `json:"pullRequestQuery"`
-	IssueQuery       string    `json:"issueQuery"`
+	Login                  string    `json:"login"`
+	RepositoryLimit        int       `json:"repositoryLimit"`
+	WindowFrom             time.Time `json:"windowFrom"`
+	WindowTo               time.Time `json:"windowTo"`
+	PullRequestQuery       string    `json:"pullRequestQuery"`
+	MergedPullRequestQuery string    `json:"mergedPullRequestQuery"`
+	IssueQuery             string    `json:"issueQuery"`
 }
 
 type graphQLProfileAnalysisEnvelope struct {
 	Data struct {
 		Owner                *graphQLProfileOwner  `json:"repositoryOwner"`
 		AuthoredPullRequests *graphQLProfileSearch `json:"authoredPullRequests"`
+		MergedPullRequests   *graphQLProfileSearch `json:"mergedPullRequests"`
 		AuthoredIssues       *graphQLProfileSearch `json:"authoredIssues"`
 		RateLimit            *graphQLRateLimit     `json:"rateLimit"`
 	} `json:"data"`
@@ -1011,7 +1134,23 @@ type graphQLProfileContributionGroup struct {
 }
 
 type graphQLProfileSearch struct {
-	IssueCount int `json:"issueCount"`
+	IssueCount int                          `json:"issueCount"`
+	PageInfo   graphQLPageInfo              `json:"pageInfo"`
+	Nodes      []*graphQLProfilePullRequest `json:"nodes"`
+}
+
+type graphQLProfilePullRequest struct {
+	TypeName   string     `json:"__typename"`
+	Number     int        `json:"number"`
+	Title      string     `json:"title"`
+	URL        string     `json:"url"`
+	MergedAt   *time.Time `json:"mergedAt"`
+	Repository struct {
+		Owner           graphQLActor           `json:"owner"`
+		Name            string                 `json:"name"`
+		Visibility      string                 `json:"visibility"`
+		PrimaryLanguage *graphQLRepositoryName `json:"primaryLanguage"`
+	} `json:"repository"`
 }
 
 func (node graphQLProfileRepository) toObservation(

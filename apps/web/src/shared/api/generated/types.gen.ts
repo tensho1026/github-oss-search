@@ -357,6 +357,7 @@ export type ProfileAnalysis = {
   recentTechnologies: Array<RecentTechnology>;
   contributions: ContributionAnalysis;
   contributionCalendar: ContributionCalendar;
+  contributionPortfolio: ContributionPortfolio;
   ossExperience: OssExperience;
   repositoryEvidence: ProfileRepositoryEvidence;
   proficiency: Array<TechnologyProficiency>;
@@ -373,6 +374,36 @@ export type ProfileAnalysis = {
  *
  */
 export type EvidenceStatus = "exact" | "sampled" | "unavailable";
+
+export type PortfolioLanguageCount = {
+  name: string;
+  count: number;
+};
+
+export type PortfolioContribution = {
+  repositoryOwner: string;
+  repositoryName: string;
+  number: number;
+  title: string;
+  url: string;
+  mergedAt: string;
+  language?: string;
+  /**
+   * Conservative text assembled only from normalized facts.
+   */
+  summary: string;
+};
+
+export type ContributionPortfolio = {
+  status: EvidenceStatus;
+  totalMerged: number;
+  displayedMerged: number;
+  repositoryCount: number;
+  hasMore: boolean;
+  analyzedAt: string;
+  languages: Array<PortfolioLanguageCount>;
+  contributions: Array<PortfolioContribution>;
+};
 
 export type EvidenceConfidence = "high" | "medium" | "low" | "unavailable";
 

@@ -115,7 +115,46 @@ type ProfileSnapshot struct {
 	Starred       RepositoryCollection
 	Forked        RepositoryCollection
 	Contributions ContributionSnapshot
+	Portfolio     PortfolioSnapshot
 	Warnings      []Warning
+}
+
+// PortfolioContribution is one normalized public merged pull request.
+type PortfolioContribution struct {
+	RepositoryOwner string
+	RepositoryName  string
+	Number          int
+	Title           string
+	URL             string
+	MergedAt        time.Time
+	Language        string
+}
+
+// PortfolioSnapshot is the bounded upstream evidence for an OSS portfolio.
+type PortfolioSnapshot struct {
+	Available   bool
+	TotalMerged int
+	Complete    bool
+	HasMore     bool
+	Items       []PortfolioContribution
+}
+
+// PortfolioLanguageCount groups displayed merged pull requests by language.
+type PortfolioLanguageCount struct {
+	Name  string
+	Count int
+}
+
+// ContributionPortfolio is the reproducible bounded portfolio analysis.
+type ContributionPortfolio struct {
+	Status          EvidenceStatus
+	TotalMerged     int
+	DisplayedMerged int
+	RepositoryCount int
+	HasMore         bool
+	AnalyzedAt      time.Time
+	Languages       []PortfolioLanguageCount
+	Contributions   []PortfolioContribution
 }
 
 // ContributionSnapshot records public contribution counts before domain
@@ -246,6 +285,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	frameworks := sortedFrameworkNames(frameworkEvidence)
 	recent := analyzeRecentTechnologies(snapshot, window.From)
 	contributions := analyzeContributions(snapshot.Contributions)
+	portfolio := analyzePortfolio(snapshot.Portfolio, window.To)
 	repositoryEvidence := RepositoryEvidence{
 		Owned:       analyzeRepositoryCollection(snapshot.Owned, window.From),
 		Contributed: analyzeRepositoryCollection(snapshot.Contributed, window.From),
@@ -263,6 +303,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		ContributionCalendar: cloneContributionCalendar(
 			snapshot.Contributions.Calendar,
 		),
+		Portfolio:          portfolio,
 		OSSExperience:      analyzeOSSExperience(contributions),
 		RepositoryEvidence: repositoryEvidence,
 		Proficiency: buildTechnologyProficiency(
@@ -290,6 +331,64 @@ func cloneContributionCalendar(
 		calendar.Status = EvidenceUnavailable
 	}
 	return calendar
+}
+
+func analyzePortfolio(
+	snapshot PortfolioSnapshot,
+	analyzedAt time.Time,
+) ContributionPortfolio {
+	if !snapshot.Available {
+		return ContributionPortfolio{
+			Status:        EvidenceUnavailable,
+			Languages:     []PortfolioLanguageCount{},
+			Contributions: []PortfolioContribution{},
+			AnalyzedAt:    analyzedAt,
+		}
+	}
+	items := slices.Clone(snapshot.Items)
+	slices.SortFunc(items, func(left, right PortfolioContribution) int {
+		if comparison := right.MergedAt.Compare(left.MergedAt); comparison != 0 {
+			return comparison
+		}
+		leftKey := strings.ToLower(left.RepositoryOwner + "/" + left.RepositoryName)
+		rightKey := strings.ToLower(right.RepositoryOwner + "/" + right.RepositoryName)
+		if comparison := strings.Compare(leftKey, rightKey); comparison != 0 {
+			return comparison
+		}
+		return right.Number - left.Number
+	})
+	repositories := make(map[string]struct{})
+	languages := make(map[string]int)
+	for _, item := range items {
+		repositories[strings.ToLower(item.RepositoryOwner+"/"+item.RepositoryName)] = struct{}{}
+		if item.Language != "" {
+			languages[item.Language]++
+		}
+	}
+	languageCounts := make([]PortfolioLanguageCount, 0, len(languages))
+	for name, count := range languages {
+		languageCounts = append(languageCounts, PortfolioLanguageCount{Name: name, Count: count})
+	}
+	slices.SortFunc(languageCounts, func(left, right PortfolioLanguageCount) int {
+		if left.Count != right.Count {
+			return right.Count - left.Count
+		}
+		return strings.Compare(left.Name, right.Name)
+	})
+	status := EvidenceSampled
+	if snapshot.Complete && !snapshot.HasMore {
+		status = EvidenceExact
+	}
+	return ContributionPortfolio{
+		Status:          status,
+		TotalMerged:     max(snapshot.TotalMerged, len(items)),
+		DisplayedMerged: len(items),
+		RepositoryCount: len(repositories),
+		HasMore:         snapshot.HasMore,
+		AnalyzedAt:      analyzedAt,
+		Languages:       languageCounts,
+		Contributions:   items,
+	}
 }
 
 func normalizeWindow(from, to time.Time) AnalysisWindow {
