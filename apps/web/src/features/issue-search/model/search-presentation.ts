@@ -36,10 +36,12 @@ export function scorePresentation(score: number): {
 
 export function skillPresentation(
   status: SkillMatchItem["status"],
-): "neutral" | "success" | "warning" {
+): "info" | "neutral" | "success" | "warning" {
   switch (status) {
     case "matched":
       return "success";
+    case "partial":
+      return "info";
     case "unmatched":
       return "warning";
     case "unknown":

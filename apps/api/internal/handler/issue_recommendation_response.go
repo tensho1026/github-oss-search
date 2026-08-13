@@ -44,16 +44,22 @@ type scoreComponentResponse struct {
 }
 
 type skillMatchResponse struct {
-	Percentage  int                      `json:"percentage"`
-	Matched     int                      `json:"matched"`
-	Denominator int                      `json:"denominator"`
-	Skills      []skillMatchItemResponse `json:"skills"`
+	Percentage   int                             `json:"percentage"`
+	Matched      int                             `json:"matched"`
+	Partial      int                             `json:"partial"`
+	Denominator  int                             `json:"denominator"`
+	Status       issue.ContributionProfileStatus `json:"status"`
+	Personalized bool                            `json:"personalized"`
+	Version      string                          `json:"version"`
+	Skills       []skillMatchItemResponse        `json:"skills"`
 }
 
 type skillMatchItemResponse struct {
-	Technology string             `json:"technology"`
-	Status     issue.MatchStatus  `json:"status"`
-	Evidence   []evidenceResponse `json:"evidence"`
+	Technology          string             `json:"technology"`
+	Status              issue.MatchStatus  `json:"status"`
+	Confidence          issue.Confidence   `json:"confidence"`
+	RequirementEvidence []evidenceResponse `json:"requirementEvidence"`
+	ContributorEvidence []evidenceResponse `json:"contributorEvidence"`
 }
 
 type recommendationWarningResponse struct {
@@ -223,9 +229,11 @@ func newRecommendationResponse(
 	)
 	for _, skill := range recommendation.SkillMatch.Skills {
 		skills = append(skills, skillMatchItemResponse{
-			Technology: skill.Technology,
-			Status:     skill.Status,
-			Evidence:   newEvidenceResponses(skill.Evidence),
+			Technology:          skill.Technology,
+			Status:              skill.Status,
+			Confidence:          skill.Confidence,
+			RequirementEvidence: newEvidenceResponses(skill.RequirementEvidence),
+			ContributorEvidence: newEvidenceResponses(skill.ContributorEvidence),
 		})
 	}
 	warnings := make(
@@ -245,10 +253,14 @@ func newRecommendationResponse(
 		Score:     recommendation.Score,
 		Breakdown: breakdown,
 		SkillMatch: skillMatchResponse{
-			Percentage:  recommendation.SkillMatch.Percentage,
-			Matched:     recommendation.SkillMatch.Matched,
-			Denominator: recommendation.SkillMatch.Denominator,
-			Skills:      skills,
+			Percentage:   recommendation.SkillMatch.Percentage,
+			Matched:      recommendation.SkillMatch.Matched,
+			Partial:      recommendation.SkillMatch.Partial,
+			Denominator:  recommendation.SkillMatch.Denominator,
+			Status:       recommendation.SkillMatch.Status,
+			Personalized: recommendation.SkillMatch.Personalized,
+			Version:      recommendation.SkillMatch.Version,
+			Skills:       skills,
 		},
 		MaintainerResponse: maintainerResponseAssessmentResponse{
 			Status:     recommendation.MaintainerResponse.Status,

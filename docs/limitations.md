@@ -13,6 +13,8 @@ creating unbounded GitHub work.
   coordinated elsewhere.
 - Maintainer response, review, merge, activity, CI, and contribution metrics
   are bounded samples with explicit status and confidence.
+- Contribution Match reflects bounded public GitHub evidence, not the user's
+  complete ability, private work, employment suitability, or future success.
 - Technology inference supports a documented manifest/keyword rule set. It
   does not compile code, clone repositories, execute dependency resolvers, or
   infer arbitrary frameworks.

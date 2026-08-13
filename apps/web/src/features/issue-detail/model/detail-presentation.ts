@@ -46,7 +46,7 @@ const scoreLabels: Record<ScoreComponent["name"], string> = {
   issue_quality: "Issue quality",
   maintainer_responsiveness: "Maintainer response",
   repository_quality: "Repository readiness",
-  skill_match: "Skill match",
+  skill_match: "Contribution match",
 };
 
 const scopeAreaLabels: Record<ChangeScope["areas"][number], string> = {

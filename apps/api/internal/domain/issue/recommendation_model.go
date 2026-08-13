@@ -5,6 +5,9 @@ import "time"
 // Recommendation score limits define the fixed 100-point model invariant.
 const (
 	MaximumRecommendationScore = 100
+	// ContributionMatchScoreVersion changes only when the public-profile
+	// evidence model or percentage calculation changes incompatibly.
+	ContributionMatchScoreVersion = "v1"
 
 	SkillScoreMaximum        = 30
 	IssueQualityScoreMaximum = 20
@@ -22,24 +25,65 @@ type MatchStatus string
 // MatchStatus values preserve unavailable evidence separately from mismatch.
 const (
 	MatchMatched   MatchStatus = "matched"
+	MatchPartial   MatchStatus = "partial"
 	MatchUnmatched MatchStatus = "unmatched"
 	MatchUnknown   MatchStatus = "unknown"
 )
 
+// ContributionProfileStatus distinguishes usable public evidence from a
+// bounded sample and from a profile that could not support a comparison.
+type ContributionProfileStatus string
+
+const (
+	// ContributionProfileAvailable means the bounded profile supports a
+	// complete comparison within its documented analysis window.
+	ContributionProfileAvailable ContributionProfileStatus = "available"
+	// ContributionProfilePartial means usable skills were observed while one
+	// or more profile collections were sampled or incomplete.
+	ContributionProfilePartial ContributionProfileStatus = "partial"
+	// ContributionProfileUnavailable means no usable public technology
+	// evidence was available; clients must not present a zero-skill claim.
+	ContributionProfileUnavailable ContributionProfileStatus = "unavailable"
+)
+
+// ContributorSkill is one normalized public-profile technology observation.
+// Strength is the deterministic profile proficiency level in the range 1-5.
+type ContributorSkill struct {
+	Name       string
+	Strength   int
+	Confidence Confidence
+	Evidence   []Evidence
+}
+
+// ContributorProfile carries only bounded, normalized public evidence into
+// issue recommendation. It deliberately excludes GitHub transport payloads.
+type ContributorProfile struct {
+	Status       ContributionProfileStatus
+	Skills       []ContributorSkill
+	Personalized bool
+	Version      string
+}
+
 // SkillMatch is one explainable technology comparison.
 type SkillMatch struct {
-	Technology string
-	Status     MatchStatus
-	Evidence   []Evidence
+	Technology          string
+	Status              MatchStatus
+	Confidence          Confidence
+	RequirementEvidence []Evidence
+	ContributorEvidence []Evidence
 }
 
 // SkillMatchAssessment exposes the exact denominator used to calculate the
 // percentage so unavailable evidence cannot appear as a mismatch.
 type SkillMatchAssessment struct {
-	Percentage  int
-	Matched     int
-	Denominator int
-	Skills      []SkillMatch
+	Percentage   int
+	Matched      int
+	Partial      int
+	Denominator  int
+	Status       ContributionProfileStatus
+	Personalized bool
+	Version      string
+	Skills       []SkillMatch
 }
 
 // RepositorySignalKey identifies one independently observed contribution
@@ -245,14 +289,15 @@ type ScoreBreakdown struct {
 
 // RecommendationInput is the complete transport-independent scoring input.
 type RecommendationInput struct {
-	Candidate         Candidate
-	Analysis          Analysis
-	DesiredSkills     []string
-	RepositorySignals []RepositorySignal
-	Activity          ActivityMetrics
-	Claim             ClaimEvidence
-	History           IssueHistory
-	Now               time.Time
+	Candidate          Candidate
+	Analysis           Analysis
+	DesiredSkills      []string
+	ContributorProfile ContributorProfile
+	RepositorySignals  []RepositorySignal
+	Activity           ActivityMetrics
+	Claim              ClaimEvidence
+	History            IssueHistory
+	Now                time.Time
 }
 
 // Recommendation is the deterministic ranked result shared by list and

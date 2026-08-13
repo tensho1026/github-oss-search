@@ -1501,6 +1501,10 @@ components:
       summary: Valid search with no eligible issues
       value:
         data:
+          contributionProfile:
+            cacheHit: false
+            status: unavailable
+            version: v1
           items: []
           pagination:
             hasNext: false
@@ -1975,8 +1979,12 @@ components:
             skillMatch:
               denominator: 0
               matched: 0
+              partial: 0
               percentage: 0
+              personalized: false
               skills: []
+              status: unavailable
+              version: v1
             stale:
               analyzedAt: 2026-07-30T00:00:00Z
               confidence: high
@@ -4100,11 +4108,14 @@ components:
       type: object
       additionalProperties: false
       required:
+        - contributionProfile
         - items
         - pagination
         - searchSummary
         - warnings
       properties:
+        contributionProfile:
+          $ref: "#/components/schemas/ContributionProfileSummary"
         items:
           type: array
           maxItems: 50
@@ -4116,9 +4127,30 @@ components:
           $ref: "#/components/schemas/SearchSummary"
         warnings:
           type: array
-          maxItems: 2
+          maxItems: 3
           items:
             $ref: "#/components/schemas/SearchWarning"
+    ContributionProfileSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - cacheHit
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          enum:
+            - available
+            - partial
+            - unavailable
+          description: Completeness of bounded public profile evidence used for matching.
+        cacheHit:
+          type: boolean
+        version:
+          type: string
+          enum:
+            - v1
     IssueSearchItem:
       type: object
       additionalProperties: false
@@ -4390,6 +4422,7 @@ components:
           enum:
             - github_search_incomplete
             - issue_enrichment_incomplete
+            - contribution_profile_incomplete
         message:
           type: string
           minLength: 1
@@ -4596,8 +4629,12 @@ components:
       required:
         - denominator
         - matched
+        - partial
         - percentage
+        - personalized
         - skills
+        - status
+        - version
       properties:
         percentage:
           type: integer
@@ -4606,9 +4643,24 @@ components:
         matched:
           type: integer
           minimum: 0
+        partial:
+          type: integer
+          minimum: 0
         denominator:
           type: integer
           minimum: 0
+        status:
+          type: string
+          enum:
+            - available
+            - partial
+            - unavailable
+        personalized:
+          type: boolean
+        version:
+          type: string
+          enum:
+            - v1
         skills:
           type: array
           maxItems: 100
@@ -4618,7 +4670,9 @@ components:
       type: object
       additionalProperties: false
       required:
-        - evidence
+        - confidence
+        - contributorEvidence
+        - requirementEvidence
         - status
         - technology
       properties:
@@ -4629,9 +4683,17 @@ components:
           type: string
           enum:
             - matched
+            - partial
             - unmatched
             - unknown
-        evidence:
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        requirementEvidence:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/Evidence"
+        contributorEvidence:
           type: array
           maxItems: 20
           items:

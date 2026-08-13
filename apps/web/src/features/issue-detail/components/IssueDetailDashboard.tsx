@@ -532,9 +532,14 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
 
           <Section title="Why IssueScout recommends it">
             <p className="text-xl font-semibold">
-              Skill match: {data.recommendation.skillMatch.matched}/
+              Contribution match: {data.recommendation.skillMatch.matched}/
               {data.recommendation.skillMatch.denominator} ·{" "}
               {formatPercentage(data.recommendation.skillMatch.percentage)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {data.recommendation.skillMatch.partial} partial ·{" "}
+              {data.recommendation.skillMatch.status} evidence · model{" "}
+              {data.recommendation.skillMatch.version}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {data.recommendation.skillMatch.skills.length > 0

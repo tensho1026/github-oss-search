@@ -167,10 +167,17 @@ func parseSingleQueryInteger(values []string, fallback int) (int, error) {
 }
 
 type issueSearchResponse struct {
-	Items         []issueSearchItemResponse `json:"items"`
-	Pagination    paginationResponse        `json:"pagination"`
-	SearchSummary searchSummaryResponse     `json:"searchSummary"`
-	Warnings      []searchWarningResponse   `json:"warnings"`
+	Items               []issueSearchItemResponse   `json:"items"`
+	Pagination          paginationResponse          `json:"pagination"`
+	SearchSummary       searchSummaryResponse       `json:"searchSummary"`
+	ContributionProfile contributionProfileResponse `json:"contributionProfile"`
+	Warnings            []searchWarningResponse     `json:"warnings"`
+}
+
+type contributionProfileResponse struct {
+	Status   issue.ContributionProfileStatus `json:"status"`
+	CacheHit bool                            `json:"cacheHit"`
+	Version  string                          `json:"version"`
 }
 
 type issueSearchItemResponse struct {
@@ -307,7 +314,7 @@ func newIssueSearchResponse(
 		})
 	}
 
-	warnings := make([]searchWarningResponse, 0, 2)
+	warnings := make([]searchWarningResponse, 0, 3)
 	if output.GitHubIncomplete {
 		warnings = append(warnings, searchWarningResponse{
 			Code:    "github_search_incomplete",
@@ -319,6 +326,12 @@ func newIssueSearchResponse(
 			Code: "issue_enrichment_incomplete",
 			Message: "One or more bounded issue detail inspections were " +
 				"unavailable or incomplete",
+		})
+	}
+	if output.ContributionProfileIncomplete {
+		warnings = append(warnings, searchWarningResponse{
+			Code:    "contribution_profile_incomplete",
+			Message: "Contribution Match uses partial or unavailable public profile evidence",
 		})
 	}
 
@@ -337,6 +350,11 @@ func newIssueSearchResponse(
 			EnrichmentAttempted: output.EnrichmentAttempted,
 			EnrichmentFailed:    output.EnrichmentFailed,
 			ExcludedByReason:    exclusions,
+		},
+		ContributionProfile: contributionProfileResponse{
+			Status:   output.ContributionProfileStatus,
+			CacheHit: output.ContributionProfileCacheHit,
+			Version:  issue.ContributionMatchScoreVersion,
 		},
 		Warnings: warnings,
 	}

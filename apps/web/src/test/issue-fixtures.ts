@@ -11,6 +11,11 @@ const evidence = {
 
 export const issueSearchFixture: IssueSearchEnvelope = {
   data: {
+    contributionProfile: {
+      cacheHit: false,
+      status: "partial",
+      version: "v1",
+    },
     items: [
       {
         difficulty: {
@@ -136,19 +141,27 @@ export const issueSearchFixture: IssueSearchEnvelope = {
           skillMatch: {
             denominator: 2,
             matched: 1,
+            partial: 0,
             percentage: 50,
+            personalized: true,
             skills: [
               {
-                evidence: [evidence],
+                confidence: "high",
+                contributorEvidence: [evidence],
+                requirementEvidence: [],
                 status: "matched",
                 technology: "TypeScript",
               },
               {
-                evidence: [],
+                confidence: "low",
+                contributorEvidence: [],
+                requirementEvidence: [],
                 status: "unknown",
                 technology: "Accessibility",
               },
             ],
+            status: "partial",
+            version: "v1",
           },
           stale: {
             analyzedAt: "2026-07-30T00:00:00Z",

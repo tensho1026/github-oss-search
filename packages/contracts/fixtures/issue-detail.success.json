@@ -471,8 +471,12 @@
       "skillMatch": {
         "denominator": 0,
         "matched": 0,
+        "partial": 0,
         "percentage": 0,
-        "skills": []
+        "personalized": false,
+        "skills": [],
+        "status": "unavailable",
+        "version": "v1"
       },
       "stale": {
         "analyzedAt": "2026-07-30T00:00:00Z",
