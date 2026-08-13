@@ -74,6 +74,7 @@ type githubProfileAnalysisResponse struct {
 	Portfolio            contributionPortfolioResponse   `json:"contributionPortfolio"`
 	Journey              ossJourneyResponse              `json:"ossJourney"`
 	Streak               contributionStreakResponse      `json:"contributionStreak"`
+	Quest                ossQuestResponse                `json:"ossQuest"`
 	OSSExperience        ossExperienceResponse           `json:"ossExperience"`
 	RepositoryEvidence   repositoryEvidenceResponse      `json:"repositoryEvidence"`
 	Proficiency          []technologyProficiencyResponse `json:"proficiency"`
@@ -199,6 +200,27 @@ type streakWeekResponse struct {
 	EvidenceURLs []string `json:"evidenceUrls"`
 }
 
+type ossQuestResponse struct {
+	CatalogVersion string                  `json:"catalogVersion"`
+	EvaluatedAt    string                  `json:"evaluatedAt"`
+	Completed      int                     `json:"completed"`
+	Total          int                     `json:"total"`
+	NextQuestID    string                  `json:"nextQuestId,omitempty"`
+	Items          []questProgressResponse `json:"items"`
+}
+
+type questProgressResponse struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Status      string  `json:"status"`
+	Current     int     `json:"current"`
+	Target      int     `json:"target"`
+	CompletedAt *string `json:"completedAt"`
+	EvidenceURL string  `json:"evidenceUrl,omitempty"`
+	NextAction  string  `json:"nextAction"`
+}
+
 type technologyEvidenceResponse struct {
 	Kind   string `json:"kind"`
 	Value  int    `json:"value"`
@@ -276,6 +298,7 @@ func newGitHubProfileAnalysisResponse(
 		Portfolio:     newContributionPortfolioResponse(analysis.Portfolio),
 		Journey:       newOSSJourneyResponse(analysis.Journey),
 		Streak:        newContributionStreakResponse(analysis.Streak),
+		Quest:         newOSSQuestResponse(analysis.Quest),
 		OSSExperience: newOSSExperienceResponse(analysis.OSSExperience),
 		RepositoryEvidence: newRepositoryEvidenceResponse(
 			analysis.RepositoryEvidence,
@@ -326,6 +349,29 @@ func newContributionCalendarResponse(
 		response.To = calendar.To.Format(time.DateOnly)
 	}
 	return response
+}
+
+func newOSSQuestResponse(quest profile.OSSQuest) ossQuestResponse {
+	items := make([]questProgressResponse, 0, len(quest.Items))
+	for _, item := range quest.Items {
+		var completedAt *string
+		if item.CompletedAt != nil {
+			value := item.CompletedAt.Format(time.RFC3339)
+			completedAt = &value
+		}
+		items = append(items, questProgressResponse{
+			ID: item.ID, Title: item.Title, Description: item.Description,
+			Status: item.Status, Current: item.Current, Target: item.Target,
+			CompletedAt: completedAt, EvidenceURL: item.EvidenceURL,
+			NextAction: item.NextAction,
+		})
+	}
+	return ossQuestResponse{
+		CatalogVersion: quest.CatalogVersion,
+		EvaluatedAt:    quest.EvaluatedAt.Format(time.RFC3339),
+		Completed:      quest.Completed, Total: quest.Total,
+		NextQuestID: quest.NextQuestID, Items: items,
+	}
 }
 
 func newContributionStreakResponse(

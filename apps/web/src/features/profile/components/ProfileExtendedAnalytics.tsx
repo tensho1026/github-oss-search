@@ -1,5 +1,3 @@
-import { Activity, GitPullRequest, Radar, Star } from "lucide-react";
-
 import { Badge } from "../../../components/ui/badge";
 import {
   Card,
@@ -8,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
-import { Icon } from "../../../components/ui/icon";
 import type {
   EvidenceConfidence,
   EvidenceCount,
@@ -26,10 +23,7 @@ type ProfileExtendedAnalyticsProps = {
 };
 
 function enumLabel(value: string): string {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
 }
 
 function EvidenceBadge({ status }: { status: EvidenceStatus }) {
@@ -54,19 +48,14 @@ function ConfidenceBadge({ confidence }: { confidence: EvidenceConfidence }) {
 
 function EvidenceMetric({
   count,
-  icon,
   label,
 }: {
   count: EvidenceCount;
-  icon: typeof Activity;
   label: string;
 }) {
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <span className="grid size-9 place-items-center rounded-lg bg-surface text-accent">
-          <Icon icon={icon} />
-        </span>
+      <div className="flex justify-end">
         <EvidenceBadge status={count.status} />
       </div>
       <p className="mt-4 text-2xl font-semibold tracking-[-0.04em]">
@@ -170,6 +159,7 @@ export function ProfileExtendedAnalytics({
       ) : null}
       <OSSJourneyTimeline analysis={analysis} />
       <ContributionStreakCard analysis={analysis} />
+      <OSSQuestCard analysis={analysis} />
       <section aria-labelledby="contribution-activity-heading" className="mt-5">
         <div className="grid gap-5">
           <ContributionCalendar calendar={analysis.contributionCalendar} />
@@ -194,27 +184,22 @@ export function ProfileExtendedAnalytics({
             <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <EvidenceMetric
                 count={contributions.commits}
-                icon={Activity}
                 label="Observed commits"
               />
               <EvidenceMetric
                 count={contributions.pullRequestsOpened}
-                icon={GitPullRequest}
                 label="Pull requests opened"
               />
               <EvidenceMetric
                 count={contributions.pullRequestReviews}
-                icon={Activity}
                 label="Observed PR reviews"
               />
               <EvidenceMetric
                 count={contributions.issuesOpened}
-                icon={Activity}
                 label="Issues opened"
               />
               <EvidenceMetric
                 count={contributions.repositoriesTouched}
-                icon={Activity}
                 label="Repositories touched"
               />
             </CardContent>
@@ -228,9 +213,6 @@ export function ProfileExtendedAnalytics({
       >
         <Card>
           <CardHeader>
-            <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
-              <Icon icon={Radar} />
-            </span>
             <CardTitle className="mt-2">OSS experience signal</CardTitle>
             <CardDescription>
               Rule-based server summary of public contribution evidence, not a
@@ -396,8 +378,7 @@ export function ProfileExtendedAnalytics({
                 <RepositorySample key={label} label={label} sample={sample} />
               ))}
             </ul>
-            <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <Icon icon={Star} />
+            <p className="mt-4 text-xs text-muted-foreground">
               Starred totals can be privacy-ambiguous for the API viewer and may
               intentionally omit a total.
             </p>
@@ -405,6 +386,39 @@ export function ProfileExtendedAnalytics({
         </Card>
       </section>
     </>
+  );
+}
+
+function OSSQuestCard({ analysis }: { analysis: ProfileAnalysis }) {
+  const quest = analysis.ossQuest;
+  const next = quest.items.find((item) => item.id === quest.nextQuestId);
+  return (
+    <section aria-labelledby="oss-quest-heading" className="mt-5">
+      <Card>
+        <CardHeader>
+          <CardTitle id="oss-quest-heading">OSS Quest</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="grid gap-2">
+            {quest.items.map((item) => (
+              <li key={item.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold">{item.title}</span>
+                  <Badge
+                    variant={
+                      item.status === "completed" ? "success" : "neutral"
+                    }
+                  >
+                    {enumLabel(item.status)} {item.current}/{item.target}
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ol>
+          {next ? <p className="mt-3">{next.nextAction}</p> : null}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 

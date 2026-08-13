@@ -132,6 +132,65 @@
       ],
       "status": "sampled"
     },
+    "ossQuest": {
+      "catalogVersion": "2026-08-01",
+      "completed": 2,
+      "evaluatedAt": "2026-07-30T00:00:00Z",
+      "items": [
+        {
+          "completedAt": null,
+          "current": 0,
+          "description": "Join a public issue discussion.",
+          "id": "first_issue_comment",
+          "nextAction": "Comment on an issue after confirming you can help.",
+          "status": "unavailable",
+          "target": 1,
+          "title": "Comment on your first issue"
+        },
+        {
+          "completedAt": null,
+          "current": 1,
+          "description": "Create a public OSS pull request.",
+          "id": "first_pr",
+          "nextAction": "Find a matching issue and open a focused PR.",
+          "status": "completed",
+          "target": 1,
+          "title": "Open your first pull request"
+        },
+        {
+          "completedAt": null,
+          "current": 1,
+          "description": "Review a public OSS pull request.",
+          "id": "first_review",
+          "nextAction": "Review an open PR and leave actionable feedback.",
+          "status": "completed",
+          "target": 1,
+          "title": "Complete your first review"
+        },
+        {
+          "completedAt": null,
+          "current": 0,
+          "description": "Have a public OSS pull request merged.",
+          "id": "first_merge",
+          "nextAction": "Respond to review feedback on an open pull request.",
+          "status": "in_progress",
+          "target": 1,
+          "title": "Get your first PR merged"
+        },
+        {
+          "completedAt": null,
+          "current": 1,
+          "description": "Build verified merged contributions across three public projects.",
+          "id": "three_repositories",
+          "nextAction": "Find a suitable issue in a new repository.",
+          "status": "locked",
+          "target": 3,
+          "title": "Contribute to 3 repositories"
+        }
+      ],
+      "nextQuestId": "first_merge",
+      "total": 5
+    },
     "frameworks": ["React"],
     "languages": [
       {

@@ -200,6 +200,30 @@ type ContributionStreak struct {
 	Weeks           []StreakWeek
 }
 
+// QuestProgress is one item in the versioned beginner OSS quest catalog.
+type QuestProgress struct {
+	ID          string
+	Title       string
+	Description string
+	Status      string
+	Current     int
+	Target      int
+	CompletedAt *time.Time
+	EvidenceURL string
+	NextAction  string
+}
+
+// OSSQuest is a deterministic, read-only quest evaluation. It never sends
+// notifications or writes progress independently of canonical evidence.
+type OSSQuest struct {
+	CatalogVersion string
+	EvaluatedAt    time.Time
+	Completed      int
+	Total          int
+	NextQuestID    string
+	Items          []QuestProgress
+}
+
 // ContributionSnapshot records public contribution counts before domain
 // normalization.
 type ContributionSnapshot struct {
@@ -331,6 +355,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	portfolio := analyzePortfolio(snapshot.Portfolio, window.To)
 	journey := analyzeJourney(portfolio)
 	streak := analyzeContributionStreak(portfolio)
+	quest := analyzeOSSQuest(contributions, portfolio, window.To)
 	repositoryEvidence := RepositoryEvidence{
 		Owned:       analyzeRepositoryCollection(snapshot.Owned, window.From),
 		Contributed: analyzeRepositoryCollection(snapshot.Contributed, window.From),
@@ -351,6 +376,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		Portfolio:          portfolio,
 		Journey:            journey,
 		Streak:             streak,
+		Quest:              quest,
 		OSSExperience:      analyzeOSSExperience(contributions),
 		RepositoryEvidence: repositoryEvidence,
 		Proficiency: buildTechnologyProficiency(
@@ -378,6 +404,97 @@ func cloneContributionCalendar(
 		calendar.Status = EvidenceUnavailable
 	}
 	return calendar
+}
+
+func analyzeOSSQuest(
+	contributions ContributionAnalysis,
+	portfolio ContributionPortfolio,
+	evaluatedAt time.Time,
+) OSSQuest {
+	firstPR := questFromCount(
+		"first_pr", "Open your first pull request", "Create a public OSS pull request.",
+		contributions.PullRequestsOpened, "Find a matching issue and open a focused PR.",
+	)
+	firstReview := questFromCount(
+		"first_review", "Complete your first review", "Review a public OSS pull request.",
+		contributions.PullRequestReviews, "Review an open PR and leave actionable feedback.",
+	)
+	firstMerged := QuestProgress{
+		ID: "first_merge", Title: "Get your first PR merged",
+		Description: "Have a public OSS pull request merged.", Target: 1,
+		NextAction: "Respond to review feedback on an open pull request.",
+	}
+	threeRepositories := QuestProgress{
+		ID: "three_repositories", Title: "Contribute to 3 repositories",
+		Description: "Build verified merged contributions across three public projects.",
+		Target:      3, NextAction: "Find a suitable issue in a new repository.",
+	}
+	if portfolio.Status == EvidenceUnavailable {
+		firstMerged.Status = "unavailable"
+		threeRepositories.Status = "unavailable"
+	} else {
+		firstMerged.Current = min(1, portfolio.DisplayedMerged)
+		threeRepositories.Current = min(3, portfolio.RepositoryCount)
+		firstMerged.Status = "in_progress"
+		threeRepositories.Status = "locked"
+		if len(portfolio.Contributions) > 0 {
+			earliest := portfolio.Contributions[len(portfolio.Contributions)-1]
+			completedAt := earliest.MergedAt
+			firstMerged.Status = "completed"
+			firstMerged.CompletedAt = &completedAt
+			firstMerged.EvidenceURL = earliest.URL
+		}
+		if portfolio.RepositoryCount >= 3 {
+			threeRepositories.Status = "completed"
+			completedAt := portfolio.AnalyzedAt
+			threeRepositories.CompletedAt = &completedAt
+		} else if firstMerged.Status == "completed" {
+			threeRepositories.Status = "in_progress"
+		}
+	}
+	items := []QuestProgress{
+		{
+			ID: "first_issue_comment", Title: "Comment on your first issue",
+			Description: "Join a public issue discussion.", Status: "unavailable",
+			Target: 1, NextAction: "Comment on an issue after confirming you can help.",
+		},
+		firstPR, firstReview, firstMerged, threeRepositories,
+	}
+	if firstPR.Status != "completed" && firstReview.Status != "completed" {
+		firstReview.Status = "locked"
+	}
+	completed := 0
+	nextQuestID := ""
+	for _, item := range items {
+		if item.Status == "completed" {
+			completed++
+		} else if nextQuestID == "" && item.Status != "unavailable" && item.Status != "locked" {
+			nextQuestID = item.ID
+		}
+	}
+	return OSSQuest{
+		CatalogVersion: "2026-08-01", EvaluatedAt: evaluatedAt,
+		Completed: completed, Total: len(items), NextQuestID: nextQuestID, Items: items,
+	}
+}
+
+func questFromCount(
+	id, title, description string,
+	metric CountMetric,
+	nextAction string,
+) QuestProgress {
+	item := QuestProgress{
+		ID: id, Title: title, Description: description,
+		Current: min(1, metric.Value), Target: 1, NextAction: nextAction,
+	}
+	if metric.Status == EvidenceUnavailable {
+		item.Status = "unavailable"
+	} else if metric.Value > 0 {
+		item.Status = "completed"
+	} else {
+		item.Status = "in_progress"
+	}
+	return item
 }
 
 func analyzeContributionStreak(portfolio ContributionPortfolio) ContributionStreak {

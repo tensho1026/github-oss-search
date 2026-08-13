@@ -212,6 +212,18 @@ Streak status inherits the portfolio evidence status, so a truncated GitHub
 search produces a sampled streak rather than a lifetime claim. The calculation
 does not use commits or inferred events that lack dated canonical evidence.
 
+## OSS Quest
+
+The public profile evaluates a versioned five-item catalog: first issue
+comment, first PR, first review, first merged PR, and merged contributions to
+three repositories. Each item is `locked`, `in_progress`, `completed`, or
+`unavailable`; unsupported issue-comment evidence remains unavailable instead
+of being guessed. The first eligible unfinished item supplies one next action.
+
+Quest state is derived on read from the same public evidence and does not send
+notifications, reminders, or celebratory messages. Catalog version
+`2026-08-01` makes future rule changes explicit and testable.
+
 ## Failure and partial-data behavior
 
 A missing repository owner, rate limit, cancellation, timeout, and unusable

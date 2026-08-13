@@ -360,6 +360,7 @@ export type ProfileAnalysis = {
   contributionPortfolio: ContributionPortfolio;
   contributionStreak: ContributionStreak;
   ossJourney: OssJourney;
+  ossQuest: OssQuest;
   ossExperience: OssExperience;
   repositoryEvidence: ProfileRepositoryEvidence;
   proficiency: Array<TechnologyProficiency>;
@@ -448,6 +449,41 @@ export type ContributionStreak = {
   longestWeeks: number;
   qualifyingWeeks: number;
   weeks: Array<StreakWeek>;
+};
+
+export type QuestStatus =
+  "locked" | "in_progress" | "completed" | "unavailable";
+
+export type QuestProgress = {
+  id:
+    | "first_issue_comment"
+    | "first_pr"
+    | "first_review"
+    | "first_merge"
+    | "three_repositories";
+  title: string;
+  description: string;
+  status: QuestStatus;
+  current: number;
+  target: number;
+  completedAt: string | null;
+  evidenceUrl?: string;
+  nextAction: string;
+};
+
+export type OssQuest = {
+  catalogVersion: string;
+  evaluatedAt: string;
+  completed: number;
+  total: 5;
+  nextQuestId?: string;
+  items: [
+    QuestProgress,
+    QuestProgress,
+    QuestProgress,
+    QuestProgress,
+    QuestProgress,
+  ];
 };
 
 export type EvidenceConfidence = "high" | "medium" | "low" | "unavailable";

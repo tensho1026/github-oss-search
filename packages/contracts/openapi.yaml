@@ -1703,6 +1703,53 @@ components:
                 technology: Go
                 title: First observed Go contribution
             status: sampled
+          ossQuest:
+            catalogVersion: 2026-08-01
+            completed: 2
+            evaluatedAt: 2026-07-30T00:00:00Z
+            items:
+              - completedAt: null
+                current: 0
+                description: Join a public issue discussion.
+                id: first_issue_comment
+                nextAction: Comment on an issue after confirming you can help.
+                status: unavailable
+                target: 1
+                title: Comment on your first issue
+              - completedAt: null
+                current: 1
+                description: Create a public OSS pull request.
+                id: first_pr
+                nextAction: Find a matching issue and open a focused PR.
+                status: completed
+                target: 1
+                title: Open your first pull request
+              - completedAt: null
+                current: 1
+                description: Review a public OSS pull request.
+                id: first_review
+                nextAction: Review an open PR and leave actionable feedback.
+                status: completed
+                target: 1
+                title: Complete your first review
+              - completedAt: null
+                current: 0
+                description: Have a public OSS pull request merged.
+                id: first_merge
+                nextAction: Respond to review feedback on an open pull request.
+                status: in_progress
+                target: 1
+                title: Get your first PR merged
+              - completedAt: null
+                current: 1
+                description: Build verified merged contributions across three public projects.
+                id: three_repositories
+                nextAction: Find a suitable issue in a new repository.
+                status: locked
+                target: 3
+                title: Contribute to 3 repositories
+            nextQuestId: first_merge
+            total: 5
           frameworks:
             - React
           languages:
@@ -3669,6 +3716,7 @@ components:
         - languageStatus
         - languages
         - ossJourney
+        - ossQuest
         - ossExperience
         - proficiency
         - recentTechnologies
@@ -3712,6 +3760,8 @@ components:
           $ref: "#/components/schemas/ContributionStreak"
         ossJourney:
           $ref: "#/components/schemas/OSSJourney"
+        ossQuest:
+          $ref: "#/components/schemas/OSSQuest"
         ossExperience:
           $ref: "#/components/schemas/OSSExperience"
         repositoryEvidence:
@@ -3963,6 +4013,94 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/StreakWeek"
+    QuestStatus:
+      type: string
+      enum:
+        - locked
+        - in_progress
+        - completed
+        - unavailable
+    QuestProgress:
+      type: object
+      additionalProperties: false
+      required:
+        - completedAt
+        - current
+        - description
+        - id
+        - nextAction
+        - status
+        - target
+        - title
+      properties:
+        id:
+          type: string
+          enum:
+            - first_issue_comment
+            - first_pr
+            - first_review
+            - first_merge
+            - three_repositories
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        status:
+          $ref: "#/components/schemas/QuestStatus"
+        current:
+          type: integer
+          minimum: 0
+          maximum: 3
+        target:
+          type: integer
+          minimum: 1
+          maximum: 3
+        completedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        evidenceUrl:
+          type: string
+          format: uri
+          pattern: ^https://github\.com/[A-Za-z0-9-]+/[^/]+/pull/[1-9][0-9]*$
+        nextAction:
+          type: string
+          minLength: 1
+    OSSQuest:
+      type: object
+      additionalProperties: false
+      required:
+        - catalogVersion
+        - completed
+        - evaluatedAt
+        - items
+        - total
+      properties:
+        catalogVersion:
+          type: string
+          pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+        evaluatedAt:
+          type: string
+          format: date-time
+        completed:
+          type: integer
+          minimum: 0
+          maximum: 5
+        total:
+          type: integer
+          enum: [5]
+        nextQuestId:
+          type: string
+          minLength: 1
+        items:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/QuestProgress"
     EvidenceConfidence:
       type: string
       enum:

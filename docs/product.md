@@ -68,7 +68,7 @@ The user supplies a validated GitHub user or organization login. IssueScout
 normalizes bounded public repository and contribution evidence, then reports
 technology percentages, recent technologies, OSS activity, sampled
 star/fork/contribution views, explainable five-level diagnostics, and
-an evidence-linked chronological OSS Journey and a weekly contribution streak.
+an evidence-linked Journey, a weekly streak, and versioned beginner OSS Quests.
 A missing owner, exhausted
 GitHub rate limit, timeout,
 and upstream failure are different recoverable states. See

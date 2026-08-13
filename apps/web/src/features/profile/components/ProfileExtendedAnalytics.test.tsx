@@ -38,6 +38,10 @@ describe("ProfileExtendedAnalytics", () => {
       "href",
       "https://github.com/community/project/pull/42",
     );
+    expect(
+      screen.getByRole("heading", { name: "OSS Quest" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Respond to review feedback/)).toBeVisible();
 
     expect(
       screen.getByRole("heading", { name: "Public contribution activity" }),
