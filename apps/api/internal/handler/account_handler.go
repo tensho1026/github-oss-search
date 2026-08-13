@@ -27,6 +27,113 @@ type AccountHandler struct {
 	responder response.Responder
 }
 
+// ListIssueClaims returns an owned contribution task page and status summary.
+func (handler AccountHandler) ListIssueClaims(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	page, err := parseAccountPage(ctx)
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	result, err := handler.workspace.ListIssueClaims(
+		ctx.Request.Context(),
+		accountID,
+		page,
+	)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	items := make([]issueClaimResponse, len(result.Items))
+	for index, claim := range result.Items {
+		items[index] = newIssueClaimResponse(claim)
+	}
+	handler.responder.Data(ctx, http.StatusOK, issueClaimListResponse{
+		Items:      items,
+		Pagination: newAccountPagination(result.Page, result.Total),
+		Summary:    newIssueClaimSummaryResponse(result.Summary),
+	})
+}
+
+// UpsertIssueClaim idempotently creates a personal contribution task. This
+// does not assign, comment on, or otherwise mutate the GitHub issue.
+func (handler AccountHandler) UpsertIssueClaim(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	request, err := decodeAccountBody[issueClaimWriteRequest](ctx)
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	claim, err := handler.workspace.UpsertIssueClaim(
+		ctx.Request.Context(),
+		accountID,
+		usecase.UpsertIssueClaimInput{
+			RepositoryOwner: request.RepositoryOwner,
+			RepositoryName:  request.RepositoryName,
+			IssueNumber:     request.IssueNumber,
+		},
+	)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, newIssueClaimResponse(claim))
+}
+
+// UpdateIssueClaim applies an optimistic workflow, archive, and PR update.
+func (handler AccountHandler) UpdateIssueClaim(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	resourceID, err := account.ParseResourceID(ctx.Param("issueClaimID"))
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	request, err := decodeAccountBody[issueClaimUpdateRequest](ctx)
+	if err != nil || request.Version < 1 {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	claim, err := handler.workspace.UpdateIssueClaim(
+		ctx.Request.Context(),
+		accountID,
+		resourceID,
+		request.Version,
+		request.input(),
+	)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, newIssueClaimResponse(claim))
+}
+
+// DeleteIssueClaim removes one owned task at its current version.
+func (handler AccountHandler) DeleteIssueClaim(ctx *gin.Context) {
+	accountID, resourceID, version, ok := handler.ownedMutationTarget(ctx)
+	if !ok {
+		return
+	}
+	if err := handler.workspace.DeleteIssueClaim(
+		ctx.Request.Context(),
+		accountID,
+		resourceID,
+		version,
+	); err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, deletionResponse{Deleted: true})
+}
+
 // NewAccountHandler constructs the account-only HTTP adapter.
 func NewAccountHandler(
 	workspace usecase.AccountWorkspace,
@@ -323,6 +430,7 @@ func (handler AccountHandler) DeleteAccount(ctx *gin.Context) {
 		Removed: ownedDataSummaryResponse{
 			Bookmarks:     summary.Bookmarks,
 			Identities:    summary.Identities,
+			IssueClaims:   summary.IssueClaims,
 			Preferences:   summary.Preferences,
 			SavedSearches: summary.SavedSearches,
 			Sessions:      summary.Sessions,
@@ -364,6 +472,9 @@ func (handler AccountHandler) ownedMutationTarget(
 	if rawID == "" {
 		rawID = ctx.Param("savedSearchID")
 	}
+	if rawID == "" {
+		rawID = ctx.Param("issueClaimID")
+	}
 	resourceID, err := account.ParseResourceID(rawID)
 	if err != nil {
 		handler.invalidRequest(ctx, err)
@@ -397,6 +508,40 @@ type bookmarkWriteRequest struct {
 	RepositoryOwner string `json:"repositoryOwner"`
 	RepositoryName  string `json:"repositoryName"`
 	IssueNumber     *int   `json:"issueNumber"`
+}
+
+type issueClaimWriteRequest struct {
+	RepositoryOwner string `json:"repositoryOwner"`
+	RepositoryName  string `json:"repositoryName"`
+	IssueNumber     int    `json:"issueNumber"`
+}
+
+type pullRequestWriteRequest struct {
+	RepositoryOwner string `json:"repositoryOwner"`
+	RepositoryName  string `json:"repositoryName"`
+	Number          int    `json:"number"`
+}
+
+type issueClaimUpdateRequest struct {
+	Status      string                   `json:"status"`
+	Archived    bool                     `json:"archived"`
+	PullRequest *pullRequestWriteRequest `json:"pullRequest"`
+	Version     int64                    `json:"version"`
+}
+
+func (request issueClaimUpdateRequest) input() usecase.UpdateIssueClaimInput {
+	input := usecase.UpdateIssueClaimInput{
+		Status:   account.IssueClaimStatus(request.Status),
+		Archived: request.Archived,
+	}
+	if request.PullRequest != nil {
+		input.PullRequest = &usecase.PullRequestInput{
+			RepositoryOwner: request.PullRequest.RepositoryOwner,
+			RepositoryName:  request.PullRequest.RepositoryName,
+			Number:          request.PullRequest.Number,
+		}
+	}
+	return input
 }
 
 type savedSearchWriteRequest struct {
@@ -442,6 +587,81 @@ type accountDeleteRequest struct {
 type bookmarkListResponse struct {
 	Items      []bookmarkResponse        `json:"items"`
 	Pagination accountPaginationResponse `json:"pagination"`
+}
+
+type issueClaimListResponse struct {
+	Items      []issueClaimResponse      `json:"items"`
+	Pagination accountPaginationResponse `json:"pagination"`
+	Summary    issueClaimSummaryResponse `json:"summary"`
+}
+
+type pullRequestReferenceResponse struct {
+	RepositoryOwner string `json:"repositoryOwner"`
+	RepositoryName  string `json:"repositoryName"`
+	Number          int    `json:"number"`
+}
+
+type issueClaimResponse struct {
+	ID                 string                         `json:"id"`
+	RepositoryOwner    string                         `json:"repositoryOwner"`
+	RepositoryName     string                         `json:"repositoryName"`
+	IssueNumber        int                            `json:"issueNumber"`
+	Status             account.IssueClaimStatus       `json:"status"`
+	Archived           bool                           `json:"archived"`
+	PullRequest        *pullRequestReferenceResponse  `json:"pullRequest"`
+	ObservedIssueState account.UpstreamReferenceState `json:"observedIssueState"`
+	ObservedPRState    account.UpstreamReferenceState `json:"observedPrState"`
+	Version            int64                          `json:"version"`
+	CreatedAt          time.Time                      `json:"createdAt"`
+	UpdatedAt          time.Time                      `json:"updatedAt"`
+}
+
+func newIssueClaimResponse(claim account.IssueClaim) issueClaimResponse {
+	response := issueClaimResponse{
+		ID:                 claim.ID.String(),
+		RepositoryOwner:    claim.Issue.RepositoryOwner,
+		RepositoryName:     claim.Issue.RepositoryName,
+		IssueNumber:        *claim.Issue.IssueNumber,
+		Status:             claim.Status,
+		Archived:           claim.Archived,
+		ObservedIssueState: claim.ObservedIssueState,
+		ObservedPRState:    claim.ObservedPRState,
+		Version:            claim.Version,
+		CreatedAt:          claim.CreatedAt.UTC(),
+		UpdatedAt:          claim.UpdatedAt.UTC(),
+	}
+	if claim.PullRequest != nil {
+		response.PullRequest = &pullRequestReferenceResponse{
+			RepositoryOwner: claim.PullRequest.RepositoryOwner,
+			RepositoryName:  claim.PullRequest.RepositoryName,
+			Number:          claim.PullRequest.Number,
+		}
+	}
+	return response
+}
+
+type issueClaimSummaryResponse struct {
+	Total        int `json:"total"`
+	NotStarted   int `json:"notStarted"`
+	Researching  int `json:"researching"`
+	Implementing int `json:"implementing"`
+	PRSubmitted  int `json:"prSubmitted"`
+	Merged       int `json:"merged"`
+	Archived     int `json:"archived"`
+}
+
+func newIssueClaimSummaryResponse(
+	summary account.IssueClaimSummary,
+) issueClaimSummaryResponse {
+	return issueClaimSummaryResponse{
+		Total:        summary.Total,
+		NotStarted:   summary.NotStarted,
+		Researching:  summary.Researching,
+		Implementing: summary.Implementing,
+		PRSubmitted:  summary.PRSubmitted,
+		Merged:       summary.Merged,
+		Archived:     summary.Archived,
+	}
 }
 
 type bookmarkResponse struct {
@@ -555,6 +775,7 @@ type accountExportResponse struct {
 	SchemaVersion int                   `json:"schemaVersion"`
 	GeneratedAt   time.Time             `json:"generatedAt"`
 	Bookmarks     []bookmarkResponse    `json:"bookmarks"`
+	IssueClaims   []issueClaimResponse  `json:"issueClaims"`
 	SavedSearches []savedSearchResponse `json:"savedSearches"`
 	Preferences   *preferencesResponse  `json:"preferences"`
 }
@@ -563,6 +784,10 @@ func newAccountExportResponse(export account.Export) accountExportResponse {
 	bookmarks := make([]bookmarkResponse, len(export.Bookmarks))
 	for index, bookmark := range export.Bookmarks {
 		bookmarks[index] = newBookmarkResponse(bookmark)
+	}
+	issueClaims := make([]issueClaimResponse, len(export.IssueClaims))
+	for index, claim := range export.IssueClaims {
+		issueClaims[index] = newIssueClaimResponse(claim)
 	}
 	savedSearches := make([]savedSearchResponse, len(export.SavedSearches))
 	for index, savedSearch := range export.SavedSearches {
@@ -574,9 +799,10 @@ func newAccountExportResponse(export account.Export) accountExportResponse {
 		preferences = &value
 	}
 	return accountExportResponse{
-		SchemaVersion: 1,
+		SchemaVersion: 2,
 		GeneratedAt:   export.GeneratedAt.UTC(),
 		Bookmarks:     bookmarks,
+		IssueClaims:   issueClaims,
 		SavedSearches: savedSearches,
 		Preferences:   preferences,
 	}
@@ -585,6 +811,7 @@ func newAccountExportResponse(export account.Export) accountExportResponse {
 type ownedDataSummaryResponse struct {
 	Bookmarks     int64 `json:"bookmarks"`
 	Identities    int64 `json:"identities"`
+	IssueClaims   int64 `json:"issueClaims"`
 	Preferences   int64 `json:"preferences"`
 	SavedSearches int64 `json:"savedSearches"`
 	Sessions      int64 `json:"sessions"`

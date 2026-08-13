@@ -83,8 +83,9 @@ protected environments are never entered from pull request events.
 - Account routes derive ownership only from the server-validated principal.
   Every feature query includes `account_id`; a foreign resource UUID is masked
   as not found. Mutations require CSRF and optimistic versions, quota writes
-  serialize per account, and stored bookmarks contain only normalized
-  references rather than GitHub payloads.
+  serialize per account, and stored bookmarks and contribution tasks contain
+  only normalized references rather than GitHub payloads. Issue-claim progress
+  never writes to GitHub and remains separate from observed upstream state.
 - Privacy export excludes credentials, audit identifiers, upstream payloads,
   and anonymous activity. Confirmed account deletion cascades through all
   owned data and leaves only a content-free event without an account ID.

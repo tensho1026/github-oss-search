@@ -1,8 +1,8 @@
 # Authenticated account workspace
 
 IssueScout keeps its public discovery product anonymous and stateless.
-GitHub sign-in unlocks only optional, account-owned bookmarks, named saved
-searches, display preferences, export, and deletion. Nothing in this feature
+GitHub sign-in unlocks only optional, account-owned contribution tasks,
+bookmarks, named saved searches, display preferences, export, and deletion. Nothing in this feature
 changes the anonymous profile, repository, issue-search, or issue-detail
 journeys.
 
@@ -26,6 +26,8 @@ flowchart LR
     CSRF --> Workspace["Lazy /workspace route"]
 ```
 
+“Try this issue” actions appear on issue recommendations and issue detail.
+They create a private task only and never assign, claim, or comment on GitHub.
 Bookmark buttons appear on issue recommendations, issue detail, and repository
 cards. `Save this search` stores the current validated issue or repository
 filter definition. Anonymous clicks open an explanatory dialog; they never
@@ -34,8 +36,8 @@ same-origin product path and its current query state. Callback markers are
 rendered as accessible success, denial, or failure alerts and then removed from
 the URL with history replacement.
 
-`/workspace` is a separately loaded route with Bookmarks, Saved searches,
-Preferences, and Privacy tabs. Queries run only for the active tab. A `401`
+`/workspace` is a separately loaded route with Contribution tasks, Bookmarks,
+Saved searches, Preferences, and Privacy tabs. Queries run only for the active tab. A `401`
 clears the in-memory principal and account query cache while preserving local
 form state. A `409` asks the user to reload the latest optimistic version, and
 a `503` links back to anonymous search. The privacy tab downloads the bounded
@@ -83,6 +85,15 @@ return `AUTH_UNAVAILABLE`; public routes stay usable and database-free.
 
 ## Stored data
 
+Contribution tasks store a normalized issue reference, one personal workflow
+state (`not_started`, `researching`, `implementing`, `pr_submitted`, or
+`merged`), an archive flag, and an optional normalized pull-request reference.
+A PR is required for the final two workflow states. Personal workflow never
+changes automatically from GitHub state: `observedIssueState` and
+`observedPrState` are separate, recoverable observations and default to
+`unverified`. Revalidation uses public issue/PR links; the account API performs
+no GitHub write.
+
 Bookmarks store only:
 
 - target type (`issue` or `repository`);
@@ -114,14 +125,15 @@ Before the first preference write, the GET route returns
 
 ## Bounds and concurrency
 
-| Resource       | Per-account quota | Payload/name bound           | Stable order                          |
-| -------------- | ----------------: | ---------------------------- | ------------------------------------- |
-| Bookmark       |               200 | Normalized GitHub reference  | `created_at DESC, id DESC`            |
-| Saved search   |                50 | 80-rune name, 8192-byte JSON | `updated_at DESC, id DESC`            |
-| Preferences    |                 1 | Fixed enums and page sizes   | One row per account                   |
-| List page size |                50 | Page 1–100                   | UUID is the deterministic tie-breaker |
+| Resource          | Per-account quota | Payload/name bound           | Stable order                          |
+| ----------------- | ----------------: | ---------------------------- | ------------------------------------- |
+| Contribution task |               200 | Issue plus optional PR refs  | `archived, updated_at DESC, id DESC`  |
+| Bookmark          |               200 | Normalized GitHub reference  | `created_at DESC, id DESC`            |
+| Saved search      |                50 | 80-rune name, 8192-byte JSON | `updated_at DESC, id DESC`            |
+| Preferences       |                 1 | Fixed enums and page sizes   | One row per account                   |
+| List page size    |                50 | Page 1–100                   | UUID is the deterministic tie-breaker |
 
-Bookmark and saved-search quota checks take a transaction-scoped PostgreSQL
+Contribution-task, bookmark, and saved-search quota checks take a transaction-scoped PostgreSQL
 advisory lock keyed by account ID in the same statement as the insert. A
 duplicate bookmark write is idempotent and returns the existing row without
 incrementing its version. Saved-search names are unique case-insensitively per
@@ -136,7 +148,7 @@ must reload before retrying. `ACCOUNT_QUOTA_EXCEEDED` and
 ## Privacy export and deletion
 
 `GET /api/account/export` returns a schema-versioned bounded document with all
-bookmarks, saved filter definitions, and persisted preferences. It excludes:
+contribution tasks, bookmarks, saved filter definitions, and persisted preferences. It excludes:
 
 - GitHub access tokens and GitHub response bodies;
 - session, CSRF, and OAuth state hashes;
@@ -145,7 +157,7 @@ bookmarks, saved filter definitions, and persisted preferences. It excludes:
 
 `DELETE /api/account` requires CSRF plus the exact JSON confirmation
 `{"confirmation":"DELETE"}`. The database deletes the account and cascades to
-identities, sessions, bookmarks, saved searches, and preferences. The response
+identities, sessions, contribution tasks, bookmarks, saved searches, and preferences. The response
 contains only removed row counts. A content-free `account_deleted` audit event
 with a null account reference and timestamp remains for privacy-safe
 operational evidence. Browser session cookies are expired after deletion.
@@ -156,19 +168,23 @@ audit retention, and jurisdiction-specific policy.
 
 ## API inventory
 
-| Method | Path                                          | CSRF | Purpose                      |
-| ------ | --------------------------------------------- | ---- | ---------------------------- |
-| GET    | `/api/account/bookmarks`                      | No   | List owned bookmarks         |
-| PUT    | `/api/account/bookmarks`                      | Yes  | Idempotent bookmark upsert   |
-| DELETE | `/api/account/bookmarks/{bookmarkID}`         | Yes  | Versioned bookmark deletion  |
-| GET    | `/api/account/saved-searches`                 | No   | List named filters           |
-| POST   | `/api/account/saved-searches`                 | Yes  | Create a named filter        |
-| PUT    | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter replacement |
-| DELETE | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter deletion    |
-| GET    | `/api/account/preferences`                    | No   | Read stored/default settings |
-| PUT    | `/api/account/preferences`                    | Yes  | Versioned preference upsert  |
-| GET    | `/api/account/export`                         | No   | Export bounded feature data  |
-| DELETE | `/api/account`                                | Yes  | Permanently delete account   |
+| Method | Path                                          | CSRF | Purpose                       |
+| ------ | --------------------------------------------- | ---- | ----------------------------- |
+| GET    | `/api/account/issue-claims`                   | No   | List owned contribution tasks |
+| PUT    | `/api/account/issue-claims`                   | Yes  | Idempotent task upsert        |
+| PATCH  | `/api/account/issue-claims/{issueClaimID}`    | Yes  | Versioned progress update     |
+| DELETE | `/api/account/issue-claims/{issueClaimID}`    | Yes  | Versioned task deletion       |
+| GET    | `/api/account/bookmarks`                      | No   | List owned bookmarks          |
+| PUT    | `/api/account/bookmarks`                      | Yes  | Idempotent bookmark upsert    |
+| DELETE | `/api/account/bookmarks/{bookmarkID}`         | Yes  | Versioned bookmark deletion   |
+| GET    | `/api/account/saved-searches`                 | No   | List named filters            |
+| POST   | `/api/account/saved-searches`                 | Yes  | Create a named filter         |
+| PUT    | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter replacement  |
+| DELETE | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter deletion     |
+| GET    | `/api/account/preferences`                    | No   | Read stored/default settings  |
+| PUT    | `/api/account/preferences`                    | Yes  | Versioned preference upsert   |
+| GET    | `/api/account/export`                         | No   | Export bounded feature data   |
+| DELETE | `/api/account`                                | Yes  | Permanently delete account    |
 
 Use [`http/account-workspace.http`](../http/account-workspace.http) for every
 success and rejection capability. Keep actual cookies and CSRF values in a

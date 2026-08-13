@@ -431,6 +431,8 @@ func (repository *AccountRepository) ownedVersionFailure(
 		query = "SELECT version FROM bookmarks WHERE account_id = $1 AND id = $2"
 	case "saved_searches":
 		query = "SELECT version FROM saved_searches WHERE account_id = $1 AND id = $2"
+	case "issue_claims":
+		query = "SELECT version FROM issue_claims WHERE account_id = $1 AND id = $2"
 	default:
 		return ErrQueryFailed
 	}

@@ -83,6 +83,8 @@ Profile analysis, search, and detail success responses also expose
 | GET `/api/auth/github/callback`                          | Consume state, fetch public identity, create session            | One-time code; fixed-origin redirect                       |
 | POST `/api/auth/session/refresh`                         | CSRF-check and atomically rotate both browser credentials       | One active session transaction                             |
 | POST `/api/auth/logout`                                  | CSRF-check, revoke server session, expire cookies               | One session revocation                                     |
+| GET/PUT `/api/account/issue-claims`                      | List or idempotently add account-owned contribution tasks       | 200 total; page size at most 50                            |
+| PATCH/DELETE `/api/account/issue-claims/{issueClaimID}`  | CSRF/version-protected progress update or deletion              | Personal state remains separate from GitHub state          |
 | GET `/api/account/bookmarks`                             | List normalized owned GitHub references                         | 200 total; page size at most 50                            |
 | PUT `/api/account/bookmarks`                             | CSRF-protected idempotent bookmark upsert                       | Per-account serialized quota                               |
 | DELETE `/api/account/bookmarks/{bookmarkID}`             | CSRF/version-protected owned deletion                           | Foreign IDs masked as not found                            |

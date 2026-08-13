@@ -70,6 +70,7 @@ for (const table of [
   "auth_sessions",
   "bookmarks",
   "github_identities",
+  "issue_claims",
   "saved_searches",
   "user_preferences",
 ]) {

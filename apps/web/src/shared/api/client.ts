@@ -34,6 +34,11 @@ export interface ApiClient {
     path: `/${string}`,
     options?: ApiRequestOptions,
   ): Promise<TResponse>;
+  patch<TResponse, TBody>(
+    path: `/${string}`,
+    body: TBody,
+    options?: ApiRequestOptions,
+  ): Promise<TResponse>;
   post<TResponse, TBody>(
     path: `/${string}`,
     body: TBody,
@@ -82,7 +87,7 @@ export function createApiClient(
 ): ApiClient {
   async function execute<TResponse>(
     path: `/${string}`,
-    method: "DELETE" | "GET" | "POST" | "PUT",
+    method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT",
     options: ApiRequestOptions,
     body?: unknown,
   ): Promise<TResponse> {
@@ -139,6 +144,13 @@ export function createApiClient(
       options: ApiRequestOptions = {},
     ): Promise<TResponse> {
       return execute<TResponse>(path, "GET", options);
+    },
+    async patch<TResponse, TBody>(
+      path: `/${string}`,
+      body: TBody,
+      options: ApiRequestOptions = {},
+    ): Promise<TResponse> {
+      return execute<TResponse>(path, "PATCH", options, body);
     },
     async post<TResponse, TBody>(
       path: `/${string}`,

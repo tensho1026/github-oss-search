@@ -69,6 +69,7 @@ func (id ID) String() string {
 type OwnedDataSummary struct {
 	Bookmarks     int64
 	Identities    int64
+	IssueClaims   int64
 	Preferences   int64
 	SavedSearches int64
 	Sessions      int64

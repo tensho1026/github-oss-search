@@ -25,6 +25,10 @@
       "schema": "BookmarkListEnvelope"
     },
     {
+      "file": "account-issue-claims.success.json",
+      "schema": "IssueClaimListEnvelope"
+    },
+    {
       "file": "account-saved-searches.success.json",
       "schema": "SavedSearchListEnvelope"
     },

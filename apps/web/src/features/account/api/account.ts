@@ -6,6 +6,10 @@ import type {
   BookmarkListEnvelope,
   BookmarkWriteRequest,
   DeletionEnvelope,
+  IssueClaimEnvelope,
+  IssueClaimListEnvelope,
+  IssueClaimUpdateRequest,
+  IssueClaimWriteRequest,
   PreferencesEnvelope,
   PreferencesWriteRequest,
   SavedSearchEnvelope,
@@ -18,6 +22,47 @@ import { accountEndpoints } from "../../../shared/config/app-config";
 
 function csrfOptions(csrfToken: string) {
   return { headers: { "X-CSRF-Token": csrfToken } };
+}
+
+export function listIssueClaims(signal?: AbortSignal) {
+  return apiClient.get<IssueClaimListEnvelope>(accountEndpoints.issueClaims(), {
+    signal,
+  });
+}
+
+export function upsertIssueClaim(
+  request: IssueClaimWriteRequest,
+  csrfToken: string,
+) {
+  return apiClient.put<IssueClaimEnvelope, IssueClaimWriteRequest>(
+    accountEndpoints.issueClaims(),
+    request,
+    csrfOptions(csrfToken),
+  );
+}
+
+export function updateIssueClaim(
+  id: string,
+  request: IssueClaimUpdateRequest,
+  csrfToken: string,
+) {
+  return apiClient.patch<IssueClaimEnvelope, IssueClaimUpdateRequest>(
+    accountEndpoints.issueClaim(id),
+    request,
+    csrfOptions(csrfToken),
+  );
+}
+
+export function deleteIssueClaim(
+  id: string,
+  version: number,
+  csrfToken: string,
+) {
+  return apiClient.delete<DeletionEnvelope>(
+    accountEndpoints.issueClaimForDelete(id, version),
+    undefined,
+    csrfOptions(csrfToken),
+  );
 }
 
 export function listBookmarks(signal?: AbortSignal) {

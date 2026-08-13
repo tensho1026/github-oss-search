@@ -36,8 +36,10 @@ work. They are now delivered behind a separate optional boundary:
 
 - GitHub OAuth uses Authorization Code + PKCE and only `read:user`;
 - PostgreSQL stores minimum public identity and hashed session/state material;
-- bookmarks and saved searches store normalized references/filters, not
-  GitHub payloads;
+- contribution tasks, bookmarks, and saved searches store normalized
+  references/filters, not GitHub payloads;
+- contribution workflow states are private user input and do not prove GitHub
+  assignment, maintainer approval, or current upstream state;
 - preferences, bounded privacy export, and confirmed account deletion are
   supported.
 

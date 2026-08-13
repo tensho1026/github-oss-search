@@ -170,6 +170,90 @@ describe("WorkspacePage", () => {
     );
   });
 
+  it("updates a contribution task with an explicitly linked pull request", async () => {
+    const claim = {
+      archived: false,
+      createdAt: "2026-08-01T00:00:00Z",
+      id: "00000000-0000-4000-8000-000000000030",
+      issueNumber: 42,
+      observedIssueState: "open",
+      observedPrState: "unverified",
+      pullRequest: null,
+      repositoryName: "repo",
+      repositoryOwner: "owner",
+      status: "not_started",
+      updatedAt: "2026-08-01T00:00:00Z",
+      version: 1,
+    };
+    const request = vi.fn<typeof fetch>().mockImplementation((input, init) => {
+      const path = requestUrl(input);
+      if (path === "/api/auth/session") {
+        return jsonResponse(authenticatedSession);
+      }
+      if (init?.method === "PATCH") {
+        return jsonResponse({
+          data: { ...claim, status: "pr_submitted", version: 2 },
+          meta,
+        });
+      }
+      return jsonResponse({
+        data: {
+          items: [claim],
+          pagination: { page: 1, perPage: 50, total: 1, totalPages: 1 },
+          summary: {
+            archived: 0,
+            implementing: 0,
+            merged: 0,
+            notStarted: 1,
+            prSubmitted: 0,
+            researching: 0,
+            total: 1,
+          },
+        },
+        meta,
+      });
+    });
+    vi.stubGlobal("fetch", request);
+    const user = userEvent.setup();
+
+    renderWorkspace("/workspace?tab=tasks");
+    await user.selectOptions(
+      await screen.findByRole("combobox", { name: "Workflow status" }),
+      "pr_submitted",
+    );
+    await user.type(
+      screen.getByRole("spinbutton", { name: "PR number for owner/repo#42" }),
+      "81",
+    );
+    await user.click(screen.getByRole("button", { name: "Save progress" }));
+
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith(
+        "/api/account/issue-claims/00000000-0000-4000-8000-000000000030",
+        expect.objectContaining({ method: "PATCH" }),
+      );
+    });
+    const patchOptions = request.mock.calls.find(
+      ([, options]) => options?.method === "PATCH",
+    )?.[1];
+    expect(new Headers(patchOptions?.headers).get("X-CSRF-Token")).toBe(
+      "csrf-token",
+    );
+    if (typeof patchOptions?.body !== "string") {
+      throw new TypeError("Expected a serialized JSON request body");
+    }
+    expect(JSON.parse(patchOptions.body)).toEqual({
+      archived: false,
+      pullRequest: {
+        number: 81,
+        repositoryName: "repo",
+        repositoryOwner: "owner",
+      },
+      status: "pr_submitted",
+      version: 1,
+    });
+  });
+
   it("runs, renames, and deletes saved searches", async () => {
     const request = vi.fn<typeof fetch>().mockImplementation((input, init) => {
       const path = requestUrl(input);

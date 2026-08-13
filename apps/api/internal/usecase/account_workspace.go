@@ -14,6 +14,33 @@ import (
 // AccountWorkspace exposes persistence only for an authenticated account.
 // Anonymous profile, repository, and issue use cases never depend on it.
 type AccountWorkspace interface {
+	// ListIssueClaims returns one account-owned contribution task page.
+	ListIssueClaims(
+		context.Context,
+		account.ID,
+		account.Page,
+	) (account.IssueClaimPage, error)
+	// UpsertIssueClaim idempotently starts a personal issue workflow.
+	UpsertIssueClaim(
+		context.Context,
+		account.ID,
+		UpsertIssueClaimInput,
+	) (account.IssueClaim, error)
+	// UpdateIssueClaim replaces status, archive flag, and optional PR at version.
+	UpdateIssueClaim(
+		context.Context,
+		account.ID,
+		account.ResourceID,
+		int64,
+		UpdateIssueClaimInput,
+	) (account.IssueClaim, error)
+	// DeleteIssueClaim removes one owned task at its current version.
+	DeleteIssueClaim(
+		context.Context,
+		account.ID,
+		account.ResourceID,
+		int64,
+	) error
 	// ListBookmarks returns one account-owned page and never accepts account
 	// identity from an HTTP request body or URL.
 	ListBookmarks(
@@ -91,6 +118,27 @@ type AccountWorkspace interface {
 	) (account.OwnedDataSummary, error)
 }
 
+// UpsertIssueClaimInput contains an untrusted canonical issue candidate.
+type UpsertIssueClaimInput struct {
+	RepositoryOwner string
+	RepositoryName  string
+	IssueNumber     int
+}
+
+// PullRequestInput contains an optional untrusted GitHub PR reference.
+type PullRequestInput struct {
+	RepositoryOwner string
+	RepositoryName  string
+	Number          int
+}
+
+// UpdateIssueClaimInput contains user-owned workflow replacement values.
+type UpdateIssueClaimInput struct {
+	Status      account.IssueClaimStatus
+	Archived    bool
+	PullRequest *PullRequestInput
+}
+
 // UpsertBookmarkInput contains an untrusted normalized-reference candidate.
 type UpsertBookmarkInput struct {
 	TargetType      account.BookmarkTarget
@@ -132,6 +180,111 @@ func NewAccountWorkspace(
 		newID:      account.NewResourceID,
 		now:        time.Now,
 	}
+}
+
+func (service *accountWorkspace) ListIssueClaims(
+	ctx context.Context,
+	accountID account.ID,
+	page account.Page,
+) (account.IssueClaimPage, error) {
+	result, err := service.repository.ListIssueClaims(ctx, accountID, page)
+	if err != nil {
+		return account.IssueClaimPage{}, accountStorageError(err)
+	}
+	return result, nil
+}
+
+func (service *accountWorkspace) UpsertIssueClaim(
+	ctx context.Context,
+	accountID account.ID,
+	input UpsertIssueClaimInput,
+) (account.IssueClaim, error) {
+	claim, err := account.NewIssueClaim(
+		input.RepositoryOwner,
+		input.RepositoryName,
+		input.IssueNumber,
+	)
+	if err != nil {
+		return account.IssueClaim{}, invalidAccountInput(err)
+	}
+	id, err := service.newID()
+	if err != nil {
+		return account.IssueClaim{}, apperror.Wrap(
+			apperror.CodeInternal,
+			"An unexpected error occurred",
+			http.StatusInternalServerError,
+			err,
+		)
+	}
+	claim.ID = id
+	claim.AccountID = accountID
+	result, err := service.repository.UpsertIssueClaim(ctx, claim)
+	if err != nil {
+		return account.IssueClaim{}, accountStorageError(err)
+	}
+	return result, nil
+}
+
+func (service *accountWorkspace) UpdateIssueClaim(
+	ctx context.Context,
+	accountID account.ID,
+	claimID account.ResourceID,
+	version int64,
+	input UpdateIssueClaimInput,
+) (account.IssueClaim, error) {
+	if version < 1 {
+		return account.IssueClaim{}, invalidAccountInput(
+			account.ErrInvalidFeatureInput,
+		)
+	}
+	claim := account.IssueClaim{
+		ID:        claimID,
+		AccountID: accountID,
+		Version:   version,
+	}
+	var pullRequest *account.PullRequestReference
+	if input.PullRequest != nil {
+		reference, err := account.NewPullRequestReference(
+			input.PullRequest.RepositoryOwner,
+			input.PullRequest.RepositoryName,
+			input.PullRequest.Number,
+		)
+		if err != nil {
+			return account.IssueClaim{}, invalidAccountInput(err)
+		}
+		pullRequest = &reference
+	}
+	claim, err := account.UpdateIssueClaim(
+		claim,
+		input.Status,
+		input.Archived,
+		pullRequest,
+	)
+	if err != nil {
+		return account.IssueClaim{}, invalidAccountInput(err)
+	}
+	result, err := service.repository.UpdateIssueClaim(ctx, claim)
+	if err != nil {
+		return account.IssueClaim{}, accountStorageError(err)
+	}
+	return result, nil
+}
+
+func (service *accountWorkspace) DeleteIssueClaim(
+	ctx context.Context,
+	accountID account.ID,
+	claimID account.ResourceID,
+	version int64,
+) error {
+	if version < 1 {
+		return invalidAccountInput(account.ErrInvalidFeatureInput)
+	}
+	return accountStorageErrorOrNil(service.repository.DeleteIssueClaim(
+		ctx,
+		accountID,
+		claimID,
+		version,
+	))
 }
 
 func (service *accountWorkspace) ListBookmarks(
@@ -313,6 +466,19 @@ func (service *accountWorkspace) Export(
 	ctx context.Context,
 	accountID account.ID,
 ) (account.Export, error) {
+	issueClaims := make([]account.IssueClaim, 0, account.MaximumIssueClaims)
+	for pageNumber := 1; ; pageNumber++ {
+		page, _ := account.NewPage(pageNumber, account.MaximumPageSize)
+		result, err := service.repository.ListIssueClaims(ctx, accountID, page)
+		if err != nil {
+			return account.Export{}, accountStorageError(err)
+		}
+		issueClaims = append(issueClaims, result.Items...)
+		if len(issueClaims) >= result.Total ||
+			len(result.Items) < account.MaximumPageSize {
+			break
+		}
+	}
 	bookmarks := make([]account.Bookmark, 0, account.MaximumBookmarks)
 	for pageNumber := 1; ; pageNumber++ {
 		page, _ := account.NewPage(pageNumber, account.MaximumPageSize)
@@ -347,6 +513,7 @@ func (service *accountWorkspace) Export(
 	return account.Export{
 		GeneratedAt:   service.now().UTC(),
 		Bookmarks:     bookmarks,
+		IssueClaims:   issueClaims,
 		SavedSearches: savedSearches.Items,
 		Preferences:   persistedPreferences,
 	}, nil

@@ -65,7 +65,8 @@ for deterministic validation, [the CI guide](docs/ci.md) for quality gates,
 [secure delivery](docs/delivery.md) for Docker-free releases, and
 [security engineering](docs/security.md) for trust boundaries and incident
 response. The [account workspace guide](docs/account-workspace.md) defines
-bookmarks, saved searches, preferences, privacy export, and deletion. The
+private contribution tasks, bookmarks, saved searches, preferences, privacy
+export, and deletion. The
 [issue recommendation guide](docs/issue-recommendations.md)
 documents the score, sampling, warnings, cache, and deterministic ranking.
 The [GoDoc guide](docs/godoc.md) explains internal package contracts, runnable

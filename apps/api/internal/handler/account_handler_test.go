@@ -18,6 +18,82 @@ import (
 	"github.com/tensho1026/github-issue-search/apps/api/internal/usecase"
 )
 
+func TestAccountHandlerIssueClaimWorkflowIsOwnedAndVersioned(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+	accountID := handlerAccountID(t)
+	resourceID := handlerResourceID(t)
+	now := time.Date(2026, time.August, 3, 4, 5, 6, 0, time.UTC)
+	claim, err := account.NewIssueClaim("openai", "openai-go", 42)
+	if err != nil {
+		t.Fatalf("NewIssueClaim() error = %v", err)
+	}
+	claim.ID = resourceID
+	claim.AccountID = accountID
+	claim.Version = 1
+	claim.CreatedAt = now
+	claim.UpdatedAt = now
+	workspace := &accountWorkspaceStub{issueClaim: claim}
+	engine := accountTestEngine(accountID)
+	handler := NewAccountHandler(
+		workspace,
+		authhttp.Policy{},
+		response.NewResponder(),
+	)
+	engine.PUT("/claims", handler.UpsertIssueClaim)
+	engine.PATCH("/claims/:issueClaimID", handler.UpdateIssueClaim)
+	engine.DELETE("/claims/:issueClaimID", handler.DeleteIssueClaim)
+
+	create := httptest.NewRequest(
+		http.MethodPut,
+		"/claims",
+		strings.NewReader(
+			`{"repositoryOwner":"OpenAI","repositoryName":"OpenAI-Go","issueNumber":42}`,
+		),
+	)
+	create.Header.Set("Content-Type", "application/json")
+	createRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(createRecorder, create)
+	if createRecorder.Code != http.StatusOK ||
+		workspace.lastAccountID != accountID ||
+		workspace.lastIssueClaimInput.IssueNumber != 42 ||
+		!strings.Contains(createRecorder.Body.String(), `"status":"not_started"`) {
+		t.Fatalf("create = %d %s", createRecorder.Code, createRecorder.Body.String())
+	}
+
+	workspace.issueClaim.Status = account.IssueClaimPRSubmitted
+	workspace.issueClaim.Version = 2
+	update := httptest.NewRequest(
+		http.MethodPatch,
+		"/claims/"+resourceID.String(),
+		strings.NewReader(
+			`{"status":"pr_submitted","archived":false,"pullRequest":{"repositoryOwner":"openai","repositoryName":"openai-go","number":91},"version":1}`,
+		),
+	)
+	update.Header.Set("Content-Type", "application/json")
+	updateRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(updateRecorder, update)
+	if updateRecorder.Code != http.StatusOK || workspace.lastVersion != 1 ||
+		workspace.lastResourceID != resourceID ||
+		workspace.lastIssueClaimUpdate.PullRequest == nil ||
+		workspace.lastIssueClaimUpdate.PullRequest.Number != 91 {
+		t.Fatalf("update = %d %s", updateRecorder.Code, updateRecorder.Body.String())
+	}
+
+	deleteRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(
+		deleteRecorder,
+		httptest.NewRequest(
+			http.MethodDelete,
+			"/claims/"+resourceID.String()+"?version=2",
+			nil,
+		),
+	)
+	if deleteRecorder.Code != http.StatusOK || workspace.lastVersion != 2 {
+		t.Fatalf("delete = %d %s", deleteRecorder.Code, deleteRecorder.Body.String())
+	}
+}
+
 func TestAccountHandlerBookmarkCollectionUsesPrincipalOwnership(t *testing.T) {
 	accountID := handlerAccountID(t)
 	now := time.Date(2026, 8, 1, 1, 2, 3, 0, time.UTC)
@@ -353,7 +429,7 @@ func TestAccountHandlerPreferencesExportAndDeletion(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/export", nil),
 	)
 	if exportRecorder.Code != http.StatusOK ||
-		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":1`) ||
+		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":2`) ||
 		!strings.Contains(exportRecorder.Body.String(), `"preferences":null`) {
 		t.Fatalf(
 			"export response = %d %s",
@@ -486,16 +562,62 @@ type accountWorkspaceStub struct {
 	lastResourceID       account.ResourceID
 	lastVersion          int64
 	lastBookmarkInput    usecase.UpsertBookmarkInput
+	lastIssueClaimInput  usecase.UpsertIssueClaimInput
+	lastIssueClaimUpdate usecase.UpdateIssueClaimInput
 	lastSavedInput       usecase.WriteSavedSearchInput
 	lastPreferencesInput usecase.UpdatePreferencesInput
 	bookmarkPage         account.PageResult[account.Bookmark]
 	bookmark             account.Bookmark
+	issueClaim           account.IssueClaim
 	savedSearchPage      account.PageResult[account.SavedSearch]
 	savedSearch          account.SavedSearch
 	preferences          account.Preferences
 	export               account.Export
 	summary              account.OwnedDataSummary
 	err                  error
+}
+
+func (workspace *accountWorkspaceStub) ListIssueClaims(
+	_ context.Context,
+	accountID account.ID,
+	page account.Page,
+) (account.IssueClaimPage, error) {
+	workspace.lastAccountID = accountID
+	return account.IssueClaimPage{PageResult: account.PageResult[account.IssueClaim]{
+		Page: page,
+	}}, workspace.err
+}
+
+func (workspace *accountWorkspaceStub) UpsertIssueClaim(
+	_ context.Context,
+	accountID account.ID,
+	input usecase.UpsertIssueClaimInput,
+) (account.IssueClaim, error) {
+	workspace.lastAccountID = accountID
+	workspace.lastIssueClaimInput = input
+	return workspace.issueClaim, workspace.err
+}
+
+func (workspace *accountWorkspaceStub) UpdateIssueClaim(
+	_ context.Context,
+	accountID account.ID,
+	resourceID account.ResourceID,
+	version int64,
+	input usecase.UpdateIssueClaimInput,
+) (account.IssueClaim, error) {
+	workspace.recordTarget(accountID, resourceID, version)
+	workspace.lastIssueClaimUpdate = input
+	return workspace.issueClaim, workspace.err
+}
+
+func (workspace *accountWorkspaceStub) DeleteIssueClaim(
+	_ context.Context,
+	accountID account.ID,
+	resourceID account.ResourceID,
+	version int64,
+) error {
+	workspace.recordTarget(accountID, resourceID, version)
+	return workspace.err
 }
 
 func (workspace *accountWorkspaceStub) ListBookmarks(

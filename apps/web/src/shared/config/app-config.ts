@@ -57,6 +57,11 @@ export const externalLinks = Object.freeze({
       owner,
     )}/${encodeURIComponent(repository)}/issues/${issueNumber}`;
   },
+  gitHubPullRequest(owner: string, repository: string, number: number): string {
+    return `https://github.com/${encodeURIComponent(
+      owner,
+    )}/${encodeURIComponent(repository)}/pull/${number}`;
+  },
   gitHubRepository(owner: string, repository: string): string {
     return `https://github.com/${encodeURIComponent(
       owner,
@@ -132,6 +137,17 @@ export const accountEndpoints = Object.freeze({
     return `/api/account/bookmarks?page=${page}&perPage=${perPage}`;
   },
   export: "/api/account/export" as const,
+  issueClaim(id: string): `/${string}` {
+    return `/api/account/issue-claims/${encodeURIComponent(id)}`;
+  },
+  issueClaimForDelete(id: string, version: number): `/${string}` {
+    return `/api/account/issue-claims/${encodeURIComponent(
+      id,
+    )}?version=${version}`;
+  },
+  issueClaims(page = 1, perPage = 50): `/${string}` {
+    return `/api/account/issue-claims?page=${page}&perPage=${perPage}`;
+  },
   preferences: "/api/account/preferences" as const,
   savedSearch(id: string): `/${string}` {
     return `/api/account/saved-searches/${encodeURIComponent(id)}`;
