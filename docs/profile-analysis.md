@@ -200,6 +200,18 @@ lifetime claim. When the merged-PR collection is truncated, the complete
 timeline is labeled `sampled`. Issue-comment and review milestones are not
 invented when dated canonical evidence is unavailable.
 
+## Contribution streak
+
+The streak groups each validated merged PR into a UTC week beginning Monday at
+00:00. A week qualifies when it contains at least one distinct canonical PR
+URL. `currentWeeks` is zero unless the current UTC week qualifies;
+`longestWeeks` is the longest uninterrupted sequence in the observed sample.
+Each qualifying week returns all evidence URLs used for its count.
+
+Streak status inherits the portfolio evidence status, so a truncated GitHub
+search produces a sampled streak rather than a lifetime claim. The calculation
+does not use commits or inferred events that lack dated canonical evidence.
+
 ## Failure and partial-data behavior
 
 A missing repository owner, rate limit, cancellation, timeout, and unusable

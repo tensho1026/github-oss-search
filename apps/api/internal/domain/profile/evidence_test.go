@@ -467,8 +467,34 @@ func TestAnalyzeSnapshotMarksJourneyUnavailableWithoutPortfolioEvidence(t *testi
 	t.Parallel()
 	analysis := AnalyzeSnapshot(ProfileSnapshot{})
 	if analysis.Journey.Status != EvidenceUnavailable ||
-		len(analysis.Journey.Milestones) != 0 {
+		len(analysis.Journey.Milestones) != 0 ||
+		analysis.Streak.Status != EvidenceUnavailable {
 		t.Fatalf("journey = %+v", analysis.Journey)
+	}
+}
+
+func TestAnalyzeSnapshotBuildsUTCContributionStreak(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.August, 12, 12, 0, 0, 0, time.UTC)
+	analysis := AnalyzeSnapshot(ProfileSnapshot{
+		WindowTo: now,
+		Portfolio: PortfolioSnapshot{
+			Available: true, Complete: true, TotalMerged: 4,
+			Items: []PortfolioContribution{
+				{URL: "https://github.com/community/tool/pull/4", MergedAt: time.Date(2026, time.August, 11, 1, 0, 0, 0, time.UTC)},
+				{URL: "https://github.com/community/tool/pull/3", MergedAt: time.Date(2026, time.August, 4, 1, 0, 0, 0, time.UTC)},
+				{URL: "https://github.com/community/tool/pull/2", MergedAt: time.Date(2026, time.July, 21, 1, 0, 0, 0, time.UTC)},
+				{URL: "https://github.com/community/tool/pull/1", MergedAt: time.Date(2026, time.July, 20, 1, 0, 0, 0, time.UTC)},
+			},
+		},
+	})
+	streak := analysis.Streak
+	if streak.Status != EvidenceExact || streak.Timezone != "UTC" ||
+		streak.WeekStartsOn != "monday" || streak.CurrentWeeks != 2 ||
+		streak.LongestWeeks != 2 || streak.QualifyingWeeks != 3 ||
+		len(streak.Weeks) != 3 || streak.Weeks[0].EventCount != 1 ||
+		streak.Weeks[2].EventCount != 2 {
+		t.Fatalf("streak = %+v", streak)
 	}
 }
 

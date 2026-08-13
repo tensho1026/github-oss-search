@@ -1663,6 +1663,20 @@ components:
             repositoryCount: 1
             status: sampled
             totalMerged: 2
+          contributionStreak:
+            analyzedAt: 2026-07-30T00:00:00Z
+            currentWeeks: 0
+            longestWeeks: 1
+            qualifyingWeeks: 1
+            status: sampled
+            timezone: UTC
+            weeks:
+              - endedAt: 2026-07-26T23:59:59.999999999Z
+                eventCount: 1
+                evidenceUrls:
+                  - https://github.com/community/project/pull/42
+                startedAt: 2026-07-20T00:00:00Z
+            weekStartsOn: monday
           ossJourney:
             analyzedAt: 2026-07-30T00:00:00Z
             milestones:
@@ -3650,6 +3664,7 @@ components:
         - contributions
         - contributionCalendar
         - contributionPortfolio
+        - contributionStreak
         - frameworks
         - languageStatus
         - languages
@@ -3693,6 +3708,8 @@ components:
           $ref: "#/components/schemas/ContributionCalendar"
         contributionPortfolio:
           $ref: "#/components/schemas/ContributionPortfolio"
+        contributionStreak:
+          $ref: "#/components/schemas/ContributionStreak"
         ossJourney:
           $ref: "#/components/schemas/OSSJourney"
         ossExperience:
@@ -3877,6 +3894,75 @@ components:
             bounded observed sample, not the user's lifetime first event.
           items:
             $ref: "#/components/schemas/JourneyMilestone"
+    StreakWeek:
+      type: object
+      additionalProperties: false
+      required:
+        - endedAt
+        - eventCount
+        - evidenceUrls
+        - startedAt
+      properties:
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        eventCount:
+          type: integer
+          minimum: 1
+          maximum: 20
+        evidenceUrls:
+          type: array
+          minItems: 1
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            format: uri
+            pattern: ^https://github\.com/[A-Za-z0-9-]+/[^/]+/pull/[1-9][0-9]*$
+    ContributionStreak:
+      type: object
+      additionalProperties: false
+      required:
+        - analyzedAt
+        - currentWeeks
+        - longestWeeks
+        - qualifyingWeeks
+        - status
+        - timezone
+        - weeks
+        - weekStartsOn
+      properties:
+        status:
+          $ref: "#/components/schemas/EvidenceStatus"
+        analyzedAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          enum: [UTC]
+        weekStartsOn:
+          type: string
+          enum: [monday]
+        currentWeeks:
+          type: integer
+          minimum: 0
+          maximum: 20
+        longestWeeks:
+          type: integer
+          minimum: 0
+          maximum: 20
+        qualifyingWeeks:
+          type: integer
+          minimum: 0
+          maximum: 20
+        weeks:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/StreakWeek"
     EvidenceConfidence:
       type: string
       enum:

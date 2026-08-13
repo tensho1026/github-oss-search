@@ -73,6 +73,7 @@ type githubProfileAnalysisResponse struct {
 	ContributionCalendar contributionCalendarResponse    `json:"contributionCalendar"`
 	Portfolio            contributionPortfolioResponse   `json:"contributionPortfolio"`
 	Journey              ossJourneyResponse              `json:"ossJourney"`
+	Streak               contributionStreakResponse      `json:"contributionStreak"`
 	OSSExperience        ossExperienceResponse           `json:"ossExperience"`
 	RepositoryEvidence   repositoryEvidenceResponse      `json:"repositoryEvidence"`
 	Proficiency          []technologyProficiencyResponse `json:"proficiency"`
@@ -180,6 +181,24 @@ type journeyMilestoneResponse struct {
 	Technology     string `json:"technology,omitempty"`
 }
 
+type contributionStreakResponse struct {
+	Status          string               `json:"status"`
+	AnalyzedAt      string               `json:"analyzedAt"`
+	Timezone        string               `json:"timezone"`
+	WeekStartsOn    string               `json:"weekStartsOn"`
+	CurrentWeeks    int                  `json:"currentWeeks"`
+	LongestWeeks    int                  `json:"longestWeeks"`
+	QualifyingWeeks int                  `json:"qualifyingWeeks"`
+	Weeks           []streakWeekResponse `json:"weeks"`
+}
+
+type streakWeekResponse struct {
+	StartedAt    string   `json:"startedAt"`
+	EndedAt      string   `json:"endedAt"`
+	EventCount   int      `json:"eventCount"`
+	EvidenceURLs []string `json:"evidenceUrls"`
+}
+
 type technologyEvidenceResponse struct {
 	Kind   string `json:"kind"`
 	Value  int    `json:"value"`
@@ -256,6 +275,7 @@ func newGitHubProfileAnalysisResponse(
 		),
 		Portfolio:     newContributionPortfolioResponse(analysis.Portfolio),
 		Journey:       newOSSJourneyResponse(analysis.Journey),
+		Streak:        newContributionStreakResponse(analysis.Streak),
 		OSSExperience: newOSSExperienceResponse(analysis.OSSExperience),
 		RepositoryEvidence: newRepositoryEvidenceResponse(
 			analysis.RepositoryEvidence,
@@ -306,6 +326,26 @@ func newContributionCalendarResponse(
 		response.To = calendar.To.Format(time.DateOnly)
 	}
 	return response
+}
+
+func newContributionStreakResponse(
+	streak profile.ContributionStreak,
+) contributionStreakResponse {
+	weeks := make([]streakWeekResponse, 0, len(streak.Weeks))
+	for _, week := range streak.Weeks {
+		weeks = append(weeks, streakWeekResponse{
+			StartedAt:    week.StartedAt.Format(time.RFC3339),
+			EndedAt:      week.EndedAt.Format(time.RFC3339Nano),
+			EventCount:   week.EventCount,
+			EvidenceURLs: append([]string(nil), week.EvidenceURLs...),
+		})
+	}
+	return contributionStreakResponse{
+		Status: string(streak.Status), AnalyzedAt: streak.AnalyzedAt.Format(time.RFC3339),
+		Timezone: streak.Timezone, WeekStartsOn: streak.WeekStartsOn,
+		CurrentWeeks: streak.CurrentWeeks, LongestWeeks: streak.LongestWeeks,
+		QualifyingWeeks: streak.QualifyingWeeks, Weeks: weeks,
+	}
 }
 
 func newOSSJourneyResponse(journey profile.OSSJourney) ossJourneyResponse {

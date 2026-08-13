@@ -81,6 +81,23 @@
       "status": "sampled",
       "totalMerged": 2
     },
+    "contributionStreak": {
+      "analyzedAt": "2026-07-30T00:00:00Z",
+      "currentWeeks": 0,
+      "longestWeeks": 1,
+      "qualifyingWeeks": 1,
+      "status": "sampled",
+      "timezone": "UTC",
+      "weeks": [
+        {
+          "endedAt": "2026-07-26T23:59:59.999999999Z",
+          "eventCount": 1,
+          "evidenceUrls": ["https://github.com/community/project/pull/42"],
+          "startedAt": "2026-07-20T00:00:00Z"
+        }
+      ],
+      "weekStartsOn": "monday"
+    },
     "ossJourney": {
       "analyzedAt": "2026-07-30T00:00:00Z",
       "milestones": [
