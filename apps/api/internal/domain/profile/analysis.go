@@ -37,6 +37,7 @@ type Analysis struct {
 	Contributions        ContributionAnalysis
 	ContributionCalendar ContributionCalendar
 	Portfolio            ContributionPortfolio
+	Journey              OSSJourney
 	OSSExperience        OSSExperience
 	RepositoryEvidence   RepositoryEvidence
 	Proficiency          []TechnologyProficiency

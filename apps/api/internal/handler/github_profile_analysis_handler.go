@@ -72,6 +72,7 @@ type githubProfileAnalysisResponse struct {
 	Contributions        contributionAnalysisResponse    `json:"contributions"`
 	ContributionCalendar contributionCalendarResponse    `json:"contributionCalendar"`
 	Portfolio            contributionPortfolioResponse   `json:"contributionPortfolio"`
+	Journey              ossJourneyResponse              `json:"ossJourney"`
 	OSSExperience        ossExperienceResponse           `json:"ossExperience"`
 	RepositoryEvidence   repositoryEvidenceResponse      `json:"repositoryEvidence"`
 	Proficiency          []technologyProficiencyResponse `json:"proficiency"`
@@ -162,6 +163,23 @@ type portfolioContributionResponse struct {
 	Summary         string `json:"summary"`
 }
 
+type ossJourneyResponse struct {
+	Status     string                     `json:"status"`
+	AnalyzedAt string                     `json:"analyzedAt"`
+	Milestones []journeyMilestoneResponse `json:"milestones"`
+}
+
+type journeyMilestoneResponse struct {
+	ID             string `json:"id"`
+	Kind           string `json:"kind"`
+	OccurredAt     string `json:"occurredAt"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	EvidenceURL    string `json:"evidenceUrl"`
+	RepositoryName string `json:"repositoryName"`
+	Technology     string `json:"technology,omitempty"`
+}
+
 type technologyEvidenceResponse struct {
 	Kind   string `json:"kind"`
 	Value  int    `json:"value"`
@@ -237,6 +255,7 @@ func newGitHubProfileAnalysisResponse(
 			analysis.ContributionCalendar,
 		),
 		Portfolio:     newContributionPortfolioResponse(analysis.Portfolio),
+		Journey:       newOSSJourneyResponse(analysis.Journey),
 		OSSExperience: newOSSExperienceResponse(analysis.OSSExperience),
 		RepositoryEvidence: newRepositoryEvidenceResponse(
 			analysis.RepositoryEvidence,
@@ -287,6 +306,25 @@ func newContributionCalendarResponse(
 		response.To = calendar.To.Format(time.DateOnly)
 	}
 	return response
+}
+
+func newOSSJourneyResponse(journey profile.OSSJourney) ossJourneyResponse {
+	milestones := make([]journeyMilestoneResponse, 0, len(journey.Milestones))
+	for _, milestone := range journey.Milestones {
+		milestones = append(milestones, journeyMilestoneResponse{
+			ID: milestone.ID, Kind: milestone.Kind,
+			OccurredAt: milestone.OccurredAt.Format(time.RFC3339),
+			Title:      milestone.Title, Description: milestone.Description,
+			EvidenceURL:    milestone.EvidenceURL,
+			RepositoryName: milestone.RepositoryName,
+			Technology:     milestone.Technology,
+		})
+	}
+	return ossJourneyResponse{
+		Status:     string(journey.Status),
+		AnalyzedAt: journey.AnalyzedAt.Format(time.RFC3339),
+		Milestones: milestones,
+	}
 }
 
 func newContributionPortfolioResponse(

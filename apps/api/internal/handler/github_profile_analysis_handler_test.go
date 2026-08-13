@@ -98,6 +98,17 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 						Language:        "Go",
 					}},
 				},
+				Journey: profile.OSSJourney{
+					Status: profile.EvidenceSampled, AnalyzedAt: now,
+					Milestones: []profile.JourneyMilestone{{
+						ID:   "merged:community/project#42",
+						Kind: "merged_pull_request", OccurredAt: now.Add(-time.Hour),
+						Title:          "Merged PR #42 in community/project",
+						Description:    "Observed public merge: Add bounded retries",
+						EvidenceURL:    "https://github.com/community/project/pull/42",
+						RepositoryName: "community/project",
+					}},
+				},
 				OSSExperience: profile.OSSExperience{
 					Level:      "active",
 					Confidence: profile.ConfidenceHigh,
@@ -201,6 +212,9 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 		`"name":"Go","count":1`,
 		`"number":42,"title":"Add bounded retries","url":"https://github.com/community/project/pull/42"`,
 		`"summary":"Merged public pull request in community/project: Add bounded retries"`,
+		`"ossJourney":{"status":"sampled","analyzedAt":"2026-07-30T12:00:00Z"`,
+		`"id":"merged:community/project#42","kind":"merged_pull_request"`,
+		`"evidenceUrl":"https://github.com/community/project/pull/42"`,
 		`"ossExperience":{"level":"active","confidence":"high","publicOnly":true`,
 		`"owned":{"status":"sampled","observed":2,"total":5`,
 		`"starred":{"status":"sampled","observed":1,"total":null`,

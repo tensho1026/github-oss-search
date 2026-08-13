@@ -68,7 +68,8 @@ The user supplies a validated GitHub user or organization login. IssueScout
 normalizes bounded public repository and contribution evidence, then reports
 technology percentages, recent technologies, OSS activity, sampled
 star/fork/contribution views, explainable five-level diagnostics, and
-partial-data warnings. A missing owner, exhausted GitHub rate limit, timeout,
+an evidence-linked chronological OSS Journey. A missing owner, exhausted
+GitHub rate limit, timeout,
 and upstream failure are different recoverable states. See
 [Public profile and OSS analysis](profile-analysis.md).
 

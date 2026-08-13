@@ -109,6 +109,42 @@ export const profileAnalysisFixture: ProfileAnalysisEnvelope = {
       status: "sampled",
       totalMerged: 2,
     },
+    ossJourney: {
+      analyzedAt: "2026-07-30T00:00:00Z",
+      milestones: [
+        {
+          description: "Observed public merge: Add bounded retries",
+          evidenceUrl: "https://github.com/community/project/pull/42",
+          id: "merged:community/project#42",
+          kind: "merged_pull_request",
+          occurredAt: "2026-07-20T12:00:00Z",
+          repositoryName: "community/project",
+          title: "Merged PR #42 in community/project",
+        },
+        {
+          description:
+            "Earliest merged PR for this repository in the bounded sample.",
+          evidenceUrl: "https://github.com/community/project/pull/42",
+          id: "repository:community/project",
+          kind: "repository_first",
+          occurredAt: "2026-07-20T12:00:00Z",
+          repositoryName: "community/project",
+          title: "First observed contribution to community/project",
+        },
+        {
+          description:
+            "Earliest merged PR using this repository's primary language in the bounded sample.",
+          evidenceUrl: "https://github.com/community/project/pull/42",
+          id: "technology:go",
+          kind: "technology_first",
+          occurredAt: "2026-07-20T12:00:00Z",
+          repositoryName: "community/project",
+          technology: "Go",
+          title: "First observed Go contribution",
+        },
+      ],
+      status: "sampled",
+    },
     frameworks: ["React", "Gin"],
     languages: [
       { name: "TypeScript", percentage: 65 },

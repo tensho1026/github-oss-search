@@ -1663,6 +1663,32 @@ components:
             repositoryCount: 1
             status: sampled
             totalMerged: 2
+          ossJourney:
+            analyzedAt: 2026-07-30T00:00:00Z
+            milestones:
+              - description: "Observed public merge: Add bounded retries"
+                evidenceUrl: https://github.com/community/project/pull/42
+                id: merged:community/project#42
+                kind: merged_pull_request
+                occurredAt: 2026-07-20T12:00:00Z
+                repositoryName: community/project
+                title: "Merged PR #42 in community/project"
+              - description: Earliest merged PR for this repository in the bounded sample.
+                evidenceUrl: https://github.com/community/project/pull/42
+                id: repository:community/project
+                kind: repository_first
+                occurredAt: 2026-07-20T12:00:00Z
+                repositoryName: community/project
+                title: First observed contribution to community/project
+              - description: Earliest merged PR using this repository's primary language in the bounded sample.
+                evidenceUrl: https://github.com/community/project/pull/42
+                id: technology:go
+                kind: technology_first
+                occurredAt: 2026-07-20T12:00:00Z
+                repositoryName: community/project
+                technology: Go
+                title: First observed Go contribution
+            status: sampled
           frameworks:
             - React
           languages:
@@ -3627,6 +3653,7 @@ components:
         - frameworks
         - languageStatus
         - languages
+        - ossJourney
         - ossExperience
         - proficiency
         - recentTechnologies
@@ -3666,6 +3693,8 @@ components:
           $ref: "#/components/schemas/ContributionCalendar"
         contributionPortfolio:
           $ref: "#/components/schemas/ContributionPortfolio"
+        ossJourney:
+          $ref: "#/components/schemas/OSSJourney"
         ossExperience:
           $ref: "#/components/schemas/OSSExperience"
         repositoryEvidence:
@@ -3785,6 +3814,69 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/PortfolioContribution"
+    JourneyMilestoneKind:
+      type: string
+      enum:
+        - merged_pull_request
+        - repository_first
+        - technology_first
+    JourneyMilestone:
+      type: object
+      additionalProperties: false
+      required:
+        - description
+        - evidenceUrl
+        - id
+        - kind
+        - occurredAt
+        - repositoryName
+        - title
+      properties:
+        id:
+          type: string
+          minLength: 1
+        kind:
+          $ref: "#/components/schemas/JourneyMilestoneKind"
+        occurredAt:
+          type: string
+          format: date-time
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        evidenceUrl:
+          type: string
+          format: uri
+          pattern: ^https://github\.com/[A-Za-z0-9-]+/[^/]+/pull/[1-9][0-9]*$
+        repositoryName:
+          type: string
+          minLength: 3
+        technology:
+          type: string
+          minLength: 1
+    OSSJourney:
+      type: object
+      additionalProperties: false
+      required:
+        - analyzedAt
+        - milestones
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/EvidenceStatus"
+        analyzedAt:
+          type: string
+          format: date-time
+        milestones:
+          type: array
+          maxItems: 60
+          description: |
+            Chronological public milestones. `first` means earliest in the
+            bounded observed sample, not the user's lifetime first event.
+          items:
+            $ref: "#/components/schemas/JourneyMilestone"
     EvidenceConfidence:
       type: string
       enum:

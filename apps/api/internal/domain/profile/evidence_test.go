@@ -439,9 +439,9 @@ func TestAnalyzeSnapshotBuildsReproducibleContributionPortfolio(t *testing.T) {
 			TotalMerged: 3,
 			HasMore:     true,
 			Items: []PortfolioContribution{
-				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 2, MergedAt: now.Add(-time.Hour), Language: "Go"},
-				{RepositoryOwner: "alpha", RepositoryName: "web", Number: 1, MergedAt: now.Add(-2 * time.Hour), Language: "TypeScript"},
-				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 1, MergedAt: now.Add(-3 * time.Hour), Language: "Go"},
+				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 2, Title: "Second", URL: "https://github.com/zeta/tool/pull/2", MergedAt: now.Add(-time.Hour), Language: "Go"},
+				{RepositoryOwner: "alpha", RepositoryName: "web", Number: 1, Title: "Web", URL: "https://github.com/alpha/web/pull/1", MergedAt: now.Add(-2 * time.Hour), Language: "TypeScript"},
+				{RepositoryOwner: "zeta", RepositoryName: "tool", Number: 1, Title: "First", URL: "https://github.com/zeta/tool/pull/1", MergedAt: now.Add(-3 * time.Hour), Language: "Go"},
 			},
 		},
 	})
@@ -452,6 +452,23 @@ func TestAnalyzeSnapshotBuildsReproducibleContributionPortfolio(t *testing.T) {
 		portfolio.Languages[0].Count != 2 ||
 		portfolio.Contributions[0].Number != 2 {
 		t.Fatalf("portfolio = %+v", portfolio)
+	}
+	journey := analysis.Journey
+	if journey.Status != EvidenceSampled || len(journey.Milestones) != 7 ||
+		journey.Milestones[0].ID != "merged:zeta/tool#1" ||
+		journey.Milestones[1].ID != "repository:zeta/tool" ||
+		journey.Milestones[2].ID != "technology:go" ||
+		journey.Milestones[6].ID != "merged:zeta/tool#2" {
+		t.Fatalf("journey = %+v", journey)
+	}
+}
+
+func TestAnalyzeSnapshotMarksJourneyUnavailableWithoutPortfolioEvidence(t *testing.T) {
+	t.Parallel()
+	analysis := AnalyzeSnapshot(ProfileSnapshot{})
+	if analysis.Journey.Status != EvidenceUnavailable ||
+		len(analysis.Journey.Milestones) != 0 {
+		t.Fatalf("journey = %+v", analysis.Journey)
 	}
 }
 
