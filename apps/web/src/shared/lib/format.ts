@@ -39,3 +39,9 @@ export function formatDuration(seconds: number | null): string {
 export function formatPercentage(value: number): string {
   return `${Math.max(0, Math.min(100, Math.round(value)))}%`;
 }
+
+export function formatRating(value: number, maximum = 5): string {
+  const boundedMaximum = Math.max(1, Math.round(maximum));
+  const boundedValue = Math.max(0, Math.min(boundedMaximum, Math.round(value)));
+  return `${"★".repeat(boundedValue)}${"☆".repeat(boundedMaximum - boundedValue)}`;
+}

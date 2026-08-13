@@ -873,9 +873,26 @@ export type Recommendation = {
     ScoreComponent,
   ];
   skillMatch: SkillMatch;
+  maintainerResponse: MaintainerResponseAssessment;
   reasons: Array<string>;
   warnings: Array<RecommendationWarning>;
   claim: ClaimEvidence;
+};
+
+export type MaintainerResponseAssessment = {
+  status: AggregateStatus;
+  /**
+   * Zero only when the bounded response sample is unavailable.
+   */
+  level: number;
+  label: string;
+  confidence: Confidence;
+  sampleSize: number;
+  windowDays: number;
+  responseCoverage: RatioAggregate;
+  firstIssueResponse: DurationAggregate;
+  firstPullReview: DurationAggregate;
+  pullRequestMerge: DurationAggregate;
 };
 
 export type ScoreComponent = {

@@ -1788,6 +1788,46 @@ components:
               claimed: false
               confidence: low
               evidence: []
+            maintainerResponse:
+              confidence: low
+              firstIssueResponse:
+                confidence: low
+                medianSeconds: null
+                percentile90Seconds: null
+                sampleSize: 0
+                status: unavailable
+                truncated: false
+                windowDays: 0
+              firstPullReview:
+                confidence: low
+                medianSeconds: null
+                percentile90Seconds: null
+                sampleSize: 0
+                status: unavailable
+                truncated: false
+                windowDays: 0
+              label: ""
+              level: 0
+              pullRequestMerge:
+                confidence: low
+                medianSeconds: null
+                percentile90Seconds: null
+                sampleSize: 0
+                status: unavailable
+                truncated: false
+                windowDays: 0
+              responseCoverage:
+                confidence: low
+                denominator: null
+                numerator: null
+                percentage: null
+                sampleSize: 0
+                status: unavailable
+                truncated: false
+                windowDays: 0
+              sampleSize: 0
+              status: unavailable
+              windowDays: 0
             reasons: []
             score: 0
             skillMatch:
@@ -4163,6 +4203,7 @@ components:
       required:
         - breakdown
         - claim
+        - maintainerResponse
         - reasons
         - score
         - skillMatch
@@ -4180,6 +4221,8 @@ components:
             $ref: "#/components/schemas/ScoreComponent"
         skillMatch:
           $ref: "#/components/schemas/SkillMatch"
+        maintainerResponse:
+          $ref: "#/components/schemas/MaintainerResponseAssessment"
         reasons:
           type: array
           maxItems: 30
@@ -4193,6 +4236,48 @@ components:
             $ref: "#/components/schemas/RecommendationWarning"
         claim:
           $ref: "#/components/schemas/ClaimEvidence"
+    MaintainerResponseAssessment:
+      type: object
+      additionalProperties: false
+      required:
+        - confidence
+        - firstIssueResponse
+        - firstPullReview
+        - label
+        - level
+        - pullRequestMerge
+        - responseCoverage
+        - sampleSize
+        - status
+        - windowDays
+      properties:
+        status:
+          $ref: "#/components/schemas/AggregateStatus"
+        level:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Zero only when the bounded response sample is unavailable.
+        label:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        sampleSize:
+          type: integer
+          minimum: 0
+          maximum: 100
+        windowDays:
+          type: integer
+          minimum: 0
+          maximum: 180
+        responseCoverage:
+          $ref: "#/components/schemas/RatioAggregate"
+        firstIssueResponse:
+          $ref: "#/components/schemas/DurationAggregate"
+        firstPullReview:
+          $ref: "#/components/schemas/DurationAggregate"
+        pullRequestMerge:
+          $ref: "#/components/schemas/DurationAggregate"
     ScoreComponent:
       type: object
       additionalProperties: false

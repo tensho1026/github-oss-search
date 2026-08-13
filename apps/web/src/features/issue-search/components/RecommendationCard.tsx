@@ -16,7 +16,9 @@ import { appRoutes, externalLinks } from "../../../shared/config/app-config";
 import {
   formatCompactNumber,
   formatDate,
+  formatDuration,
   formatPercentage,
+  formatRating,
 } from "../../../shared/lib/format";
 import { cn } from "../../../shared/lib/cn";
 import { issueDetailSearchParameters } from "../../../shared/lib/issue-detail-location";
@@ -47,6 +49,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
     detailParameters.size > 0
       ? `${detailRoute}?${detailParameters.toString()}`
       : detailRoute;
+  const maintainerResponse = item.recommendation.maintainerResponse;
   return (
     <Card aria-labelledby={`issue-result-${rank}`} className="overflow-hidden">
       <CardHeader className="border-b border-border bg-muted/35">
@@ -171,6 +174,59 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           </div>
         </section>
 
+        <section
+          aria-labelledby={`maintainer-response-${rank}`}
+          className="rounded-xl border border-border bg-muted/35 p-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold" id={`maintainer-response-${rank}`}>
+                Maintainer response
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Historical maintainer-only activity
+              </p>
+            </div>
+            {maintainerResponse.status === "available" ? (
+              <div className="text-right">
+                <strong
+                  aria-label={`${maintainerResponse.level} out of 5, ${maintainerResponse.label}`}
+                  className="block tracking-[0.08em] text-accent"
+                >
+                  {formatRating(maintainerResponse.level)}
+                </strong>
+                <span className="text-xs font-semibold">
+                  {maintainerResponse.label}
+                </span>
+              </div>
+            ) : (
+              <Badge variant="neutral">Unavailable</Badge>
+            )}
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-xs text-muted-foreground">
+                Median first response
+              </dt>
+              <dd className="mt-1 font-medium">
+                {durationValue(maintainerResponse.firstIssueResponse)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">PR merge time</dt>
+              <dd className="mt-1 font-medium">
+                {durationValue(maintainerResponse.pullRequestMerge)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            {maintainerResponse.sampleSize} sampled ·{" "}
+            {maintainerResponse.confidence}
+            {" confidence"}. Historical samples do not guarantee a future
+            response or merge.
+          </p>
+        </section>
+
         <section aria-labelledby={`reasons-${rank}`}>
           <h3 className="font-semibold" id={`reasons-${rank}`}>
             Why it ranks here
@@ -230,4 +286,13 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
       </CardFooter>
     </Card>
   );
+}
+
+function durationValue(metric: {
+  medianSeconds: number | null;
+  status: string;
+}) {
+  return metric.status === "available"
+    ? formatDuration(metric.medianSeconds)
+    : "Unavailable";
 }

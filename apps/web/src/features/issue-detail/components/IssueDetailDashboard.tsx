@@ -30,6 +30,7 @@ import {
   formatDate,
   formatDuration,
   formatPercentage,
+  formatRating,
 } from "../../../shared/lib/format";
 import {
   scorePresentation,
@@ -585,6 +586,58 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
           </Section>
 
           <Section title="Maintainer activity">
+            <div className="mb-4 rounded-xl border border-border bg-muted/25 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">Maintainer Response Score</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Bounded maintainer-only response history
+                  </p>
+                </div>
+                {data.recommendation.maintainerResponse.status ===
+                "available" ? (
+                  <div className="text-right">
+                    <strong
+                      aria-label={`${data.recommendation.maintainerResponse.level} out of 5, ${data.recommendation.maintainerResponse.label}`}
+                      className="block tracking-[0.08em] text-accent"
+                    >
+                      {formatRating(
+                        data.recommendation.maintainerResponse.level,
+                      )}
+                    </strong>
+                    <span className="text-xs font-semibold">
+                      {data.recommendation.maintainerResponse.label}
+                    </span>
+                  </div>
+                ) : (
+                  <Badge variant="neutral">Unavailable</Badge>
+                )}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Response coverage
+                  </dt>
+                  <dd className="mt-1 font-medium">
+                    {ratioValue(
+                      data.recommendation.maintainerResponse.responseCoverage,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Response sample
+                  </dt>
+                  <dd className="mt-1 font-medium">
+                    {data.recommendation.maintainerResponse.sampleSize} ·{" "}
+                    {data.recommendation.maintainerResponse.confidence}
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                Historical samples do not guarantee a future response or merge.
+              </p>
+            </div>
             <p className="mb-3 text-sm text-muted-foreground">
               CI: {data.activity.ci} · Meaningful update:{" "}
               {data.activity.lastMeaningfulUpdate

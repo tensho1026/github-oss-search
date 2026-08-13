@@ -134,6 +134,21 @@ type ActivityMetrics struct {
 	PullRequestMergeTime  DurationAggregate
 }
 
+// MaintainerResponseAssessment summarizes bounded historical maintainer
+// interactions without promising a future response or merge.
+type MaintainerResponseAssessment struct {
+	Status             AggregateStatus
+	Level              int
+	Label              string
+	Confidence         Confidence
+	SampleSize         int
+	WindowDays         int
+	ResponseCoverage   RatioAggregate
+	FirstIssueResponse DurationAggregate
+	FirstPullReview    DurationAggregate
+	PullRequestMerge   DurationAggregate
+}
+
 // ClaimEvidence is a conservative observation that another contributor has
 // explicitly claimed the issue.
 type ClaimEvidence struct {
@@ -193,14 +208,15 @@ type RecommendationInput struct {
 // Recommendation is the deterministic ranked result shared by list and
 // detail transports.
 type Recommendation struct {
-	Score             int
-	Breakdown         ScoreBreakdown
-	SkillMatch        SkillMatchAssessment
-	RepositorySignals []RepositorySignal
-	Activity          ActivityMetrics
-	Claim             ClaimEvidence
-	Reasons           []string
-	Warnings          []Warning
+	Score              int
+	Breakdown          ScoreBreakdown
+	SkillMatch         SkillMatchAssessment
+	RepositorySignals  []RepositorySignal
+	Activity           ActivityMetrics
+	MaintainerResponse MaintainerResponseAssessment
+	Claim              ClaimEvidence
+	Reasons            []string
+	Warnings           []Warning
 }
 
 // RankedIssue is the shared evaluated shape used by both list and detail

@@ -89,6 +89,15 @@ describe("IssueDetailPage", () => {
     expect(
       screen.getByRole("heading", { name: "Maintainer activity" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Maintainer Response Score")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("5 out of 5, Very responsive"),
+    ).toHaveTextContent("★★★★★");
+    expect(
+      screen.getByText(
+        "Historical samples do not guarantee a future response or merge.",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Back to search results" }),
     ).toHaveAttribute("href", route.from);
