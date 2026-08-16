@@ -22,6 +22,15 @@ describe("ProfileExtendedAnalytics", () => {
       screen.getByRole("link", { name: "View canonical PR" }),
     ).toHaveAttribute("href", "https://github.com/community/project/pull/42");
     expect(screen.getByText("Observed merged")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "OSS Journey" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("First observed Go contribution"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "View evidence" })).toHaveLength(
+      3,
+    );
 
     expect(
       screen.getByRole("heading", { name: "Public contribution activity" }),

@@ -3,6 +3,7 @@ package profile
 import (
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -157,6 +158,28 @@ type ContributionPortfolio struct {
 	Contributions   []PortfolioContribution
 }
 
+// JourneyMilestone is a dated, normalized OSS event backed by a canonical
+// public GitHub URL. "First" milestones always mean first in the bounded
+// observed sample, never a lifetime claim.
+type JourneyMilestone struct {
+	ID             string
+	Kind           string
+	OccurredAt     time.Time
+	Title          string
+	Description    string
+	EvidenceURL    string
+	RepositoryName string
+	Technology     string
+}
+
+// OSSJourney is a deterministic timeline derived only from verified public
+// contribution evidence.
+type OSSJourney struct {
+	Status     EvidenceStatus
+	AnalyzedAt time.Time
+	Milestones []JourneyMilestone
+}
+
 // ContributionSnapshot records public contribution counts before domain
 // normalization.
 type ContributionSnapshot struct {
@@ -286,6 +309,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	recent := analyzeRecentTechnologies(snapshot, window.From)
 	contributions := analyzeContributions(snapshot.Contributions)
 	portfolio := analyzePortfolio(snapshot.Portfolio, window.To)
+	journey := analyzeJourney(portfolio)
 	repositoryEvidence := RepositoryEvidence{
 		Owned:       analyzeRepositoryCollection(snapshot.Owned, window.From),
 		Contributed: analyzeRepositoryCollection(snapshot.Contributed, window.From),
@@ -304,6 +328,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 			snapshot.Contributions.Calendar,
 		),
 		Portfolio:          portfolio,
+		Journey:            journey,
 		OSSExperience:      analyzeOSSExperience(contributions),
 		RepositoryEvidence: repositoryEvidence,
 		Proficiency: buildTechnologyProficiency(
@@ -331,6 +356,72 @@ func cloneContributionCalendar(
 		calendar.Status = EvidenceUnavailable
 	}
 	return calendar
+}
+
+func analyzeJourney(portfolio ContributionPortfolio) OSSJourney {
+	journey := OSSJourney{
+		Status: portfolio.Status, AnalyzedAt: portfolio.AnalyzedAt,
+		Milestones: []JourneyMilestone{},
+	}
+	if portfolio.Status == EvidenceUnavailable {
+		return journey
+	}
+	items := slices.Clone(portfolio.Contributions)
+	slices.SortFunc(items, func(left, right PortfolioContribution) int {
+		if comparison := left.MergedAt.Compare(right.MergedAt); comparison != 0 {
+			return comparison
+		}
+		leftKey := strings.ToLower(left.RepositoryOwner + "/" + left.RepositoryName)
+		rightKey := strings.ToLower(right.RepositoryOwner + "/" + right.RepositoryName)
+		if comparison := strings.Compare(leftKey, rightKey); comparison != 0 {
+			return comparison
+		}
+		return left.Number - right.Number
+	})
+	seenRepositories := make(map[string]struct{})
+	seenTechnologies := make(map[string]struct{})
+	for _, item := range items {
+		repositoryName := item.RepositoryOwner + "/" + item.RepositoryName
+		repositoryKey := strings.ToLower(repositoryName)
+		journey.Milestones = append(journey.Milestones, JourneyMilestone{
+			ID:   "merged:" + repositoryKey + "#" + strconv.Itoa(item.Number),
+			Kind: "merged_pull_request", OccurredAt: item.MergedAt,
+			Title:       "Merged PR #" + strconv.Itoa(item.Number) + " in " + repositoryName,
+			Description: "Observed public merge: " + item.Title,
+			EvidenceURL: item.URL, RepositoryName: repositoryName,
+		})
+		if _, seen := seenRepositories[repositoryKey]; !seen {
+			seenRepositories[repositoryKey] = struct{}{}
+			journey.Milestones = append(journey.Milestones, JourneyMilestone{
+				ID: "repository:" + repositoryKey, Kind: "repository_first",
+				OccurredAt:  item.MergedAt,
+				Title:       "First observed contribution to " + repositoryName,
+				Description: "Earliest merged PR for this repository in the bounded sample.",
+				EvidenceURL: item.URL, RepositoryName: repositoryName,
+			})
+		}
+		technologyKey := strings.ToLower(item.Language)
+		if technologyKey != "" {
+			if _, seen := seenTechnologies[technologyKey]; !seen {
+				seenTechnologies[technologyKey] = struct{}{}
+				journey.Milestones = append(journey.Milestones, JourneyMilestone{
+					ID: "technology:" + technologyKey, Kind: "technology_first",
+					OccurredAt:  item.MergedAt,
+					Title:       "First observed " + item.Language + " contribution",
+					Description: "Earliest merged PR using this repository's primary language in the bounded sample.",
+					EvidenceURL: item.URL, RepositoryName: repositoryName,
+					Technology: item.Language,
+				})
+			}
+		}
+	}
+	slices.SortFunc(journey.Milestones, func(left, right JourneyMilestone) int {
+		if comparison := left.OccurredAt.Compare(right.OccurredAt); comparison != 0 {
+			return comparison
+		}
+		return strings.Compare(left.ID, right.ID)
+	})
+	return journey
 }
 
 func analyzePortfolio(

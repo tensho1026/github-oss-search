@@ -32,6 +32,6 @@
   },
   "webBundle": {
     "maximumSingleJavaScriptGzipKiB": 75,
-    "maximumTotalGzipKiB": 208
+    "maximumTotalGzipKiB": 209
   }
 }

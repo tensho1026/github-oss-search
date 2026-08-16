@@ -188,6 +188,18 @@ authenticated GitHub login matches the analyzed profile, and it says explicitly
 that nothing is published automatically. Anonymous profile analysis remains
 database-free and does not persist the portfolio snapshot.
 
+## OSS Journey timeline
+
+The journey is derived from the same validated public merged-PR evidence. It
+normalizes merge, first-observed repository, and first-observed primary-language
+milestones, then orders them by UTC timestamp and a stable ID tie-breaker. Every
+milestone links to the canonical pull request that supports it.
+
+`First observed` is deliberately scoped to the bounded sample; it is not a
+lifetime claim. When the merged-PR collection is truncated, the complete
+timeline is labeled `sampled`. Issue-comment and review milestones are not
+invented when dated canonical evidence is unavailable.
+
 ## Failure and partial-data behavior
 
 A missing repository owner, rate limit, cancellation, timeout, and unusable

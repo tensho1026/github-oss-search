@@ -358,6 +358,7 @@ export type ProfileAnalysis = {
   contributions: ContributionAnalysis;
   contributionCalendar: ContributionCalendar;
   contributionPortfolio: ContributionPortfolio;
+  ossJourney: OssJourney;
   ossExperience: OssExperience;
   repositoryEvidence: ProfileRepositoryEvidence;
   proficiency: Array<TechnologyProficiency>;
@@ -403,6 +404,31 @@ export type ContributionPortfolio = {
   analyzedAt: string;
   languages: Array<PortfolioLanguageCount>;
   contributions: Array<PortfolioContribution>;
+};
+
+export type JourneyMilestoneKind =
+  "merged_pull_request" | "repository_first" | "technology_first";
+
+export type JourneyMilestone = {
+  id: string;
+  kind: JourneyMilestoneKind;
+  occurredAt: string;
+  title: string;
+  description: string;
+  evidenceUrl: string;
+  repositoryName: string;
+  technology?: string;
+};
+
+export type OssJourney = {
+  status: EvidenceStatus;
+  analyzedAt: string;
+  /**
+   * Chronological public milestones. `first` means earliest in the
+   * bounded observed sample, not the user's lifetime first event.
+   *
+   */
+  milestones: Array<JourneyMilestone>;
 };
 
 export type EvidenceConfidence = "high" | "medium" | "low" | "unavailable";

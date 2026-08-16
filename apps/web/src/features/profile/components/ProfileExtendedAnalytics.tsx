@@ -168,6 +168,7 @@ export function ProfileExtendedAnalytics({
       {showPortfolio ? (
         <ContributionPortfolioPreview analysis={analysis} />
       ) : null}
+      <OSSJourneyTimeline analysis={analysis} />
       <section aria-labelledby="contribution-activity-heading" className="mt-5">
         <div className="grid gap-5">
           <ContributionCalendar calendar={analysis.contributionCalendar} />
@@ -403,6 +404,75 @@ export function ProfileExtendedAnalytics({
         </Card>
       </section>
     </>
+  );
+}
+
+function OSSJourneyTimeline({ analysis }: { analysis: ProfileAnalysis }) {
+  const journey = analysis.ossJourney;
+  return (
+    <section aria-labelledby="oss-journey-heading" className="mt-5">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle id="oss-journey-heading">OSS Journey</CardTitle>
+              <CardDescription>
+                A chronological timeline backed by canonical public GitHub
+                evidence. First means earliest in the observed sample.
+              </CardDescription>
+            </div>
+            <EvidenceBadge status={journey.status} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {journey.status === "unavailable" ? (
+            <p className="text-sm text-muted-foreground">
+              No verified public journey evidence is available.
+            </p>
+          ) : journey.milestones.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No milestone was observed in this bounded sample.
+            </p>
+          ) : (
+            <ol className="relative grid gap-4 border-l border-border pl-5">
+              {journey.milestones.map((milestone) => (
+                <li className="relative" key={milestone.id}>
+                  <span
+                    aria-hidden="true"
+                    className="absolute -left-[1.49rem] top-1.5 size-2 rounded-full bg-accent ring-4 ring-surface"
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <time
+                      className="font-mono text-xs text-muted-foreground"
+                      dateTime={milestone.occurredAt}
+                    >
+                      {formatDate(milestone.occurredAt)}
+                    </time>
+                    <Badge variant="neutral">{enumLabel(milestone.kind)}</Badge>
+                  </div>
+                  <p className="mt-1 font-semibold">{milestone.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {milestone.description}
+                  </p>
+                  <a
+                    className="mt-2 inline-flex rounded-md text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                    href={milestone.evidenceUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    View evidence
+                  </a>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            Analyzed {formatDate(journey.analyzedAt)}. Ordering uses normalized
+            UTC timestamps and stable milestone IDs.
+          </p>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
