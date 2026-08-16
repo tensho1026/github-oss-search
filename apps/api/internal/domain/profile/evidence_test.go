@@ -498,6 +498,36 @@ func TestAnalyzeSnapshotBuildsUTCContributionStreak(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSnapshotEvaluatesVersionedOSSQuests(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.August, 12, 12, 0, 0, 0, time.UTC)
+	analysis := AnalyzeSnapshot(ProfileSnapshot{
+		WindowTo: now,
+		Contributions: ContributionSnapshot{
+			Available:          true,
+			PullRequestsOpened: CountEvidence{Available: true, Value: 2, Complete: true},
+			PullRequestReviews: CountEvidence{Available: true, Complete: true},
+		},
+		Portfolio: PortfolioSnapshot{
+			Available: true, Complete: true, TotalMerged: 1,
+			Items: []PortfolioContribution{{
+				RepositoryOwner: "community", RepositoryName: "tool", Number: 1,
+				URL: "https://github.com/community/tool/pull/1", MergedAt: now.Add(-time.Hour),
+			}},
+		},
+	})
+	quest := analysis.Quest
+	if quest.CatalogVersion != "2026-08-01" || quest.Completed != 2 ||
+		quest.Total != 5 || quest.NextQuestID != "first_review" ||
+		quest.Items[0].Status != "unavailable" ||
+		quest.Items[1].Status != "completed" ||
+		quest.Items[2].Status != "in_progress" ||
+		quest.Items[3].EvidenceURL != "https://github.com/community/tool/pull/1" ||
+		quest.Items[4].Status != "in_progress" {
+		t.Fatalf("quest = %+v", quest)
+	}
+}
+
 func BenchmarkAnalyzeProfileSnapshotBounded(b *testing.B) {
 	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
 	owned := make([]RepositoryObservation, 0, 20)

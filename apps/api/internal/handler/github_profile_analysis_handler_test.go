@@ -120,6 +120,16 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 						EvidenceURLs: []string{"https://github.com/community/project/pull/42"},
 					}},
 				},
+				Quest: profile.OSSQuest{
+					CatalogVersion: "2026-08-01", EvaluatedAt: now,
+					Completed: 1, Total: 5, NextQuestID: "first_review",
+					Items: []profile.QuestProgress{{
+						ID: "first_pr", Title: "Open your first pull request",
+						Description: "Create a public OSS pull request.",
+						Status:      "completed", Current: 1, Target: 1,
+						NextAction: "Find a matching issue and open a focused PR.",
+					}},
+				},
 				OSSExperience: profile.OSSExperience{
 					Level:      "active",
 					Confidence: profile.ConfidenceHigh,
@@ -228,6 +238,8 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 		`"evidenceUrl":"https://github.com/community/project/pull/42"`,
 		`"contributionStreak":{"status":"sampled","analyzedAt":"2026-07-30T12:00:00Z","timezone":"UTC","weekStartsOn":"monday","currentWeeks":1,"longestWeeks":1,"qualifyingWeeks":1`,
 		`"eventCount":1,"evidenceUrls":["https://github.com/community/project/pull/42"]`,
+		`"ossQuest":{"catalogVersion":"2026-08-01","evaluatedAt":"2026-07-30T12:00:00Z","completed":1,"total":5,"nextQuestId":"first_review"`,
+		`"id":"first_pr","title":"Open your first pull request","description":"Create a public OSS pull request.","status":"completed","current":1,"target":1,"completedAt":null`,
 		`"ossExperience":{"level":"active","confidence":"high","publicOnly":true`,
 		`"owned":{"status":"sampled","observed":2,"total":5`,
 		`"starred":{"status":"sampled","observed":1,"total":null`,

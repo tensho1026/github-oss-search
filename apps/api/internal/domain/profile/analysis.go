@@ -39,6 +39,7 @@ type Analysis struct {
 	Portfolio            ContributionPortfolio
 	Journey              OSSJourney
 	Streak               ContributionStreak
+	Quest                OSSQuest
 	OSSExperience        OSSExperience
 	RepositoryEvidence   RepositoryEvidence
 	Proficiency          []TechnologyProficiency
