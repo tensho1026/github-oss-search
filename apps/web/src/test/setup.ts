@@ -9,4 +9,6 @@ Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.lang = "en";
 });

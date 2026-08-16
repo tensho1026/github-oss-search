@@ -1,39 +1,40 @@
-const compactNumberFormatter = new Intl.NumberFormat("en", {
-  maximumFractionDigits: 1,
-  notation: "compact",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
-
-export function formatCompactNumber(value: number): string {
-  return compactNumberFormatter.format(Math.max(0, value));
+export function formatCompactNumber(value: number, locale = "en"): string {
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+    notation: "compact",
+  }).format(Math.max(0, value));
 }
 
-export function formatDate(value: string): string {
+export function formatDate(value: string, locale = "en-GB"): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Unknown" : dateFormatter.format(date);
+  return Number.isNaN(date.getTime())
+    ? "Unknown"
+    : new Intl.DateTimeFormat(locale, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date);
 }
 
-export function formatDuration(seconds: number | null): string {
+export function formatDuration(seconds: number | null, locale = "en"): string {
   if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
-    return "Unavailable";
+    return locale === "ja" ? "利用不可" : "Unavailable";
   }
   if (seconds < 60) {
-    return "< 1 min";
+    return locale === "ja" ? "1分未満" : "< 1 min";
   }
   if (seconds < 3600) {
-    return `${Math.round(seconds / 60)} min`;
+    const minutes = Math.round(seconds / 60);
+    return locale === "ja" ? `${minutes}分` : `${minutes} min`;
   }
   if (seconds < 172_800) {
     const hours = Math.round(seconds / 3600);
-    return `${hours} ${hours === 1 ? "hr" : "hrs"}`;
+    return locale === "ja"
+      ? `${hours}時間`
+      : `${hours} ${hours === 1 ? "hr" : "hrs"}`;
   }
   const days = Math.round(seconds / 86_400);
-  return `${days} days`;
+  return locale === "ja" ? `${days}日` : `${days} days`;
 }
 
 export function formatPercentage(value: number): string {

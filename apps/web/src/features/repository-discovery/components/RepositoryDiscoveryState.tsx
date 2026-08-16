@@ -15,8 +15,10 @@ import {
 import { Icon } from "../../../components/ui/icon";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { repositoryErrorPresentation } from "../model/repository-presentation";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 export function RepositoryDiscoveryBeforeState() {
+  const { t } = useI18n();
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-4 p-8 text-center sm:p-12">
@@ -24,10 +26,11 @@ export function RepositoryDiscoveryBeforeState() {
           <Icon className="size-6" icon={Search} />
         </span>
         <div>
-          <h2 className="text-xl font-semibold">Shape an OSS shortlist</h2>
+          <h2 className="text-xl font-semibold">
+            {t("repository.beforeTitle")}
+          </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Choose filters, then run one bounded public GitHub search. The URL
-            restores the exact conditions and page without storing result data.
+            {t("repository.beforeDescription")}
           </p>
         </div>
       </CardContent>
@@ -36,6 +39,7 @@ export function RepositoryDiscoveryBeforeState() {
 }
 
 export function RepositoryDiscoveryInvalidState() {
+  const { t } = useI18n();
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-4 p-8 text-center sm:p-12">
@@ -44,11 +48,10 @@ export function RepositoryDiscoveryInvalidState() {
         </span>
         <div>
           <h2 className="text-xl font-semibold">
-            Fix the shared repository URL
+            {t("repository.invalidTitle")}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            No API request was sent. Correct the highlighted values and submit
-            to replace this invalid URL with a validated one.
+            {t("repository.invalidDescription")}
           </p>
         </div>
       </CardContent>
@@ -57,9 +60,10 @@ export function RepositoryDiscoveryInvalidState() {
 }
 
 export function RepositoryDiscoveryLoadingState() {
+  const { t } = useI18n();
   return (
     <div
-      aria-label="Discovering repositories"
+      aria-label={t("repository.loading")}
       className="grid gap-5"
       role="status"
     >
@@ -93,6 +97,7 @@ export function RepositoryDiscoveryErrorState({
   isFetching,
   onRetry,
 }: RepositoryDiscoveryErrorStateProps) {
+  const { t } = useI18n();
   const presentation = repositoryErrorPresentation(error);
   return (
     <Card className="overflow-hidden">
@@ -102,7 +107,7 @@ export function RepositoryDiscoveryErrorState({
         </span>
         <div>
           <p className="font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
-            Repository discovery
+            {t("repository.errorEyebrow")}
           </p>
           <CardTitle className="mt-3 text-3xl">{presentation.title}</CardTitle>
           <p className="mt-4 max-w-xl leading-7 text-muted-foreground">
@@ -111,10 +116,11 @@ export function RepositoryDiscoveryErrorState({
         </div>
         {presentation.requestId ? (
           <Alert variant={presentation.tone}>
-            <AlertTitle>Reference for support</AlertTitle>
+            <AlertTitle>{t("issueSearch.supportReference")}</AlertTitle>
             <AlertDescription>
-              Request ID:{" "}
-              <code className="font-mono">{presentation.requestId}</code>
+              {t("issueSearch.requestId", {
+                requestId: presentation.requestId,
+              })}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -125,7 +131,7 @@ export function RepositoryDiscoveryErrorState({
                 className={isFetching ? "animate-spin" : undefined}
                 icon={RefreshCw}
               />
-              {isFetching ? "Retrying…" : "Retry discovery"}
+              {isFetching ? t("issueSearch.retrying") : t("repository.retry")}
             </Button>
           </div>
         ) : null}

@@ -4,6 +4,7 @@ import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import type { AuthUser } from "../../../shared/api/generated";
 import { cn } from "../../../shared/lib/cn";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { BookmarksPanel } from "./BookmarksPanel";
 import { IssueClaimsPanel } from "./IssueClaimsPanel";
 import { PreferencesPanel } from "./PreferencesPanel";
@@ -40,6 +41,7 @@ export function WorkspaceDashboard({
   onSessionExpired,
   user,
 }: Props) {
+  const { t } = useI18n();
   const [parameters, setParameters] = useSearchParams();
   const activeTab = readTab(parameters);
 
@@ -47,22 +49,19 @@ export function WorkspaceDashboard({
     <div className="mx-auto min-h-[68vh] w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div className="max-w-3xl">
-          <Badge variant="accent">Optional authenticated workspace</Badge>
+          <Badge variant="accent">{t("workspace.badge")}</Badge>
           <h1 className="mt-5 text-4xl font-semibold tracking-[-0.055em] text-balance sm:text-5xl">
-            Your saved IssueScout workspace.
+            {t("workspace.title")}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Signed in as{" "}
-            <strong className="text-foreground">{user.login}</strong>. Public
-            discovery remains anonymous; only the features below use account
-            storage.
+            {t("workspace.signedIn", { login: user.login })}
           </p>
         </div>
       </header>
 
       <div className="mt-8 overflow-x-auto pb-2">
         <div
-          aria-label="Account workspace sections"
+          aria-label={t("workspace.sections")}
           className="flex min-w-max gap-2"
           role="tablist"
         >
@@ -83,7 +82,17 @@ export function WorkspaceDashboard({
               role="tab"
               variant="outline"
             >
-              {tab.label}
+              {t(
+                tab.value === "tasks"
+                  ? "workspace.tasks"
+                  : tab.value === "bookmarks"
+                    ? "workspace.bookmarks"
+                    : tab.value === "saved"
+                      ? "workspace.saved"
+                      : tab.value === "preferences"
+                        ? "workspace.preferences"
+                        : "workspace.privacy",
+              )}
             </Button>
           ))}
         </div>

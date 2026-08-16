@@ -10,6 +10,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Icon } from "../../../components/ui/icon";
 import { appRoutes } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { profileErrorPresentation } from "../model/profile-error";
 
 type ProfileErrorStateProps = {
@@ -25,6 +26,7 @@ export function ProfileErrorState({
   onRetry,
   username,
 }: ProfileErrorStateProps) {
+  const { t } = useI18n();
   const presentation = profileErrorPresentation(error, username);
   return (
     <section className="mx-auto grid min-h-[68vh] w-full max-w-3xl content-center px-5 py-16 sm:px-8">
@@ -35,7 +37,7 @@ export function ProfileErrorState({
           </span>
           <div>
             <p className="font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
-              Profile analysis
+              {t("profile.analysis")}
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em]">
               {presentation.title}
@@ -46,10 +48,9 @@ export function ProfileErrorState({
           </div>
           {presentation.requestId ? (
             <Alert variant={presentation.tone}>
-              <AlertTitle>Reference for support</AlertTitle>
+              <AlertTitle>{t("profile.support")}</AlertTitle>
               <AlertDescription>
-                Request ID:{" "}
-                <code className="font-mono">{presentation.requestId}</code>
+                {t("profile.requestId", { requestId: presentation.requestId })}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -60,13 +61,13 @@ export function ProfileErrorState({
                   className={isFetching ? "animate-spin" : undefined}
                   icon={RefreshCw}
                 />
-                {isFetching ? "Retrying…" : "Retry analysis"}
+                {isFetching ? t("profile.retrying") : t("profile.retry")}
               </Button>
             ) : null}
             <Button asChild variant="outline">
               <Link to={appRoutes.home}>
                 <Icon icon={ArrowLeft} />
-                Try another profile
+                {t("profile.tryAnother")}
               </Link>
             </Button>
           </div>

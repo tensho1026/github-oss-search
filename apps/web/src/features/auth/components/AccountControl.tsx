@@ -13,11 +13,13 @@ import {
 import { ApiError } from "../../../shared/api/client";
 import type { AuthSessionEnvelope } from "../../../shared/api/generated";
 import { appRoutes } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { queryKeys } from "../../../shared/query/query-keys";
 import { logoutAuthSession } from "../api/auth";
 import { useAuth } from "../auth-context";
 
 export function AccountControl() {
+  const { t } = useI18n();
   const { markSessionExpired, query, session, signIn } = useAuth();
   const queryClient = useQueryClient();
 
@@ -61,7 +63,7 @@ export function AccountControl() {
   if (query.isFetching && !query.data) {
     return (
       <span
-        aria-label="Checking account session"
+        aria-label={t("account.checking")}
         className="grid size-10 animate-pulse place-items-center rounded-full bg-muted text-muted-foreground motion-reduce:animate-none"
         role="status"
       >
@@ -74,9 +76,9 @@ export function AccountControl() {
     return (
       <span
         className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-medium text-muted-foreground"
-        title="Public features remain available."
+        title={t("account.publicAvailable")}
       >
-        <span className="hidden lg:inline">Sign-in unavailable</span>
+        <span className="hidden lg:inline">{t("account.unavailable")}</span>
       </span>
     );
   }
@@ -90,7 +92,7 @@ export function AccountControl() {
         size="small"
         variant="outline"
       >
-        Sign in
+        {t("account.signIn")}
       </Button>
     );
   }
@@ -100,7 +102,7 @@ export function AccountControl() {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          aria-label={`Open account menu for ${user.login}`}
+          aria-label={t("account.openMenu", { login: user.login })}
           className="gap-2 rounded-full pr-3 pl-1.5"
           size="small"
           variant="outline"
@@ -121,25 +123,25 @@ export function AccountControl() {
       <PopoverContent align="end" className="grid w-72 gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Signed in with GitHub
+            {t("account.signedInWith")}
           </p>
           <p className="mt-1 truncate font-semibold">{user.login}</p>
         </div>
         <div className="grid gap-1 border-y border-border py-2">
           <Button asChild className="justify-start" variant="ghost">
-            <Link to={appRoutes.workspace}>Account workspace</Link>
+            <Link to={appRoutes.workspace}>{t("account.workspace")}</Link>
           </Button>
           <Button asChild className="justify-start" variant="ghost">
             <a href={user.profileUrl} rel="noreferrer" target="_blank">
-              View GitHub profile
+              {t("account.viewGitHub")}
             </a>
           </Button>
         </div>
         {logout.error ? (
           <p className="text-xs leading-5 text-danger" role="alert">
             {logout.error instanceof ApiError && logout.error.status === 401
-              ? "Your session expired. Sign in again when you are ready."
-              : "Logout could not be confirmed. Your public work is unchanged."}
+              ? t("account.sessionExpired")
+              : t("account.logoutFailed")}
           </p>
         ) : null}
         <Button
@@ -150,7 +152,7 @@ export function AccountControl() {
           }}
           variant="ghost"
         >
-          {logout.isPending ? "Signing out…" : "Sign out"}
+          {logout.isPending ? t("account.signingOut") : t("account.signOut")}
         </Button>
       </PopoverContent>
     </Popover>

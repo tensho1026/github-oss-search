@@ -181,8 +181,9 @@ the same file.
 | `BenchmarkRecommendBounded` latency                  |      1 ms/op |
 | Recommendation bytes                                 |   128 KiB/op |
 | Recommendation allocations                           |     1,000/op |
-| Largest JavaScript asset                             |  75 KiB gzip |
-| All JavaScript and CSS                               | 209 KiB gzip |
+| Largest JavaScript asset                             |  80 KiB gzip |
+| English-core JavaScript and CSS                      | 217 KiB gzip |
+| Optional locale chunks                               |  20 KiB gzip |
 
 Production-oriented orchestration tests additionally prove a 50-candidate
 window, exactly 20 unique detail leaders, no more than five active detail

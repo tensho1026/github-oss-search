@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type PropsWithChildren } from "react";
 
 import { appConfig } from "../shared/config/app-config";
+import { I18nProvider } from "../shared/i18n/I18nProvider";
 import { shouldRetryQuery } from "../shared/query/retry-policy";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { AuthProvider } from "../features/auth/AuthProvider";
@@ -22,10 +23,12 @@ export function AppProviders({ children }: PropsWithChildren) {
   const [queryClient] = useState(createQueryClient);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }

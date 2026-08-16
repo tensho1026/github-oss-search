@@ -27,8 +27,10 @@ import {
   toRepositoryDiscoveryRequest,
   type RepositoryFilters,
 } from "../features/repository-discovery/model/repository-filters";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function RepositoryDiscoveryPage() {
+  const { t } = useI18n();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const serializedSearch = searchParameters.toString();
   const location = useMemo(
@@ -84,15 +86,13 @@ export function RepositoryDiscoveryPage() {
       <header className="max-w-3xl">
         <Badge variant="accent">
           <Icon icon={BookOpenCheck} />
-          Anonymous OSS discovery
+          {t("repository.badge")}
         </Badge>
         <h1 className="mt-5 text-4xl font-semibold tracking-[-0.055em] text-balance sm:text-5xl">
-          Find a repository ready for your contribution.
+          {t("repository.title")}
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-          Filter public repositories by technology, license, activity, and
-          contribution readiness. IssueScout explains bounded evidence without
-          using an account or database.
+          {t("repository.description")}
         </p>
         {location.shouldSearch && location.valid ? (
           <div className="mt-5">
@@ -113,10 +113,9 @@ export function RepositoryDiscoveryPage() {
             <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
               <Icon className="size-5" icon={SlidersHorizontal} />
             </span>
-            <CardTitle className="mt-2">Repository criteria</CardTitle>
+            <CardTitle className="mt-2">{t("repository.criteria")}</CardTitle>
             <CardDescription>
-              Validated filters and page state are shareable in the URL. Result
-              payloads and anonymous search history are never stored.
+              {t("repository.criteriaDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 sm:p-6">

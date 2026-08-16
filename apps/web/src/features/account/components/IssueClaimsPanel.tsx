@@ -13,6 +13,7 @@ import type {
   IssueClaimUpdateRequest,
 } from "../../../shared/api/generated";
 import { appRoutes, externalLinks } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { queryKeys } from "../../../shared/query/query-keys";
 import {
   deleteIssueClaim,
@@ -26,15 +27,16 @@ type Props = {
   onSessionExpired: () => Promise<void>;
 };
 
-const statusOptions: Array<{ label: string; value: IssueClaimStatus }> = [
-  { label: "Not started", value: "not_started" },
-  { label: "Researching", value: "researching" },
-  { label: "Implementing", value: "implementing" },
-  { label: "PR submitted", value: "pr_submitted" },
-  { label: "Merged", value: "merged" },
+const statusOptions: IssueClaimStatus[] = [
+  "not_started",
+  "researching",
+  "implementing",
+  "pr_submitted",
+  "merged",
 ];
 
 export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
   const query = useQuery({
@@ -81,14 +83,14 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold" id="issue-claims-heading">
-            Contribution task board
+            {t("claims.title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Private progress only—this never claims or comments on GitHub.
+            {t("claims.description")}
           </p>
         </div>
         <label className="grid gap-1 text-sm font-medium">
-          Show tasks
+          {t("claims.show")}
           <select
             className="min-h-11 rounded-xl border border-input bg-surface px-3"
             onChange={(event) =>
@@ -96,9 +98,9 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             }
             value={filter}
           >
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-            <option value="all">All</option>
+            <option value="active">{t("claims.active")}</option>
+            <option value="archived">{t("claims.archived")}</option>
+            <option value="all">{t("claims.all")}</option>
           </select>
         </label>
       </div>
@@ -106,13 +108,13 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
       {summary ? (
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           {[
-            ["Total", summary.total],
-            ["Not started", summary.notStarted],
-            ["Researching", summary.researching],
-            ["Implementing", summary.implementing],
-            ["PR submitted", summary.prSubmitted],
-            ["Merged", summary.merged],
-            ["Archived", summary.archived],
+            [t("claims.total"), summary.total],
+            [t("claims.notStarted"), summary.notStarted],
+            [t("claims.researching"), summary.researching],
+            [t("claims.implementing"), summary.implementing],
+            [t("claims.prSubmitted"), summary.prSubmitted],
+            [t("claims.merged"), summary.merged],
+            [t("claims.archived"), summary.archived],
           ].map(([label, value]) => (
             <div
               className="rounded-xl border border-border bg-muted/25 p-3"
@@ -130,7 +132,7 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
       {query.error ? <AccountRequestAlert error={query.error} /> : null}
       {update.isSuccess ? (
         <p aria-live="polite" className="text-sm text-success" role="status">
-          Task progress updated.
+          {t("claims.updated")}
         </p>
       ) : null}
 
@@ -140,15 +142,15 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             className="p-6 text-sm text-muted-foreground"
             role="status"
           >
-            Loading contribution tasks…
+            {t("claims.loading")}
           </CardContent>
         </Card>
       ) : claims.length === 0 ? (
         <Card>
           <CardContent className="grid justify-items-center gap-3 p-8 text-center">
-            <p className="font-semibold">No matching contribution tasks</p>
+            <p className="font-semibold">{t("claims.empty")}</p>
             <p className="max-w-lg text-sm text-muted-foreground">
-              Choose “Try this issue” on a search result or issue detail page.
+              {t("claims.emptyDescription")}
             </p>
           </CardContent>
         </Card>
@@ -181,6 +183,14 @@ function IssueClaimCard({
   onDelete: (id: string, version: number) => void;
   onUpdate: (id: string, request: IssueClaimUpdateRequest) => void;
 }) {
+  const { t } = useI18n();
+  const statusLabels: Record<IssueClaimStatus, string> = {
+    implementing: t("claims.implementing"),
+    merged: t("claims.merged"),
+    not_started: t("claims.notStarted"),
+    pr_submitted: t("claims.prSubmitted"),
+    researching: t("claims.researching"),
+  };
   const [status, setStatus] = useState(claim.status);
   const [pullOwner, setPullOwner] = useState(
     claim.pullRequest?.repositoryOwner ?? claim.repositoryOwner,
@@ -213,14 +223,16 @@ function IssueClaimCard({
             <p className="font-mono text-sm font-semibold">{label}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge variant={claim.archived ? "neutral" : "accent"}>
-                {claim.archived ? "Archived" : "Active"}
+                {claim.archived ? t("claims.archived") : t("claims.active")}
               </Badge>
               <Badge variant="neutral">
-                issue upstream {claim.observedIssueState}
+                {t("claims.issueUpstream", {
+                  state: claim.observedIssueState,
+                })}
               </Badge>
               {claim.pullRequest ? (
                 <Badge variant="neutral">
-                  PR upstream {claim.observedPrState}
+                  {t("claims.prUpstream", { state: claim.observedPrState })}
                 </Badge>
               ) : null}
             </div>
@@ -233,13 +245,13 @@ function IssueClaimCard({
                 claim.issueNumber,
               )}
             >
-              Revalidate issue
+              {t("claims.revalidate")}
             </Link>
           </Button>
         </div>
 
         <label className="grid gap-1 text-sm font-medium">
-          Workflow status
+          {t("claims.workflow")}
           <select
             className="min-h-11 rounded-xl border border-input bg-surface px-3"
             onChange={(event) =>
@@ -248,8 +260,8 @@ function IssueClaimCard({
             value={status}
           >
             {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+              <option key={option} value={option}>
+                {statusLabels[option]}
               </option>
             ))}
           </select>
@@ -257,26 +269,30 @@ function IssueClaimCard({
 
         <fieldset className="grid gap-3 rounded-xl border border-border p-3">
           <legend className="px-1 text-sm font-semibold">
-            Linked pull request {needsPullRequest ? "(required)" : "(optional)"}
+            {t("claims.linkedPr", {
+              requirement: t(
+                needsPullRequest ? "claims.required" : "claims.optional",
+              ),
+            })}
           </legend>
           <Input
-            aria-label={`PR owner for ${label}`}
+            aria-label={t("claims.prOwner", { label })}
             onChange={(event) => setPullOwner(event.target.value)}
-            placeholder="Owner"
+            placeholder={t("claims.owner")}
             value={pullOwner}
           />
           <Input
-            aria-label={`PR repository for ${label}`}
+            aria-label={t("claims.prRepository", { label })}
             onChange={(event) => setPullRepository(event.target.value)}
-            placeholder="Repository"
+            placeholder={t("claims.repository")}
             value={pullRepository}
           />
           <Input
-            aria-label={`PR number for ${label}`}
+            aria-label={t("claims.prNumberLabel", { label })}
             inputMode="numeric"
             min={1}
             onChange={(event) => setPullNumber(event.target.value)}
-            placeholder="PR number"
+            placeholder={t("claims.prNumber")}
             type="number"
             value={pullNumber}
           />
@@ -291,7 +307,7 @@ function IssueClaimCard({
               rel="noreferrer"
               target="_blank"
             >
-              Open linked PR #{claim.pullRequest.number}
+              {t("claims.openPr", { number: claim.pullRequest.number })}
             </a>
           ) : null}
         </fieldset>
@@ -316,7 +332,7 @@ function IssueClaimCard({
             }
             size="small"
           >
-            Save progress
+            {t("claims.save")}
           </Button>
           <Button
             disabled={busy}
@@ -331,16 +347,16 @@ function IssueClaimCard({
             size="small"
             variant="outline"
           >
-            {claim.archived ? "Restore" : "Archive"}
+            {claim.archived ? t("claims.restore") : t("claims.archive")}
           </Button>
           <Button
-            aria-label={`Delete contribution task ${label}`}
+            aria-label={t("claims.deleteLabel", { label })}
             disabled={busy}
             onClick={() => onDelete(claim.id, claim.version)}
             size="small"
             variant="danger"
           >
-            Delete
+            {t("claims.delete")}
           </Button>
         </div>
       </CardContent>

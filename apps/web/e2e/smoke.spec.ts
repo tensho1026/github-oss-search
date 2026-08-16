@@ -112,7 +112,7 @@ test("analyzes a valid username through the production profile route", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("img", {
-      name: "2 public contributions on 2026-07-22",
+      name: "2 public contributions on Jul 22, 2026",
     }),
   ).toBeVisible();
   await expect(
@@ -536,7 +536,7 @@ test("hydrates the code-split account workspace without browser token storage", 
     session: Object.keys(sessionStorage),
     url: window.location.href,
   })`);
-  expect(browserStorage.local).toEqual([]);
+  expect(browserStorage.local).toEqual(["issuescout.locale"]);
   expect(browserStorage.session).toEqual([]);
   expect(browserStorage.url).not.toContain("csrf-browser-memory-only");
   expect(browserStorage.url).not.toContain(

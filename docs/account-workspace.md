@@ -49,7 +49,7 @@ memory and mutation headers; neither credential enters `localStorage`,
 `sessionStorage`, URLs, logs, analytics, source maps, or static artifacts.
 Theme and reduced-motion preferences are applied as document data attributes
 without browser persistence. The authenticated route is code-split, and the
-bundle gate limits every JavaScript asset to 75 KiB gzip.
+bundle gate limits every JavaScript asset to 80 KiB gzip.
 
 ## Ownership and request boundary
 

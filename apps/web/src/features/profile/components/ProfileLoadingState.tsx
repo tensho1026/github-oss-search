@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 import { Skeleton } from "../../../components/ui/skeleton";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 export function ProfileLoadingState() {
+  const { t } = useI18n();
   return (
     <div
-      aria-label="Analyzing public GitHub profile"
+      aria-label={t("profile.loading")}
       className="mx-auto grid min-h-[70vh] w-full max-w-7xl content-center gap-6 px-5 py-12 sm:px-8 lg:px-10"
       role="status"
     >
@@ -42,9 +44,7 @@ export function ProfileLoadingState() {
           </CardContent>
         </Card>
       </div>
-      <span className="sr-only">
-        Reading profile and bounded repository evidence…
-      </span>
+      <span className="sr-only">{t("profile.loadingDetail")}</span>
     </div>
   );
 }

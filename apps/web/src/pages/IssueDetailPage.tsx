@@ -13,8 +13,10 @@ import {
   validateIssueReference,
 } from "../features/issue-detail/model/issue-reference";
 import { appRoutes } from "../shared/config/app-config";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function IssueDetailPage() {
+  const { t } = useI18n();
   const route = useParams();
   const location = useLocation();
   const reference = useMemo(
@@ -33,14 +35,14 @@ export function IssueDetailPage() {
   if (!reference.valid) {
     content = (
       <IssueDetailInvalidState
-        action={{ label: "Start a new issue search", to: appRoutes.search }}
+        action={{ label: t("detail.startSearch"), to: appRoutes.search }}
         message={reference.message}
       />
     );
   } else if (!context.valid) {
     content = (
       <IssueDetailInvalidState
-        action={{ label: "Start a new issue search", to: appRoutes.search }}
+        action={{ label: t("detail.startSearch"), to: appRoutes.search }}
         message={context.message}
       />
     );

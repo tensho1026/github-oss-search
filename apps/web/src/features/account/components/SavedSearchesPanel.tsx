@@ -14,6 +14,8 @@ import type {
   SavedSearchUpdateRequest,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { useI18n } from "../../../shared/i18n/i18n-context";
+import { formatDate } from "../../../shared/lib/format";
 import {
   deleteSavedSearch,
   listSavedSearches,
@@ -57,19 +59,20 @@ function SavedSearchRow({
   onRename: (search: SavedSearch, name: string) => void;
   search: SavedSearch;
 }) {
+  const { locale, t } = useI18n();
   const [name, setName] = useState(search.name);
   return (
     <li>
       <Card>
         <CardContent className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <Field
-            description={`Last updated ${new Date(
-              search.updatedAt,
-            ).toLocaleDateString()}.`}
+            description={t("saved.updated", {
+              date: formatDate(search.updatedAt, locale),
+            })}
             htmlFor={`saved-search-${search.id}`}
             label={
               <span className="inline-flex items-center gap-2">
-                Search name
+                {t("saved.name")}
                 <Badge variant="neutral">{search.searchType}</Badge>
               </span>
             }
@@ -83,7 +86,7 @@ function SavedSearchRow({
           </Field>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="small" variant="outline">
-              <Link to={savedSearchRoute(search)}>Run</Link>
+              <Link to={savedSearchRoute(search)}>{t("saved.run")}</Link>
             </Button>
             <Button
               disabled={disabled || !name.trim() || name === search.name}
@@ -91,16 +94,16 @@ function SavedSearchRow({
               size="small"
               variant="secondary"
             >
-              Rename
+              {t("saved.rename")}
             </Button>
             <Button
-              aria-label={`Delete saved search ${search.name}`}
+              aria-label={t("saved.deleteLabel", { name: search.name })}
               disabled={disabled}
               onClick={() => onDelete(search)}
               size="small"
               variant="danger"
             >
-              Delete
+              {t("saved.delete")}
             </Button>
           </div>
         </CardContent>
@@ -110,6 +113,7 @@ function SavedSearchRow({
 }
 
 export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryFn: ({ signal }) => listSavedSearches(signal),
@@ -152,7 +156,7 @@ export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
   return (
     <section aria-labelledby="saved-searches-heading" className="grid gap-5">
       <h2 className="sr-only" id="saved-searches-heading">
-        Saved searches
+        {t("workspace.saved")}
       </h2>
 
       {mutationError ? <AccountRequestAlert error={mutationError} /> : null}
@@ -164,15 +168,15 @@ export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
             className="p-6 text-sm text-muted-foreground"
             role="status"
           >
-            Loading saved searches…
+            {t("saved.loading")}
           </CardContent>
         </Card>
       ) : query.data?.data.items.length === 0 ? (
         <Card>
           <CardContent className="grid justify-items-center gap-3 p-8 text-center">
-            <p className="font-semibold">No saved searches yet</p>
+            <p className="font-semibold">{t("saved.empty")}</p>
             <p className="max-w-lg text-sm text-muted-foreground">
-              Save the current validated filters from a public search page.
+              {t("saved.emptyDescription")}
             </p>
           </CardContent>
         </Card>

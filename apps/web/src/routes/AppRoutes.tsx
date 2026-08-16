@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { AppShell } from "../components/layout/AppShell";
 import { Skeleton } from "../components/ui/skeleton";
 import { appRoutes } from "../shared/config/app-config";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 const HomePage = lazy(async () => {
   const module = await import("../pages/HomePage");
@@ -45,9 +46,11 @@ function LazyPage({ children }: { children: ReactNode }) {
 }
 
 function RouteFallback() {
+  const { t } = useI18n();
+
   return (
     <div
-      aria-label="Loading page"
+      aria-label={t("route.loading")}
       className="mx-auto grid min-h-[60vh] w-full max-w-7xl content-center gap-5 px-5 sm:px-8 lg:px-10"
       role="status"
     >

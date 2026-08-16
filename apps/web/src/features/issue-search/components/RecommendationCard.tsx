@@ -22,6 +22,7 @@ import {
 } from "../../../shared/lib/format";
 import { cn } from "../../../shared/lib/cn";
 import { issueDetailSearchParameters } from "../../../shared/lib/issue-detail-location";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { BookmarkAction } from "../../account/components/BookmarkAction";
 import { IssueClaimAction } from "../../account/components/IssueClaimAction";
 import {
@@ -35,16 +36,17 @@ type RecommendationCardProps = {
   rank: number;
 };
 
-const healthLabels = {
-  activity: "Activity",
-  community: "Community",
-  beginner_friendly: "Beginner friendly",
-  security: "Security",
-} as const;
-
 export function RecommendationCard({ item, rank }: RecommendationCardProps) {
+  const { locale, t } = useI18n();
   const location = useLocation();
   const score = scorePresentation(item.recommendation.score);
+  const scoreLabel = t(
+    item.recommendation.score >= 75
+      ? "recommendation.strong"
+      : item.recommendation.score >= 50
+        ? "recommendation.promising"
+        : "recommendation.careful",
+  );
   const detailRoute = appRoutes.issue(
     item.repository.owner,
     item.repository.name,
@@ -58,6 +60,12 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
       ? `${detailRoute}?${detailParameters.toString()}`
       : detailRoute;
   const maintainerResponse = item.recommendation.maintainerResponse;
+  const healthLabels = {
+    activity: t("recommendation.healthActivity"),
+    beginner_friendly: t("recommendation.healthBeginner"),
+    community: t("recommendation.healthCommunity"),
+    security: t("recommendation.healthSecurity"),
+  } as const;
   return (
     <Card aria-labelledby={`issue-result-${rank}`} className="overflow-hidden">
       <CardHeader className="border-b border-border bg-muted/35">
@@ -69,10 +77,14 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1">
                 <Icon className="size-3.5" icon={Star} />
-                {formatCompactNumber(item.repository.stars)}
+                {formatCompactNumber(item.repository.stars, locale)}
               </span>
               <span aria-hidden="true">·</span>
-              <span>Updated {formatDate(item.issue.updatedAt)}</span>
+              <span>
+                {t("recommendation.updated", {
+                  date: formatDate(item.issue.updatedAt, locale),
+                })}
+              </span>
             </div>
             <h2
               className="mt-3 text-xl leading-7 font-semibold tracking-[-0.03em]"
@@ -82,7 +94,10 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
             </h2>
           </div>
           <div
-            aria-label={`${item.recommendation.score} out of 100, ${score.label}`}
+            aria-label={t("recommendation.scoreMeter", {
+              label: scoreLabel,
+              score: item.recommendation.score,
+            })}
             aria-valuemax={100}
             aria-valuemin={0}
             aria-valuenow={item.recommendation.score}
@@ -97,7 +112,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
                 {item.recommendation.score}
               </strong>
               <span className="mt-1 block text-[0.65rem] font-semibold uppercase">
-                {score.label}
+                {scoreLabel}
               </span>
             </span>
           </div>
@@ -110,13 +125,20 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
             </Badge>
           ) : null}
           <Badge variant="neutral">
-            Difficulty {item.difficulty.level}: {item.difficulty.label}
+            {t("recommendation.difficulty", {
+              label: item.difficulty.label,
+              level: item.difficulty.level,
+            })}
           </Badge>
           <Badge
-            aria-label={`Stale status: ${item.recommendation.stale.state}`}
+            aria-label={t("recommendation.staleStatus", {
+              state: item.recommendation.stale.state,
+            })}
             variant={staleBadgeVariant(item.recommendation.stale.state)}
           >
-            Stale check: {item.recommendation.stale.state}
+            {t("recommendation.staleCheck", {
+              state: item.recommendation.stale.state,
+            })}
           </Badge>
           <Badge variant="neutral">
             <Icon className="size-3.5" icon={Clock3} />
@@ -124,14 +146,16 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           </Badge>
           <Badge variant="neutral">
             <Icon className="size-3.5" icon={MessageCircle} />
-            {formatCompactNumber(item.issue.comments)} comments
+            {t("recommendation.comments", {
+              count: formatCompactNumber(item.issue.comments, locale),
+            })}
           </Badge>
           {item.repository.isArchived ? (
-            <Badge variant="warning">Archived repository</Badge>
+            <Badge variant="warning">{t("recommendation.archived")}</Badge>
           ) : null}
         </div>
         <div
-          aria-label="Repository health summary"
+          aria-label={t("recommendation.healthSummary")}
           className="mt-2 flex flex-wrap gap-2"
         >
           {item.healthSummary.map((category) => (
@@ -144,9 +168,9 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
       </CardHeader>
 
       <CardContent className="grid gap-5 p-5 sm:p-6">
-        <section aria-label="Issue labels">
+        <section aria-label={t("recommendation.issueLabels")}>
           <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-            Labels
+            {t("recommendation.labels")}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {item.issue.labels.length > 0 ? (
@@ -157,7 +181,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
               ))
             ) : (
               <span className="text-sm text-muted-foreground">
-                No public labels
+                {t("recommendation.noLabels")}
               </span>
             )}
           </div>
@@ -170,14 +194,17 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="font-semibold" id={`skill-match-${rank}`}>
-                Contribution match
+                {t("recommendation.skillMatch")}
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                {item.recommendation.skillMatch.matched} of{" "}
-                {item.recommendation.skillMatch.denominator} requirements
-                matched
+                {t("recommendation.skillSummary", {
+                  denominator: item.recommendation.skillMatch.denominator,
+                  matched: item.recommendation.skillMatch.matched,
+                })}
                 {item.recommendation.skillMatch.partial > 0
-                  ? ` · ${item.recommendation.skillMatch.partial} partial`
+                  ? ` · ${t("recommendation.partialMatch", {
+                      count: item.recommendation.skillMatch.partial,
+                    })}`
                   : ""}
               </p>
             </div>
@@ -197,14 +224,17 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
               ))
             ) : (
               <span className="text-sm text-muted-foreground">
-                No comparable skill evidence
+                {t("recommendation.noSkillEvidence")}
               </span>
             )}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             {item.recommendation.skillMatch.personalized
-              ? `Public GitHub profile evidence · ${item.recommendation.skillMatch.status} · model ${item.recommendation.skillMatch.version}`
-              : "Explicitly selected technology evidence"}
+              ? t("recommendation.personalizedEvidence", {
+                  status: item.recommendation.skillMatch.status,
+                  version: item.recommendation.skillMatch.version,
+                })
+              : t("recommendation.explicitEvidence")}
           </p>
         </section>
 
@@ -215,16 +245,19 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold" id={`maintainer-response-${rank}`}>
-                Maintainer response
+                {t("recommendation.maintainerResponse")}
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Historical maintainer-only activity
+                {t("recommendation.maintainerResponseDescription")}
               </p>
             </div>
             {maintainerResponse.status === "available" ? (
               <div className="text-right">
                 <strong
-                  aria-label={`${maintainerResponse.level} out of 5, ${maintainerResponse.label}`}
+                  aria-label={t("recommendation.rating", {
+                    label: maintainerResponse.label,
+                    level: maintainerResponse.level,
+                  })}
                   className="block tracking-[0.08em] text-accent"
                 >
                   {formatRating(maintainerResponse.level)}
@@ -234,36 +267,46 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
                 </span>
               </div>
             ) : (
-              <Badge variant="neutral">Unavailable</Badge>
+              <Badge variant="neutral">{t("recommendation.unavailable")}</Badge>
             )}
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-xs text-muted-foreground">
-                Median first response
+                {t("recommendation.medianFirstResponse")}
               </dt>
               <dd className="mt-1 font-medium">
-                {durationValue(maintainerResponse.firstIssueResponse)}
+                {durationValue(
+                  maintainerResponse.firstIssueResponse,
+                  locale,
+                  t("recommendation.unavailable"),
+                )}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">PR merge time</dt>
+              <dt className="text-xs text-muted-foreground">
+                {t("recommendation.prMergeTime")}
+              </dt>
               <dd className="mt-1 font-medium">
-                {durationValue(maintainerResponse.pullRequestMerge)}
+                {durationValue(
+                  maintainerResponse.pullRequestMerge,
+                  locale,
+                  t("recommendation.unavailable"),
+                )}
               </dd>
             </div>
           </dl>
           <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            {maintainerResponse.sampleSize} sampled ·{" "}
-            {maintainerResponse.confidence}
-            {" confidence"}. Historical samples do not guarantee a future
-            response or merge.
+            {t("recommendation.maintainerSample", {
+              confidence: maintainerResponse.confidence,
+              count: formatCompactNumber(maintainerResponse.sampleSize, locale),
+            })}
           </p>
         </section>
 
         <section aria-labelledby={`reasons-${rank}`}>
           <h3 className="font-semibold" id={`reasons-${rank}`}>
-            Why it ranks here
+            {t("recommendation.reasons")}
           </h3>
           <ul className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground">
             {item.recommendation.reasons.map((reason) => (
@@ -278,7 +321,10 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
         </section>
 
         {item.recommendation.warnings.length > 0 ? (
-          <section aria-label="Recommendation warnings" className="grid gap-2">
+          <section
+            aria-label={t("recommendation.warnings")}
+            className="grid gap-2"
+          >
             {item.recommendation.warnings.map((warning) => (
               <Alert
                 key={`${warning.code}-${warning.message}`}
@@ -293,7 +339,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
 
       <CardFooter className="flex-wrap border-t border-border bg-muted/20 p-5 sm:p-6">
         <Button asChild>
-          <Link to={detailPath}>View recommendation details</Link>
+          <Link to={detailPath}>{t("recommendation.details")}</Link>
         </Button>
         <Button asChild variant="outline">
           <a
@@ -305,7 +351,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
             rel="noreferrer"
             target="_blank"
           >
-            Open GitHub issue
+            {t("recommendation.openGitHub")}
             <Icon icon={ArrowUpRight} />
           </a>
         </Button>
@@ -329,13 +375,17 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
   );
 }
 
-function durationValue(metric: {
-  medianSeconds: number | null;
-  status: string;
-}) {
+function durationValue(
+  metric: {
+    medianSeconds: number | null;
+    status: string;
+  },
+  locale: string,
+  unavailable: string,
+) {
   return metric.status === "available"
-    ? formatDuration(metric.medianSeconds)
-    : "Unavailable";
+    ? formatDuration(metric.medianSeconds, locale)
+    : unavailable;
 }
 
 function staleBadgeVariant(state: string) {

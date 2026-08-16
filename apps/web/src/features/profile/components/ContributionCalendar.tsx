@@ -10,8 +10,9 @@ import {
   CardTitle,
 } from "../../../components/ui/card";
 import { cn } from "../../../shared/lib/cn";
+import { useI18n, type Locale } from "../../../shared/i18n/i18n-context";
+import { formatCompactNumber, formatDate } from "../../../shared/lib/format";
 
-const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const levels = [
   "none",
   "first_quartile",
@@ -20,12 +21,11 @@ const levels = [
   "fourth_quartile",
 ] as const;
 
-function monthLabel(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toUTCString().slice(8, 11);
-}
-
-function dayLabel(day: ContributionDay): string {
-  return `${day.count} public ${day.count === 1 ? "contribution" : "contributions"} on ${day.date}`;
+function monthLabel(date: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
 }
 
 const levelClasses: Record<ContributionDay["level"], string> = {
@@ -41,50 +41,65 @@ export function ContributionCalendar({
 }: {
   calendar: ContributionCalendarData;
 }) {
+  const { locale, t } = useI18n();
+  const weekdays = Array.from({ length: 7 }, (_, weekday) =>
+    new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+      timeZone: "UTC",
+      weekday: "short",
+    }).format(new Date(Date.UTC(2026, 7, 16 + weekday))),
+  );
   if (calendar.status === "unavailable" || calendar.weeks.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Public contribution calendar</CardTitle>
-          <CardDescription>
-            GitHub did not provide a public daily calendar. Other profile
-            evidence remains available.
-          </CardDescription>
+          <CardTitle>{t("calendar.title")}</CardTitle>
+          <CardDescription>{t("calendar.unavailable")}</CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
   const monthLabels = calendar.weeks.map((week, index) => {
-    const current = monthLabel(week.firstDay);
+    const current = monthLabel(week.firstDay, locale);
     const previousWeek = calendar.weeks[index - 1];
-    const previous = previousWeek ? monthLabel(previousWeek.firstDay) : "";
+    const previous = previousWeek
+      ? monthLabel(previousWeek.firstDay, locale)
+      : "";
     return current === previous ? "" : current;
   });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Public contribution calendar</CardTitle>
+        <CardTitle>{t("calendar.title")}</CardTitle>
         <CardDescription>
-          {calendar.total} public contributions from {calendar.from} to{" "}
-          {calendar.to}. GitHub-normalized public intensity only.
+          {t("calendar.summary", {
+            from: calendar.from
+              ? formatDate(calendar.from, locale)
+              : t("detail.unknown"),
+            to: calendar.to
+              ? formatDate(calendar.to, locale)
+              : t("detail.unknown"),
+            total: formatCompactNumber(calendar.total, locale),
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div
-          aria-label="Public contribution calendar. Scroll for every week."
+          aria-label={t("calendar.scrollLabel")}
           className="overflow-x-auto pb-3"
           tabIndex={0}
         >
           <table className="w-max border-separate border-spacing-1">
             <caption className="sr-only">
-              {calendar.total} public contributions. Focus a day for details.
+              {t("calendar.caption", {
+                total: formatCompactNumber(calendar.total, locale),
+              })}
             </caption>
             <thead>
               <tr>
                 <th className="w-9" scope="col">
-                  <span className="sr-only">Weekday</span>
+                  <span className="sr-only">{t("calendar.weekday")}</span>
                 </th>
                 {calendar.weeks.map((week, index) => (
                   <th
@@ -122,10 +137,10 @@ export function ContributionCalendar({
           </table>
         </div>
         <div
-          aria-label="Contribution intensity legend from less to more"
+          aria-label={t("calendar.legend")}
           className="mt-3 flex items-center justify-end gap-1.5 text-xs text-muted-foreground"
         >
-          <span>Less</span>
+          <span>{t("calendar.less")}</span>
           {levels.map((level) => (
             <span
               aria-hidden="true"
@@ -136,7 +151,7 @@ export function ContributionCalendar({
               key={level}
             />
           ))}
-          <span>More</span>
+          <span>{t("calendar.more")}</span>
         </div>
       </CardContent>
     </Card>
@@ -144,7 +159,11 @@ export function ContributionCalendar({
 }
 
 function CalendarDayCell({ day }: { day: ContributionDay }) {
-  const label = dayLabel(day);
+  const { locale, t } = useI18n();
+  const label = t("calendar.dayLabel", {
+    count: formatCompactNumber(day.count, locale),
+    date: formatDate(day.date, locale),
+  });
   return (
     <span
       aria-label={label}

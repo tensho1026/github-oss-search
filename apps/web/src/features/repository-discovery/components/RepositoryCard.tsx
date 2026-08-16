@@ -34,6 +34,7 @@ import {
 } from "../../../components/ui/tooltip";
 import type { RepositoryDiscoveryItem } from "../../../shared/api/generated";
 import { formatCompactNumber, formatDate } from "../../../shared/lib/format";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import {
   categoryLabel,
   confidenceLabel,
@@ -66,6 +67,7 @@ function Signal({ available, label }: SignalProps) {
 }
 
 export function RepositoryCard({ item, rank }: RepositoryCardProps) {
+  const { locale, t } = useI18n();
   const readiness = readinessPresentation(item.readiness);
   const difficulty = difficultyPresentation(item.difficulty);
   const documentation = evidencePresentation(item.documentation.status);
@@ -81,10 +83,10 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               <Badge variant="neutral">#{rank}</Badge>
               <Badge variant="info">{categoryLabel(item.category)}</Badge>
               {item.repository.isFork ? (
-                <Badge variant="neutral">Fork</Badge>
+                <Badge variant="neutral">{t("repository.fork")}</Badge>
               ) : null}
               {item.repository.isArchived ? (
-                <Badge variant="warning">Archived</Badge>
+                <Badge variant="warning">{t("repository.archived")}</Badge>
               ) : null}
             </div>
             <CardTitle className="mt-4 text-2xl">
@@ -99,7 +101,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               </a>
             </CardTitle>
             <CardDescription className="mt-2 max-w-3xl">
-              {item.repository.description || "No public description."}
+              {item.repository.description || t("repository.noDescription")}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -107,7 +109,10 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               {readiness.label} · {item.readiness.score}/100
             </Badge>
             <Badge variant={difficulty.tone}>
-              Difficulty {item.difficulty.level}/5 · {difficulty.label}
+              {t("repository.difficulty", {
+                label: difficulty.label,
+                level: item.difficulty.level,
+              })}
             </Badge>
           </div>
         </div>
@@ -117,28 +122,28 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
         <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Metric
             icon={Star}
-            label="Stars"
-            value={formatCompactNumber(item.popularity.stars)}
+            label={t("repository.stars")}
+            value={formatCompactNumber(item.popularity.stars, locale)}
           />
           <Metric
             icon={GitFork}
-            label="Forks"
-            value={formatCompactNumber(item.popularity.forks)}
+            label={t("repository.forks")}
+            value={formatCompactNumber(item.popularity.forks, locale)}
           />
           <Metric
             icon={Users}
-            label="Watchers"
-            value={formatCompactNumber(item.popularity.watchers)}
+            label={t("repository.watchers")}
+            value={formatCompactNumber(item.popularity.watchers, locale)}
           />
           <Metric
             icon={MessageCircle}
-            label="Open issues"
-            value={formatCompactNumber(item.popularity.openIssues)}
+            label={t("repository.openIssues")}
+            value={formatCompactNumber(item.popularity.openIssues, locale)}
           />
           <Metric
             icon={Clock3}
-            label="Last push"
-            value={formatDate(item.activity.pushedAt)}
+            label={t("repository.lastPush")}
+            value={formatDate(item.activity.pushedAt, locale)}
           />
         </dl>
 
@@ -149,11 +154,13 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               {item.language}
             </Badge>
           ) : (
-            <Badge variant="neutral">Language unavailable</Badge>
+            <Badge variant="neutral">
+              {t("repository.languageUnavailable")}
+            </Badge>
           )}
           <Badge variant={item.license.spdxId ? "success" : "neutral"}>
             <Icon icon={ShieldCheck} />
-            {item.license.spdxId ?? "License unavailable"}
+            {item.license.spdxId ?? t("repository.licenseUnavailable")}
           </Badge>
           {item.technologies.map((technology) => (
             <Badge key={technology} variant="accent">
@@ -171,7 +178,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               className="font-semibold"
               id={`${item.repository.fullName}-readiness`}
             >
-              Why this readiness
+              {t("repository.readinessReason")}
             </h3>
             <ul className="mt-3 grid gap-2 text-sm leading-6 text-muted-foreground">
               {item.readiness.reasons.map((reason) => (
@@ -179,9 +186,16 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               ))}
             </ul>
             <p className="mt-4 text-xs text-muted-foreground">
-              {formatCompactNumber(item.readiness.goodFirstIssues)} good first
-              issues · {formatCompactNumber(item.readiness.helpWantedIssues)}{" "}
-              help wanted
+              {t("repository.starterIssues", {
+                goodFirst: formatCompactNumber(
+                  item.readiness.goodFirstIssues,
+                  locale,
+                ),
+                helpWanted: formatCompactNumber(
+                  item.readiness.helpWantedIssues,
+                  locale,
+                ),
+              })}
             </p>
           </section>
 
@@ -194,7 +208,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
                 className="font-semibold"
                 id={`${item.repository.fullName}-documentation`}
               >
-                Contribution documents
+                {t("repository.documents")}
               </h3>
               <Badge variant={documentation.tone}>{documentation.label}</Badge>
             </div>
@@ -205,15 +219,15 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               />
               <Signal
                 available={item.documentation.contributingGuide}
-                label="Contributing guide"
+                label={t("repository.contributingGuide")}
               />
               <Signal
                 available={item.documentation.codeOfConduct}
-                label="Code of conduct"
+                label={t("repository.codeOfConduct")}
               />
               <Signal
                 available={item.documentation.securityPolicy}
-                label="Security policy"
+                label={t("repository.securityPolicy")}
               />
             </ul>
           </section>
@@ -227,7 +241,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
                 className="font-semibold"
                 id={`${item.repository.fullName}-japanese`}
               >
-                Japanese README evidence
+                {t("repository.japaneseEvidence")}
               </h3>
               <Badge variant={japaneseEvidence.tone}>
                 {japaneseEvidence.label}
@@ -235,10 +249,10 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
             </div>
             <p className="mt-3 text-sm font-medium">
               {japanese.status === "unavailable"
-                ? "Not analyzed"
+                ? t("repository.notAnalyzed")
                 : japanese.detected
-                  ? "Japanese script detected"
-                  : "Japanese script not detected"}
+                  ? t("repository.japaneseDetected")
+                  : t("repository.japaneseNotDetected")}
             </p>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -250,31 +264,34 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                Heuristic only: at least 20 Japanese-script runes and 5% of
-                analyzed letters are required for detection.
+                {t("repository.japaneseHeuristic")}
               </TooltipContent>
             </Tooltip>
             {japanese.status !== "unavailable" ? (
               <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                {formatCompactNumber(japanese.japaneseRunes)} Japanese-script
-                runes across {formatCompactNumber(japanese.letterRunes)} letters
-                in {formatCompactNumber(japanese.analyzedBytes)} analyzed bytes.
+                {t("repository.japaneseCounts", {
+                  bytes: formatCompactNumber(japanese.analyzedBytes, locale),
+                  japanese: formatCompactNumber(japanese.japaneseRunes, locale),
+                  letters: formatCompactNumber(japanese.letterRunes, locale),
+                })}
               </p>
             ) : null}
           </section>
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <section aria-label="Difficulty reasons">
-            <h3 className="font-semibold">Preliminary difficulty evidence</h3>
+          <section aria-label={t("repository.difficultyReasons")}>
+            <h3 className="font-semibold">
+              {t("repository.difficultyEvidence")}
+            </h3>
             <ul className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground">
               {item.difficulty.reasons.map((reason) => (
                 <li key={reason}>• {reason}</li>
               ))}
             </ul>
           </section>
-          <section aria-label="Repository topics">
-            <h3 className="font-semibold">Public topics</h3>
+          <section aria-label={t("repository.topicsLabel")}>
+            <h3 className="font-semibold">{t("repository.topics")}</h3>
             {item.topics.length > 0 ? (
               <ul className="mt-2 flex flex-wrap gap-2">
                 {item.topics.map((topic) => (
@@ -288,7 +305,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               </ul>
             ) : (
               <p className="mt-2 text-sm text-muted-foreground">
-                No public topics were returned.
+                {t("repository.noTopics")}
               </p>
             )}
           </section>
@@ -296,7 +313,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
 
         {item.warnings.length > 0 ? (
           <Alert variant="warning">
-            <AlertTitle>Repository evidence is partial</AlertTitle>
+            <AlertTitle>{t("repository.evidencePartial")}</AlertTitle>
             <AlertDescription>
               {item.warnings.map((warning) => warning.message).join(" ")}
             </AlertDescription>
@@ -305,8 +322,9 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
 
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Icon icon={BookOpen} />
-          Repository updated {formatDate(item.activity.updatedAt)}. Server
-          ordering and decisions are preserved.
+          {t("repository.updated", {
+            date: formatDate(item.activity.updatedAt, locale),
+          })}
         </p>
         <div>
           <BookmarkAction

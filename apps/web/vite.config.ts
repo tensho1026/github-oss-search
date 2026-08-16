@@ -7,6 +7,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.endsWith("/shared/i18n/ja-messages.ts")) {
+            return "locale-ja";
+          }
           if (
             id.includes("/node_modules/react-hook-form/") ||
             id.endsWith("/features/profile/components/ProfileSearchForm.tsx")

@@ -5,8 +5,11 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Icon } from "../components/ui/icon";
 import { appRoutes } from "../shared/config/app-config";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function NotFoundPage() {
+  const { t } = useI18n();
+
   return (
     <section className="mx-auto grid min-h-[68vh] w-full max-w-3xl content-center px-5 py-16 sm:px-8">
       <Card>
@@ -16,20 +19,19 @@ export function NotFoundPage() {
           </span>
           <div>
             <p className="font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
-              404 · Route not found
+              {t("notFound.eyebrow")}
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em]">
-              This trail ends here.
+              {t("notFound.title")}
             </h1>
             <p className="mt-3 max-w-lg leading-7 text-muted-foreground">
-              The page may have moved. Return home to analyze a public GitHub
-              profile.
+              {t("notFound.description")}
             </p>
           </div>
           <Button asChild>
             <Link to={appRoutes.home}>
               <Icon icon={Home} />
-              Back to IssueScout
+              {t("notFound.back")}
             </Link>
           </Button>
         </CardContent>

@@ -24,10 +24,10 @@ import {
 } from "../../../components/ui/select";
 import { Slider } from "../../../components/ui/slider";
 import { validateGitHubUsername } from "../../../shared/lib/github-username";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import {
   createDefaultSearchFilters,
   normalizeSearchFilters,
-  searchFilterDescriptions,
   searchFilterOptions,
   validateSearchFilters,
   type SearchFilterErrors,
@@ -84,6 +84,7 @@ export function IssueSearchForm({
   locationErrors,
   onSubmit,
 }: IssueSearchFormProps) {
+  const { t } = useI18n();
   const {
     control,
     formState: { errors },
@@ -102,10 +103,28 @@ export function IssueSearchForm({
   const difficulty =
     useWatch({ control, name: "maximumDifficulty" }) ??
     defaultValues.maximumDifficulty;
-  const difficultyLabel =
-    searchFilterOptions.difficulties.find(
-      (option) => option.value === difficulty,
-    )?.label ?? `Level ${difficulty}`;
+  const difficultyLabel = t(
+    difficulty === 1
+      ? "issueForm.difficulty1"
+      : difficulty === 2
+        ? "issueForm.difficulty2"
+        : difficulty === 3
+          ? "issueForm.difficulty3"
+          : difficulty === 4
+            ? "issueForm.difficulty4"
+            : difficulty === 5
+              ? "issueForm.difficulty5"
+              : "issueForm.level",
+    { level: difficulty },
+  );
+  const effortLabels = {
+    "": t("issueForm.effortAny"),
+    half_day: t("issueForm.effortHalfDay"),
+    one_day: t("issueForm.effortDay"),
+    thirty_minutes: t("issueForm.effort30m"),
+    three_days: t("issueForm.effortThreeDays"),
+    two_hours: t("issueForm.effort2h"),
+  } as const;
 
   const submit = handleSubmit((values) => {
     const normalized = normalizeSearchFilters({ ...values, page: 1 });
@@ -159,10 +178,10 @@ export function IssueSearchForm({
       ) : null}
 
       <Field
-        description="Recommendations are matched against this public GitHub profile."
+        description={t("issueForm.profileDescription")}
         error={usernameError}
         htmlFor="search-username"
-        label="GitHub username"
+        label={t("profileForm.username")}
       >
         <Input
           aria-describedby={fieldDescribedBy(
@@ -179,7 +198,17 @@ export function IssueSearchForm({
           {...register("username", {
             validate(value) {
               const result = validateGitHubUsername(value);
-              return result.valid ? true : result.message;
+              if (result.valid) {
+                return true;
+              }
+              return t(
+                result.code === "empty"
+                  ? "profileForm.required"
+                  : result.code === "too_long"
+                    ? "profileForm.tooLong"
+                    : "profileForm.invalid",
+                { maximum: 39 },
+              );
             },
           })}
         />
@@ -191,10 +220,10 @@ export function IssueSearchForm({
           name="languages"
           render={({ field }) => (
             <Field
-              description={searchFilterDescriptions.languages}
+              description={t("issueForm.languagesDescription")}
               error={languagesError}
               htmlFor="search-languages"
-              label="Languages"
+              label={t("issueForm.languages")}
             >
               <MultiSelect
                 aria-describedby={fieldDescribedBy(
@@ -206,8 +235,8 @@ export function IssueSearchForm({
                 id="search-languages"
                 onValuesChange={field.onChange}
                 options={searchFilterOptions.languages}
-                placeholder="Any primary language"
-                searchLabel="Search languages"
+                placeholder={t("issueForm.anyLanguage")}
+                searchLabel={t("issueForm.searchLanguages")}
                 values={field.value}
               />
             </Field>
@@ -218,10 +247,10 @@ export function IssueSearchForm({
           name="frameworks"
           render={({ field }) => (
             <Field
-              description={searchFilterDescriptions.frameworks}
+              description={t("issueForm.frameworksDescription")}
               error={frameworksError}
               htmlFor="search-frameworks"
-              label="Frameworks"
+              label={t("issueForm.frameworks")}
             >
               <MultiSelect
                 aria-describedby={fieldDescribedBy(
@@ -233,8 +262,8 @@ export function IssueSearchForm({
                 id="search-frameworks"
                 onValuesChange={field.onChange}
                 options={searchFilterOptions.frameworks}
-                placeholder="Any framework"
-                searchLabel="Search frameworks"
+                placeholder={t("issueForm.anyFramework")}
+                searchLabel={t("issueForm.searchFrameworks")}
                 values={field.value}
               />
             </Field>
@@ -247,10 +276,10 @@ export function IssueSearchForm({
         name="labels"
         render={({ field }) => (
           <Field
-            description={searchFilterDescriptions.labels}
+            description={t("issueForm.labelsDescription")}
             error={labelsError}
             htmlFor="search-labels"
-            label="Issue labels"
+            label={t("issueForm.labels")}
           >
             <MultiSelect
               aria-describedby={fieldDescribedBy(
@@ -262,8 +291,8 @@ export function IssueSearchForm({
               id="search-labels"
               onValuesChange={field.onChange}
               options={searchFilterOptions.labels}
-              placeholder="Default starter labels"
-              searchLabel="Search issue labels"
+              placeholder={t("issueForm.defaultLabels")}
+              searchLabel={t("issueForm.searchLabels")}
               values={field.value}
             />
           </Field>
@@ -272,10 +301,10 @@ export function IssueSearchForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
-          description="Repositories below this star count are excluded."
+          description={t("issueForm.minimumStarsDescription")}
           error={minimumStarsError}
           htmlFor="search-minimum-stars"
-          label="Minimum repository stars"
+          label={t("issueForm.minimumStars")}
         >
           <Input
             aria-describedby={fieldDescribedBy(
@@ -290,7 +319,7 @@ export function IssueSearchForm({
             type="number"
             {...register("minimumStars", {
               min: {
-                message: "Minimum stars cannot be negative.",
+                message: t("issueForm.minimumStarsError"),
                 value: 0,
               },
               valueAsNumber: true,
@@ -298,10 +327,10 @@ export function IssueSearchForm({
           />
         </Field>
         <Field
-          description="Both the issue and repository must be this recent."
+          description={t("issueForm.recencyDescription")}
           error={recencyError}
           htmlFor="search-recency"
-          label="Updated within days"
+          label={t("issueForm.recency")}
         >
           <Input
             aria-describedby={fieldDescribedBy(
@@ -317,11 +346,11 @@ export function IssueSearchForm({
             type="number"
             {...register("updatedWithinDays", {
               max: {
-                message: "Recency cannot exceed 3650 days.",
+                message: t("issueForm.recencyMaxError"),
                 value: 3650,
               },
               min: {
-                message: "Recency must be at least one day.",
+                message: t("issueForm.recencyMinError"),
                 value: 1,
               },
               valueAsNumber: true,
@@ -332,10 +361,12 @@ export function IssueSearchForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
-          description={`Current maximum: ${difficultyLabel}.`}
+          description={t("issueForm.currentMaximum", {
+            label: difficultyLabel,
+          })}
           error={difficultyError}
           htmlFor="search-difficulty"
-          label="Maximum difficulty"
+          label={t("issueForm.maximumDifficulty")}
         >
           <Slider
             aria-describedby={fieldDescribedBy(
@@ -361,10 +392,10 @@ export function IssueSearchForm({
           name="maximumEffort"
           render={({ field }) => (
             <Field
-              description="Applied after full issue analysis and before pagination."
+              description={t("issueForm.availableTimeDescription")}
               error={effortError}
               htmlFor="search-effort"
-              label="Available time"
+              label={t("issueForm.availableTime")}
             >
               <Select
                 onValueChange={(value) =>
@@ -390,7 +421,7 @@ export function IssueSearchForm({
                       key={option.value || "any"}
                       value={option.value || "any"}
                     >
-                      {option.label}
+                      {effortLabels[option.value]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -401,7 +432,9 @@ export function IssueSearchForm({
       </div>
 
       <fieldset className="grid gap-3">
-        <legend className="mb-2 text-sm font-semibold">Eligibility</legend>
+        <legend className="mb-2 text-sm font-semibold">
+          {t("issueForm.eligibility")}
+        </legend>
         <div className="grid gap-3 xl:grid-cols-4">
           <Controller
             control={control}
@@ -409,9 +442,9 @@ export function IssueSearchForm({
             render={({ field }) => (
               <Toggle
                 checked={field.value}
-                description="Add documentation-labelled issues."
+                description={t("issueForm.includeDocumentationDescription")}
                 id="search-documentation"
-                label="Include documentation"
+                label={t("issueForm.includeDocumentation")}
                 onChange={field.onChange}
               />
             )}
@@ -435,9 +468,9 @@ export function IssueSearchForm({
             render={({ field }) => (
               <Toggle
                 checked={field.value}
-                description="Allow predominantly Latin-script issue text."
+                description={t("issueForm.includeEnglishDescription")}
                 id="search-english"
-                label="Include English issues"
+                label={t("issueForm.includeEnglish")}
                 onChange={field.onChange}
               />
             )}
@@ -448,9 +481,9 @@ export function IssueSearchForm({
             render={({ field }) => (
               <Toggle
                 checked={field.value}
-                description="Hide repositories that no longer accept changes."
+                description={t("issueForm.excludeArchivedDescription")}
                 id="search-archived"
-                label="Exclude archived repositories"
+                label={t("issueForm.excludeArchived")}
                 onChange={field.onChange}
               />
             )}
@@ -464,10 +497,10 @@ export function IssueSearchForm({
         render={({ field }) => (
           <Field
             className="max-w-xs"
-            description="The server remains the pagination source of truth."
+            description={t("issueForm.pageSizeDescription")}
             error={pageSizeError}
             htmlFor="search-page-size"
-            label="Results per page"
+            label={t("issueForm.pageSize")}
           >
             <Select
               onValueChange={(value) => field.onChange(Number(value))}
@@ -491,7 +524,7 @@ export function IssueSearchForm({
                     key={option.value}
                     value={option.value.toString()}
                   >
-                    {option.label}
+                    {t("issueForm.perPage", { count: option.value })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -503,7 +536,7 @@ export function IssueSearchForm({
       <div className="flex flex-wrap gap-3 border-t border-border pt-5">
         <Button disabled={disabled} type="submit">
           <Icon icon={Search} />
-          {disabled ? "Searching…" : "Find ranked issues"}
+          {disabled ? t("issueForm.searching") : t("issueForm.submit")}
         </Button>
         <Button
           disabled={disabled}
@@ -514,7 +547,7 @@ export function IssueSearchForm({
           variant="ghost"
         >
           <Icon icon={RotateCcw} />
-          Reset filters
+          {t("issueForm.reset")}
         </Button>
       </div>
     </form>

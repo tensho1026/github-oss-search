@@ -7,6 +7,7 @@ import {
   AlertTitle,
 } from "../../../components/ui/alert";
 import { useAuth } from "../auth-context";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type AuthMarker = "denied" | "error" | "success";
 
@@ -22,6 +23,7 @@ function readMarker(parameters: URLSearchParams): AuthMarker | undefined {
 }
 
 export function AuthFeedback() {
+  const { t } = useI18n();
   const [parameters, setParameters] = useSearchParams();
   const { query } = useAuth();
   const { refetch } = query;
@@ -48,21 +50,18 @@ export function AuthFeedback() {
 
   const content = {
     denied: {
-      description:
-        "GitHub authorization was cancelled. Your current page and anonymous work were preserved.",
-      title: "Sign-in cancelled",
+      description: t("auth.deniedDescription"),
+      title: t("auth.deniedTitle"),
       variant: "info" as const,
     },
     error: {
-      description:
-        "GitHub sign-in could not be completed. Public IssueScout features remain available.",
-      title: "Sign-in was not completed",
+      description: t("auth.errorDescription"),
+      title: t("auth.errorTitle"),
       variant: "danger" as const,
     },
     success: {
-      description:
-        "Your secure IssueScout session is ready. No GitHub token is stored in this browser.",
-      title: "Signed in successfully",
+      description: t("auth.successDescription"),
+      title: t("auth.successTitle"),
       variant: "success" as const,
     },
   }[marker];

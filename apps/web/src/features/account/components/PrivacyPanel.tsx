@@ -21,6 +21,7 @@ import {
 import { Field } from "../../../components/ui/field";
 import { Input } from "../../../components/ui/input";
 import { ApiError } from "../../../shared/api/client";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { deleteAccount, exportAccount } from "../api/account";
 import { AccountRequestAlert } from "./AccountRequestAlert";
 
@@ -47,6 +48,7 @@ export function PrivacyPanel({
   onAccountDeleted,
   onSessionExpired,
 }: Props) {
+  const { t } = useI18n();
   const [confirmation, setConfirmation] = useState("");
   const exportMutation = useMutation({
     mutationFn: () => exportAccount(),
@@ -75,19 +77,14 @@ export function PrivacyPanel({
     <section aria-labelledby="privacy-heading" className="grid gap-5">
       <Card>
         <CardHeader>
-          <CardTitle id="privacy-heading">Privacy and account data</CardTitle>
-          <CardDescription>
-            Export exactly the account-owned feature data IssueScout retains, or
-            permanently remove the account and all linked records.
-          </CardDescription>
+          <CardTitle id="privacy-heading">{t("privacy.title")}</CardTitle>
+          <CardDescription>{t("privacy.description")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5">
           <div className="rounded-xl border border-border bg-muted/30 p-5">
-            <h3 className="font-semibold">Portable JSON export</h3>
+            <h3 className="font-semibold">{t("privacy.exportTitle")}</h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Includes bookmarks, validated saved filters, and preferences.
-              Sessions, credential hashes, OAuth state, GitHub payloads, and
-              anonymous activity are excluded.
+              {t("privacy.exportDescription")}
             </p>
             <Button
               className="mt-4"
@@ -95,36 +92,36 @@ export function PrivacyPanel({
               onClick={() => exportMutation.mutate()}
               variant="outline"
             >
-              {exportMutation.isPending ? "Preparing…" : "Download export"}
+              {exportMutation.isPending
+                ? t("privacy.preparing")
+                : t("privacy.download")}
             </Button>
           </div>
 
           <div className="rounded-xl border border-danger/25 bg-danger-soft p-5">
             <h3 className="font-semibold text-danger">
-              Permanently delete account
+              {t("privacy.deleteTitle")}
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground/80">
-              This cascades through identities, sessions, bookmarks, saved
-              searches, and preferences. It cannot be undone.
+              {t("privacy.deleteDescription")}
             </p>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="mt-4" variant="danger">
-                  Delete account
+                  {t("privacy.delete")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Delete your IssueScout account?</DialogTitle>
+                  <DialogTitle>{t("privacy.dialogTitle")}</DialogTitle>
                   <DialogDescription>
-                    Enter DELETE exactly. The server validates the confirmation
-                    and revokes every active session.
+                    {t("privacy.dialogDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <Field
-                  description="This action is permanent."
+                  description={t("privacy.permanent")}
                   htmlFor="account-delete-confirmation"
-                  label="Type DELETE to confirm"
+                  label={t("privacy.confirm")}
                 >
                   <Input
                     autoComplete="off"
@@ -138,7 +135,7 @@ export function PrivacyPanel({
                 ) : null}
                 <div className="flex flex-wrap justify-end gap-3">
                   <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
+                    <Button variant="outline">{t("privacy.cancel")}</Button>
                   </DialogClose>
                   <Button
                     disabled={
@@ -148,8 +145,8 @@ export function PrivacyPanel({
                     variant="danger"
                   >
                     {deleteMutation.isPending
-                      ? "Deleting account…"
-                      : "Delete permanently"}
+                      ? t("privacy.deleting")
+                      : t("privacy.deletePermanently")}
                   </Button>
                 </div>
               </DialogContent>

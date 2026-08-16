@@ -18,6 +18,7 @@ import type {
   SavedSearchWriteRequest,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { useAuth } from "../../auth/auth-context";
 import { createSavedSearch } from "../api/account";
 import { AccountRequestAlert } from "./AccountRequestAlert";
@@ -27,6 +28,7 @@ type Props =
   | { filters: RepositoryDiscoveryRequest; searchType: "repository" };
 
 export function SaveSearchAction(props: Props) {
+  const { t } = useI18n();
   const { markSessionExpired, session, signIn } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -63,7 +65,7 @@ export function SaveSearchAction(props: Props) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) {
-      setFormError("Enter a name for this search.");
+      setFormError(t("savedSearch.nameRequired"));
       return;
     }
     setFormError("");
@@ -78,20 +80,22 @@ export function SaveSearchAction(props: Props) {
   return (
     <>
       <Button onClick={() => setOpen(true)} size="small" variant="outline">
-        {savedFilters === filterKey ? "Search saved" : "Save this search"}
+        {savedFilters === filterKey
+          ? t("savedSearch.saved")
+          : t("savedSearch.saveThis")}
       </Button>
       <Dialog onOpenChange={setOpen} open={open}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {authenticated
-                ? "Name this saved search"
-                : "Save validated filters"}
+                ? t("savedSearch.nameTitle")
+                : t("savedSearch.filtersTitle")}
             </DialogTitle>
             <DialogDescription>
               {authenticated
-                ? "Only this validated filter definition is stored. Result payloads and anonymous history are excluded."
-                : "Sign in to retain this filter definition. Your current URL and unsaved filter state will be preserved."}
+                ? t("savedSearch.authDescription")
+                : t("savedSearch.guestDescription")}
             </DialogDescription>
           </DialogHeader>
           {authenticated ? (
@@ -99,7 +103,7 @@ export function SaveSearchAction(props: Props) {
               <Field
                 error={formError || undefined}
                 htmlFor={`save-${props.searchType}-search-name`}
-                label="Saved-search name"
+                label={t("savedSearch.name")}
               >
                 <Input
                   id={`save-${props.searchType}-search-name`}
@@ -112,15 +116,19 @@ export function SaveSearchAction(props: Props) {
                 <AccountRequestAlert error={mutation.error} />
               ) : null}
               <Button disabled={mutation.isPending} type="submit">
-                {mutation.isPending ? "Saving…" : "Save search"}
+                {mutation.isPending
+                  ? t("savedSearch.saving")
+                  : t("savedSearch.save")}
               </Button>
             </form>
           ) : session?.configured === false ? (
             <p className="text-sm text-muted-foreground">
-              Sign-in is not configured in this environment.
+              {t("workspace.notConfigured")}
             </p>
           ) : (
-            <Button onClick={() => signIn()}>Sign in with GitHub</Button>
+            <Button onClick={() => signIn()}>
+              {t("workspace.signInGitHub")}
+            </Button>
           )}
         </DialogContent>
       </Dialog>

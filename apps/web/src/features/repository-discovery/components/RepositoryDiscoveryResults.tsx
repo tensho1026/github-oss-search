@@ -17,6 +17,7 @@ import { Pagination } from "../../../components/ui/pagination";
 import type { RepositoryDiscoveryEnvelope } from "../../../shared/api/generated";
 import { formatCompactNumber } from "../../../shared/lib/format";
 import { RepositoryCard } from "./RepositoryCard";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type RepositoryDiscoveryResultsProps = {
   envelope: RepositoryDiscoveryEnvelope;
@@ -29,6 +30,7 @@ export function RepositoryDiscoveryResults({
   isFetching,
   onPageChange,
 }: RepositoryDiscoveryResultsProps) {
+  const { locale, t } = useI18n();
   const { items, pagination, searchSummary, warnings } = envelope.data;
   if (items.length === 0) {
     const outOfRange =
@@ -44,23 +46,25 @@ export function RepositoryDiscoveryResults({
           <div>
             <h2 className="text-xl font-semibold">
               {outOfRange
-                ? "This repository page is no longer available"
-                : "No eligible repositories found"}
+                ? t("repository.noPageTitle")
+                : t("repository.emptyTitle")}
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
               {outOfRange
-                ? "The bounded result set changed after this URL was shared. Return to the first server-ordered page."
-                : "GitHub candidates were checked, but none met every condition. Try fewer technology terms, a lower readiness threshold, or a broader recency window."}
+                ? t("repository.noPageDescription")
+                : t("repository.emptyDescription")}
             </p>
           </div>
           {outOfRange ? (
-            <Button onClick={() => onPageChange(1)}>Return to page 1</Button>
+            <Button onClick={() => onPageChange(1)}>
+              {t("issueSearch.returnFirst")}
+            </Button>
           ) : (
             <a
               className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               href="#repository-filters"
             >
-              Broaden the filters
+              {t("issueSearch.broaden")}
             </a>
           )}
         </CardContent>
@@ -84,35 +88,45 @@ export function RepositoryDiscoveryResults({
         <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-mono text-xs tracking-[0.14em] text-accent uppercase">
-              Server-ordered repositories
+              {t("repository.orderedEyebrow")}
             </p>
             <CardTitle
               className="mt-2 text-2xl"
               id="repository-results-heading"
             >
-              {formatCompactNumber(pagination.total)} eligible repositories
+              {t("repository.eligibleCount", {
+                count: formatCompactNumber(pagination.total, locale),
+              })}
             </CardTitle>
           </div>
           <span className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
             <Icon icon={Gauge} />
-            {formatCompactNumber(searchSummary.candidatesChecked)} checked ·{" "}
-            {formatCompactNumber(searchSummary.enrichmentAttempted)} enriched
+            {t("issueSearch.checkedSummary", {
+              checked: formatCompactNumber(
+                searchSummary.candidatesChecked,
+                locale,
+              ),
+              enriched: formatCompactNumber(
+                searchSummary.enrichmentAttempted,
+                locale,
+              ),
+            })}
           </span>
         </CardHeader>
         <CardContent className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
           <p>
-            GitHub reported{" "}
-            <strong className="text-foreground">
-              {formatCompactNumber(searchSummary.upstreamTotal)}
-            </strong>{" "}
-            matching repositories before the bounded window.
+            {t("repository.upstreamTotal", {
+              count: formatCompactNumber(searchSummary.upstreamTotal, locale),
+            })}
           </p>
           {envelope.meta.rateLimitRemaining !== undefined ? (
             <p className="sm:text-right">
-              GitHub API requests remaining:{" "}
-              <strong className="text-foreground">
-                {formatCompactNumber(envelope.meta.rateLimitRemaining)}
-              </strong>
+              {t("issueSearch.rateRemaining", {
+                count: formatCompactNumber(
+                  envelope.meta.rateLimitRemaining,
+                  locale,
+                ),
+              })}
             </p>
           ) : null}
         </CardContent>
@@ -120,21 +134,19 @@ export function RepositoryDiscoveryResults({
 
       {hasPartialEvidence ? (
         <Alert variant="warning">
-          <AlertTitle>Some repository evidence is partial</AlertTitle>
+          <AlertTitle>{t("repository.partialTitle")}</AlertTitle>
           <AlertDescription>
-            Eligible results keep deterministic server ordering, but optional
-            GitHub evidence was incomplete.{" "}
+            {t("repository.partialDescription")}{" "}
             {warnings.map((warning) => warning.message).join(" ")}
           </AlertDescription>
         </Alert>
       ) : (
         <Alert variant="success">
-          <AlertTitle>Bounded analysis completed</AlertTitle>
+          <AlertTitle>{t("issueSearch.completeTitle")}</AlertTitle>
           <AlertDescription>
             <span className="inline-flex items-center gap-2">
               <Icon icon={SearchCheck} />
-              Cards preserve the exact server order and explain every
-              repository-level decision.
+              {t("repository.completeDescription")}
             </span>
           </AlertDescription>
         </Alert>
@@ -151,7 +163,7 @@ export function RepositoryDiscoveryResults({
       <Card>
         <CardContent className="p-5 sm:p-6">
           <Pagination
-            ariaLabel="Repository discovery pagination"
+            ariaLabel={t("repository.pagination")}
             disabled={isFetching}
             hasNext={pagination.hasNext}
             onPageChange={onPageChange}

@@ -17,6 +17,7 @@ import { Pagination } from "../../../components/ui/pagination";
 import type { IssueSearchEnvelope } from "../../../shared/api/generated";
 import { formatCompactNumber } from "../../../shared/lib/format";
 import { RecommendationCard } from "./RecommendationCard";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type IssueSearchResultsProps = {
   envelope: IssueSearchEnvelope;
@@ -31,6 +32,7 @@ export function IssueSearchResults({
 }: IssueSearchResultsProps) {
   const { contributionProfile, items, pagination, searchSummary, warnings } =
     envelope.data;
+  const { locale, t } = useI18n();
   if (items.length === 0) {
     const outOfRange =
       pagination.total > 0 &&
@@ -45,23 +47,25 @@ export function IssueSearchResults({
           <div>
             <h2 className="text-xl font-semibold">
               {outOfRange
-                ? "This result page is no longer available"
-                : "No eligible issues found"}
+                ? t("issueSearch.noPageTitle")
+                : t("issueSearch.emptyTitle")}
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
               {outOfRange
-                ? "The eligible result set changed after this URL was shared. Return to the first server-ranked page."
-                : "GitHub candidates were checked, but none met every validated condition. Try fewer framework terms, a lower star threshold, or more available time."}
+                ? t("issueSearch.noPageDescription")
+                : t("issueSearch.emptyDescription")}
             </p>
           </div>
           {outOfRange ? (
-            <Button onClick={() => onPageChange(1)}>Return to page 1</Button>
+            <Button onClick={() => onPageChange(1)}>
+              {t("issueSearch.returnFirst")}
+            </Button>
           ) : (
             <a
               className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               href="#search-filters"
             >
-              Broaden the filters
+              {t("issueSearch.broaden")}
             </a>
           )}
         </CardContent>
@@ -78,29 +82,43 @@ export function IssueSearchResults({
         <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-mono text-xs tracking-[0.14em] text-accent uppercase">
-              Server-ranked recommendations
+              {t("issueSearch.rankedEyebrow")}
             </p>
             <CardTitle className="mt-2 text-2xl" id="issue-results-heading">
-              {formatCompactNumber(pagination.total)} eligible issues
+              {t("issueSearch.eligibleCount", {
+                count: formatCompactNumber(pagination.total, locale),
+              })}
             </CardTitle>
           </div>
           <span className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
             <Icon icon={Gauge} />
-            {formatCompactNumber(searchSummary.candidatesChecked)} checked ·{" "}
-            {formatCompactNumber(searchSummary.enrichmentAttempted)} enriched
+            {t("issueSearch.checkedSummary", {
+              checked: formatCompactNumber(
+                searchSummary.candidatesChecked,
+                locale,
+              ),
+              enriched: formatCompactNumber(
+                searchSummary.enrichmentAttempted,
+                locale,
+              ),
+            })}
           </span>
           <span className="text-xs text-muted-foreground">
-            Contribution profile: {contributionProfile.status} · model{" "}
-            {contributionProfile.version}
+            {t("issueSearch.contributionProfile", {
+              status: contributionProfile.status,
+              version: contributionProfile.version,
+            })}
           </span>
         </CardHeader>
         {envelope.meta.rateLimitRemaining !== undefined ? (
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              GitHub API requests remaining:{" "}
-              <strong className="text-foreground">
-                {formatCompactNumber(envelope.meta.rateLimitRemaining)}
-              </strong>
+              {t("issueSearch.rateRemaining", {
+                count: formatCompactNumber(
+                  envelope.meta.rateLimitRemaining,
+                  locale,
+                ),
+              })}
             </p>
           </CardContent>
         ) : null}
@@ -108,20 +126,19 @@ export function IssueSearchResults({
 
       {hasPartialEvidence ? (
         <Alert variant="warning">
-          <AlertTitle>Some recommendation evidence is partial</AlertTitle>
+          <AlertTitle>{t("issueSearch.partialTitle")}</AlertTitle>
           <AlertDescription>
-            Ranking remains deterministic, but GitHub omitted optional evidence
-            for part of this bounded window.{" "}
+            {t("issueSearch.partialDescription")}{" "}
             {warnings.map((warning) => warning.message).join(" ")}
           </AlertDescription>
         </Alert>
       ) : (
         <Alert variant="success">
-          <AlertTitle>Bounded analysis completed</AlertTitle>
+          <AlertTitle>{t("issueSearch.completeTitle")}</AlertTitle>
           <AlertDescription>
             <span className="inline-flex items-center gap-2">
               <Icon icon={SearchCheck} />
-              Cards below preserve the exact order returned by the API.
+              {t("issueSearch.completeDescription")}
             </span>
           </AlertDescription>
         </Alert>
