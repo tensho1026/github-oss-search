@@ -20,8 +20,8 @@ API calls GitHub, and bounded public snapshots may be cached only in process
 memory. Anonymous handlers do not access or write a database. A GitHub token
 used for upstream capacity remains server-side.
 
-Optional GitHub OAuth, bookmarks, saved searches, preferences, export, and
-account deletion are separate authenticated capabilities. Their
+Optional GitHub OAuth, a private issue contribution task board, bookmarks,
+saved searches, preferences, export, and account deletion are separate authenticated capabilities. Their
 Neon-compatible PostgreSQL adapter remains behind authentication and
 persistence ports so account behavior cannot become a hidden dependency of
 public analysis.

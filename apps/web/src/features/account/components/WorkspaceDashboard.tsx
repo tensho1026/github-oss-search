@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import type { AuthUser } from "../../../shared/api/generated";
 import { cn } from "../../../shared/lib/cn";
 import { BookmarksPanel } from "./BookmarksPanel";
+import { IssueClaimsPanel } from "./IssueClaimsPanel";
 import { PreferencesPanel } from "./PreferencesPanel";
 import { PrivacyPanel } from "./PrivacyPanel";
 import { SavedSearchesPanel } from "./SavedSearchesPanel";
@@ -17,6 +18,7 @@ type Props = {
 };
 
 const tabs = [
+  { label: "Contribution tasks", value: "tasks" },
   { label: "Bookmarks", value: "bookmarks" },
   { label: "Saved searches", value: "saved" },
   { label: "Preferences", value: "preferences" },
@@ -93,6 +95,12 @@ export function WorkspaceDashboard({
         id={`workspace-panel-${activeTab}`}
         role="tabpanel"
       >
+        {activeTab === "tasks" ? (
+          <IssueClaimsPanel
+            csrfToken={csrfToken}
+            onSessionExpired={onSessionExpired}
+          />
+        ) : null}
         {activeTab === "bookmarks" ? (
           <BookmarksPanel
             csrfToken={csrfToken}

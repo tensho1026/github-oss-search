@@ -10,6 +10,67 @@ import (
 	"github.com/tensho1026/github-issue-search/apps/api/internal/platform/apperror"
 )
 
+func TestAccountWorkspaceCreatesAndUpdatesIssueClaimWithoutGitHubWrites(
+	t *testing.T,
+) {
+	t.Parallel()
+	repository := &accountRepositoryStub{}
+	service := concreteAccountWorkspace(t, repository)
+	accountID := workspaceAccountID(t)
+	claimID := workspaceResourceID(t)
+	service.newID = func() (account.ResourceID, error) { return claimID, nil }
+
+	created, err := service.UpsertIssueClaim(
+		context.Background(),
+		accountID,
+		UpsertIssueClaimInput{
+			RepositoryOwner: "OpenAI",
+			RepositoryName:  "OpenAI-Go",
+			IssueNumber:     42,
+		},
+	)
+	if err != nil || created.Status != account.IssueClaimNotStarted ||
+		created.Issue.RepositoryOwner != "openai" ||
+		repository.upsertIssueClaimCalls != 1 {
+		t.Fatalf("UpsertIssueClaim() = %+v, %v", created, err)
+	}
+	updated, err := service.UpdateIssueClaim(
+		context.Background(),
+		accountID,
+		claimID,
+		created.Version,
+		UpdateIssueClaimInput{
+			Status: account.IssueClaimPRSubmitted,
+			PullRequest: &PullRequestInput{
+				RepositoryOwner: "OpenAI",
+				RepositoryName:  "OpenAI-Go",
+				Number:          91,
+			},
+		},
+	)
+	if err != nil || updated.Status != account.IssueClaimPRSubmitted ||
+		updated.PullRequest == nil || repository.updateIssueClaimCalls != 1 {
+		t.Fatalf("UpdateIssueClaim() = %+v, %v", updated, err)
+	}
+}
+
+func TestAccountWorkspaceRejectsSubmittedClaimWithoutPullRequest(t *testing.T) {
+	t.Parallel()
+	repository := &accountRepositoryStub{}
+	service := concreteAccountWorkspace(t, repository)
+	_, err := service.UpdateIssueClaim(
+		context.Background(),
+		workspaceAccountID(t),
+		workspaceResourceID(t),
+		1,
+		UpdateIssueClaimInput{Status: account.IssueClaimMerged},
+	)
+	assertApplicationError(t, err, apperror.CodeInvalidRequest)
+	if repository.updateIssueClaimCalls != 0 {
+		t.Fatal("invalid issue claim reached persistence")
+	}
+}
+
 func TestAccountWorkspaceNormalizesBookmarkBeforePersistence(t *testing.T) {
 	accountID := workspaceAccountID(t)
 	repository := &accountRepositoryStub{}
@@ -277,6 +338,9 @@ func TestAccountWorkspaceRejectsMissingRepositoryAndStorageListFailure(
 }
 
 type accountRepositoryStub struct {
+	issueClaim             account.IssueClaim
+	upsertIssueClaimCalls  int
+	updateIssueClaimCalls  int
 	upsertBookmarkCalls    int
 	deleteBookmarkError    error
 	listBookmarkCalls      int
@@ -287,6 +351,45 @@ type accountRepositoryStub struct {
 	preferences            account.Preferences
 	summary                account.OwnedDataSummary
 	deleteCalls            int
+}
+
+func (repository *accountRepositoryStub) ListIssueClaims(
+	_ context.Context,
+	_ account.ID,
+	page account.Page,
+) (account.IssueClaimPage, error) {
+	return account.IssueClaimPage{PageResult: account.PageResult[account.IssueClaim]{
+		Page: page,
+	}}, nil
+}
+
+func (repository *accountRepositoryStub) UpsertIssueClaim(
+	_ context.Context,
+	claim account.IssueClaim,
+) (account.IssueClaim, error) {
+	repository.upsertIssueClaimCalls++
+	claim.Version = 1
+	repository.issueClaim = claim
+	return claim, nil
+}
+
+func (repository *accountRepositoryStub) UpdateIssueClaim(
+	_ context.Context,
+	claim account.IssueClaim,
+) (account.IssueClaim, error) {
+	repository.updateIssueClaimCalls++
+	claim.Version++
+	repository.issueClaim = claim
+	return claim, nil
+}
+
+func (repository *accountRepositoryStub) DeleteIssueClaim(
+	context.Context,
+	account.ID,
+	account.ResourceID,
+	int64,
+) error {
+	return nil
 }
 
 func (repository *accountRepositoryStub) ListBookmarks(

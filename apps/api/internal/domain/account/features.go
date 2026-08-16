@@ -20,6 +20,8 @@ const (
 	MaximumBookmarks = 200
 	// MaximumSavedSearches bounds stored filter documents for one account.
 	MaximumSavedSearches = 50
+	// MaximumIssueClaims bounds personal contribution tasks for one account.
+	MaximumIssueClaims = 200
 	// MaximumSavedSearchNameRunes is the user-visible saved-search name limit.
 	MaximumSavedSearchNameRunes = 80
 	// MaximumSavedSearchFilterBytes matches the PostgreSQL JSON document limit.
@@ -125,8 +127,8 @@ func NewBookmarkReference(
 		)
 	}
 	reference, err := issue.NewReference(
-		owner,
-		repositoryName,
+		strings.TrimSpace(owner),
+		strings.TrimSpace(repositoryName),
 		validationNumber,
 	)
 	if err != nil {
@@ -156,6 +158,170 @@ type Bookmark struct {
 	Version   int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// IssueClaimStatus is the user-owned contribution workflow state. It never
+// represents GitHub assignment or maintainer approval.
+type IssueClaimStatus string
+
+const (
+	// IssueClaimNotStarted is a saved opportunity with no work begun.
+	IssueClaimNotStarted IssueClaimStatus = "not_started"
+	// IssueClaimResearching means the contributor is investigating the issue.
+	IssueClaimResearching IssueClaimStatus = "researching"
+	// IssueClaimImplementing means a local implementation is in progress.
+	IssueClaimImplementing IssueClaimStatus = "implementing"
+	// IssueClaimPRSubmitted means a pull request has been submitted.
+	IssueClaimPRSubmitted IssueClaimStatus = "pr_submitted"
+	// IssueClaimMerged means the linked contribution was merged.
+	IssueClaimMerged IssueClaimStatus = "merged"
+)
+
+// UpstreamReferenceState is an observation about GitHub, kept independent
+// from the user's workflow status.
+type UpstreamReferenceState string
+
+const (
+	// UpstreamUnverified means no current public observation is available.
+	UpstreamUnverified UpstreamReferenceState = "unverified"
+	// UpstreamOpen means the referenced public object was observed open.
+	UpstreamOpen UpstreamReferenceState = "open"
+	// UpstreamClosed means the referenced public object was observed closed.
+	UpstreamClosed UpstreamReferenceState = "closed"
+	// UpstreamMerged means the referenced public pull request was observed merged.
+	UpstreamMerged UpstreamReferenceState = "merged"
+	// UpstreamMissing means the referenced public object was not found.
+	UpstreamMissing UpstreamReferenceState = "missing"
+	// UpstreamInaccessible means the referenced object cannot be observed publicly.
+	UpstreamInaccessible UpstreamReferenceState = "inaccessible"
+)
+
+// PullRequestReference is an optional canonical GitHub PR associated with a
+// submitted contribution.
+type PullRequestReference struct {
+	RepositoryOwner string
+	RepositoryName  string
+	Number          int
+}
+
+// NewPullRequestReference validates and canonicalizes an optional PR target.
+func NewPullRequestReference(
+	owner string,
+	repositoryName string,
+	number int,
+) (PullRequestReference, error) {
+	reference, err := issue.NewReference(owner, repositoryName, number)
+	if err != nil {
+		return PullRequestReference{}, fmt.Errorf(
+			"%w: pull request reference is invalid",
+			ErrInvalidFeatureInput,
+		)
+	}
+	return PullRequestReference{
+		RepositoryOwner: strings.ToLower(reference.Owner()),
+		RepositoryName:  strings.ToLower(reference.RepositoryName()),
+		Number:          reference.Number(),
+	}, nil
+}
+
+// IssueClaim is one account-owned task. Workflow and upstream observations
+// are intentionally separate, and no write is sent to GitHub.
+type IssueClaim struct {
+	ID                 ResourceID
+	AccountID          ID
+	Issue              BookmarkReference
+	Status             IssueClaimStatus
+	Archived           bool
+	PullRequest        *PullRequestReference
+	ObservedIssueState UpstreamReferenceState
+	ObservedPRState    UpstreamReferenceState
+	Version            int64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// NewIssueClaim validates a canonical issue reference and initial status.
+func NewIssueClaim(
+	owner string,
+	repositoryName string,
+	issueNumber int,
+) (IssueClaim, error) {
+	reference, err := NewBookmarkReference(
+		BookmarkTargetIssue,
+		owner,
+		repositoryName,
+		&issueNumber,
+	)
+	if err != nil {
+		return IssueClaim{}, err
+	}
+	return IssueClaim{
+		Issue:              reference,
+		Status:             IssueClaimNotStarted,
+		ObservedIssueState: UpstreamUnverified,
+		ObservedPRState:    UpstreamUnverified,
+	}, nil
+}
+
+// UpdateIssueClaim validates a replacement workflow status and optional PR.
+// Transitions may move forward or backward because this is a personal task
+// board, not a maintainer-controlled state machine.
+func UpdateIssueClaim(
+	claim IssueClaim,
+	status IssueClaimStatus,
+	archived bool,
+	pullRequest *PullRequestReference,
+) (IssueClaim, error) {
+	if !validIssueClaimStatus(status) {
+		return IssueClaim{}, fmt.Errorf(
+			"%w: issue claim status is invalid",
+			ErrInvalidFeatureInput,
+		)
+	}
+	if (status == IssueClaimPRSubmitted || status == IssueClaimMerged) &&
+		pullRequest == nil {
+		return IssueClaim{}, fmt.Errorf(
+			"%w: a pull request is required for submitted or merged status",
+			ErrInvalidFeatureInput,
+		)
+	}
+	claim.Status = status
+	claim.Archived = archived
+	claim.PullRequest = pullRequest
+	if pullRequest == nil {
+		claim.ObservedPRState = UpstreamUnverified
+	}
+	return claim, nil
+}
+
+func validIssueClaimStatus(status IssueClaimStatus) bool {
+	switch status {
+	case IssueClaimNotStarted,
+		IssueClaimResearching,
+		IssueClaimImplementing,
+		IssueClaimPRSubmitted,
+		IssueClaimMerged:
+		return true
+	default:
+		return false
+	}
+}
+
+// IssueClaimSummary contains account-owned workflow counts.
+type IssueClaimSummary struct {
+	Total        int
+	NotStarted   int
+	Researching  int
+	Implementing int
+	PRSubmitted  int
+	Merged       int
+	Archived     int
+}
+
+// IssueClaimPage combines one owned page with progress counts.
+type IssueClaimPage struct {
+	PageResult[IssueClaim]
+	Summary IssueClaimSummary
 }
 
 // SearchType identifies which anonymous domain contract validates a saved
@@ -356,6 +522,7 @@ type PageResult[T any] struct {
 type Export struct {
 	GeneratedAt   time.Time
 	Bookmarks     []Bookmark
+	IssueClaims   []IssueClaim
 	SavedSearches []SavedSearch
 	Preferences   *Preferences
 }

@@ -14,6 +14,29 @@ type DatabaseHealth interface {
 
 // AccountRepository owns account-scoped persistence and deletion semantics.
 type AccountRepository interface {
+	// ListIssueClaims returns one account-owned task page and workflow summary.
+	ListIssueClaims(
+		ctx context.Context,
+		accountID account.ID,
+		page account.Page,
+	) (account.IssueClaimPage, error)
+	// UpsertIssueClaim inserts or idempotently returns one canonical issue task.
+	UpsertIssueClaim(
+		ctx context.Context,
+		claim account.IssueClaim,
+	) (account.IssueClaim, error)
+	// UpdateIssueClaim applies an optimistic account-owned workflow replacement.
+	UpdateIssueClaim(
+		ctx context.Context,
+		claim account.IssueClaim,
+	) (account.IssueClaim, error)
+	// DeleteIssueClaim removes one account-owned task at the expected version.
+	DeleteIssueClaim(
+		ctx context.Context,
+		accountID account.ID,
+		claimID account.ResourceID,
+		version int64,
+	) error
 	// ListBookmarks returns one stable account-owned page and total count.
 	ListBookmarks(
 		ctx context.Context,

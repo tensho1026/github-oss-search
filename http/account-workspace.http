@@ -1,6 +1,60 @@
 # Obtain fresh local values from GET /api/auth/session. Keep them only in a
 # private HTTPYAC environment. Never commit real session or CSRF credentials.
 
+### List the authenticated account's private contribution tasks
+# @name listAccountIssueClaims
+GET {{apiBaseUrl}}/api/account/issue-claims?page=1&perPage=20
+Accept: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-Request-ID: httpyac-account-issue-claims-list
+
+### Idempotently add an issue to the private task board
+# @name upsertAccountIssueClaim
+PUT {{apiBaseUrl}}/api/account/issue-claims
+Accept: application/json
+Content-Type: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-issue-claims-upsert
+
+{
+  "repositoryOwner": "openai",
+  "repositoryName": "openai-go",
+  "issueNumber": 42
+}
+
+### Update personal progress and link a pull request
+# @name updateAccountIssueClaim
+PATCH {{apiBaseUrl}}/api/account/issue-claims/{{issueClaimID}}
+Accept: application/json
+Content-Type: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-issue-claims-update
+
+{
+  "status": "pr_submitted",
+  "archived": false,
+  "pullRequest": {
+    "repositoryOwner": "openai",
+    "repositoryName": "openai-go",
+    "number": 91
+  },
+  "version": {{issueClaimVersion}}
+}
+
+### Delete an owned contribution task with optimistic concurrency
+# @name deleteAccountIssueClaim
+DELETE {{apiBaseUrl}}/api/account/issue-claims/{{issueClaimID}}?version={{issueClaimVersion}}
+Accept: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-issue-claims-delete
+
 ### List the authenticated account's normalized bookmarks
 # @name listAccountBookmarks
 GET {{apiBaseUrl}}/api/account/bookmarks?page=1&perPage=20

@@ -7,6 +7,66 @@ import (
 	"testing"
 )
 
+func TestIssueClaimWorkflowValidatesReferencesAndSubmittedStates(t *testing.T) {
+	t.Parallel()
+	claim, err := NewIssueClaim(" OpenAI ", "OpenAI-Go", 42)
+	if err != nil {
+		t.Fatalf("NewIssueClaim() error = %v", err)
+	}
+	if claim.Issue.RepositoryOwner != "openai" ||
+		claim.Issue.RepositoryName != "openai-go" ||
+		claim.Status != IssueClaimNotStarted {
+		t.Fatalf("claim = %+v", claim)
+	}
+	if _, updateErr := UpdateIssueClaim(
+		claim,
+		IssueClaimPRSubmitted,
+		false,
+		nil,
+	); !errors.Is(updateErr, ErrInvalidFeatureInput) {
+		t.Fatalf("submitted without PR error = %v", updateErr)
+	}
+	pullRequest, err := NewPullRequestReference("OpenAI", "OpenAI-Go", 91)
+	if err != nil {
+		t.Fatalf("NewPullRequestReference() error = %v", err)
+	}
+	updated, err := UpdateIssueClaim(
+		claim,
+		IssueClaimPRSubmitted,
+		false,
+		&pullRequest,
+	)
+	if err != nil || updated.PullRequest == nil ||
+		updated.PullRequest.RepositoryOwner != "openai" {
+		t.Fatalf("UpdateIssueClaim() = %+v, %v", updated, err)
+	}
+}
+
+func TestIssueClaimWorkflowSupportsEveryPersonalStateAndArchive(t *testing.T) {
+	t.Parallel()
+	claim, err := NewIssueClaim("octocat", "hello-world", 1)
+	if err != nil {
+		t.Fatalf("NewIssueClaim() error = %v", err)
+	}
+	pullRequest, _ := NewPullRequestReference("octocat", "hello-world", 2)
+	for _, status := range []IssueClaimStatus{
+		IssueClaimNotStarted,
+		IssueClaimResearching,
+		IssueClaimImplementing,
+		IssueClaimPRSubmitted,
+		IssueClaimMerged,
+	} {
+		var linked *PullRequestReference
+		if status == IssueClaimPRSubmitted || status == IssueClaimMerged {
+			linked = &pullRequest
+		}
+		claim, err = UpdateIssueClaim(claim, status, true, linked)
+		if err != nil || claim.Status != status || !claim.Archived {
+			t.Fatalf("status %q = %+v, %v", status, claim, err)
+		}
+	}
+}
+
 func TestBookmarkReferenceNormalizesAndValidatesTarget(t *testing.T) {
 	number := 42
 	reference, err := NewBookmarkReference(

@@ -66,7 +66,10 @@ sentinels.
 Forward migration `000001` creates accounts, one GitHub identity per account,
 single-use OAuth state hashes, and hashed session/CSRF material. Forward
 migration `000002` creates normalized bookmarks, validated JSON saved filters,
-preferences, and content-free privacy audit events.
+preferences, and content-free privacy audit events. Forward migration `000003`
+creates normalized account-owned issue claims with personal workflow state,
+optional pull-request references, separate upstream observations, and
+optimistic versions.
 
 The database never stores:
 
@@ -76,7 +79,7 @@ The database never stores:
 - plaintext session, CSRF, or OAuth state values;
 - a database URL or database credential.
 
-Identity, session, bookmark, saved-search, and preference rows reference an
+Identity, session, issue-claim, bookmark, saved-search, and preference rows reference an
 account with `ON DELETE CASCADE`. Deleting an account therefore removes every
 account-owned row. The account repository performs deletion and a content-free
 `account_deleted` audit insert in one PostgreSQL statement. Privacy audit rows
@@ -87,10 +90,10 @@ Repository methods accept a validated opaque account UUID and include it as a
 parameterized ownership predicate. A missing or foreign account is exposed as
 not found, preventing identifier enumeration.
 
-Bookmark and saved-search quota checks serialize per account with
+Issue-claim, bookmark, and saved-search quota checks serialize per account with
 transaction-scoped advisory locks in the insert statement. Bookmark duplicate
-writes are idempotent. Saved-search updates and all feature deletes include the
-current optimistic version. Full behavior and privacy export policy are in
+writes are idempotent, as are duplicate issue-claim upserts. Issue-claim and
+saved-search updates and all feature deletes include the current optimistic version. Full behavior and privacy export policy are in
 [Authenticated account workspace](account-workspace.md).
 
 GitHub identity linking takes a transaction-scoped advisory lock keyed by the

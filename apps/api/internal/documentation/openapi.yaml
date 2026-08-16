@@ -712,6 +712,180 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+  /api/account/issue-claims:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+    get:
+      operationId: listAccountIssueClaims
+      summary: List owned contribution tasks
+      description: |
+        Returns the authenticated account's personal IssueScout workflow and
+        progress summary. Workflow status never implies GitHub assignment or
+        maintainer approval. Upstream observations remain separate and may be
+        unverified, missing, or inaccessible.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AccountPage"
+        - $ref: "#/components/parameters/AccountPerPage"
+      responses:
+        "200":
+          description: An ownership-isolated contribution task page.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueClaimListEnvelope"
+              examples:
+                task-board:
+                  $ref: "#/components/examples/AccountIssueClaimsSuccess"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrigin"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+    put:
+      operationId: upsertAccountIssueClaim
+      summary: Idempotently try an issue
+      description: |
+        Creates an account-owned `not_started` task or returns the existing
+        canonical issue task. This endpoint never writes to GitHub. Requires
+        the session CSRF header and enforces a 200-task quota.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        description: The normalized public issue reference to add privately.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueClaimWriteRequest"
+      responses:
+        "200":
+          description: The inserted or existing account-owned task.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueClaimEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+  /api/account/issue-claims/{issueClaimID}:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+      - $ref: "#/components/parameters/IssueClaimID"
+    patch:
+      operationId: updateAccountIssueClaim
+      summary: Update an owned contribution task
+      description: |
+        Optimistically replaces personal status, archive flag, and optional
+        canonical PR reference. Submitted and merged states require a PR.
+        Repeated writes with a stale version return a conflict.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        description: The complete personal workflow state at the current version.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueClaimUpdateRequest"
+      responses:
+        "200":
+          description: The updated owned task.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueClaimEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "404":
+          $ref: "#/components/responses/AccountResourceNotFound"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+    delete:
+      operationId: deleteAccountIssueClaim
+      summary: Delete an owned contribution task
+      description: |
+        Removes only the authenticated account's matching ID and optimistic
+        version. A foreign ID is indistinguishable from a missing resource.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceVersion"
+      responses:
+        "200":
+          description: The owned task was deleted.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "404":
+          $ref: "#/components/responses/AccountResourceNotFound"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
   /api/account/bookmarks:
     parameters:
       - $ref: "#/components/parameters/RequestID"
@@ -1266,6 +1440,42 @@ components:
         meta:
           requestId: req_account_bookmarks
           timestamp: 2026-08-01T01:02:03Z
+    AccountIssueClaimsSuccess:
+      summary: Account-owned contribution task board
+      value:
+        data:
+          items:
+            - archived: false
+              createdAt: 2026-08-01T01:02:03Z
+              id: 13aa8a51-cc7c-4d91-8d99-c65000afc2aa
+              issueNumber: 42
+              observedIssueState: unverified
+              observedPrState: open
+              pullRequest:
+                number: 91
+                repositoryName: openai-go
+                repositoryOwner: openai
+              repositoryName: openai-go
+              repositoryOwner: openai
+              status: pr_submitted
+              updatedAt: 2026-08-03T04:05:06Z
+              version: 4
+          pagination:
+            page: 1
+            perPage: 20
+            total: 1
+            totalPages: 1
+          summary:
+            archived: 0
+            implementing: 0
+            merged: 0
+            notStarted: 0
+            prSubmitted: 1
+            researching: 0
+            total: 1
+        meta:
+          requestId: req_account_issue_claims
+          timestamp: 2026-08-03T04:05:06Z
     AccountSavedSearchesSuccess:
       summary: Deterministic account-owned saved-search page
       value:
@@ -1316,9 +1526,10 @@ components:
       summary: Bounded privacy export
       value:
         data:
-          schemaVersion: 1
+          schemaVersion: 2
           generatedAt: 2026-08-01T02:03:04Z
           bookmarks: []
+          issueClaims: []
           savedSearches: []
           preferences: null
         meta:
@@ -1332,6 +1543,7 @@ components:
           removed:
             bookmarks: 2
             identities: 1
+            issueClaims: 4
             preferences: 1
             savedSearches: 3
             sessions: 1
@@ -2204,6 +2416,15 @@ components:
         type: string
         format: uuid
       example: 06d30598-6b27-44dc-ad1f-87a4c821d615
+    IssueClaimID:
+      name: issueClaimID
+      in: path
+      required: true
+      description: Opaque account-owned contribution task identifier.
+      schema:
+        type: string
+        format: uuid
+      example: 13aa8a51-cc7c-4d91-8d99-c65000afc2aa
     SavedSearchID:
       name: savedSearchID
       in: path
@@ -2542,6 +2763,200 @@ components:
             loggedOut:
               type: boolean
               const: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+    IssueClaimWriteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - issueNumber
+        - repositoryName
+        - repositoryOwner
+      properties:
+        repositoryOwner:
+          $ref: "#/components/schemas/GitHubOwnerValue"
+        repositoryName:
+          $ref: "#/components/schemas/GitHubRepositoryValue"
+        issueNumber:
+          type: integer
+          minimum: 1
+    IssueClaimStatus:
+      type: string
+      enum:
+        - not_started
+        - researching
+        - implementing
+        - pr_submitted
+        - merged
+    PullRequestReference:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - repositoryName
+        - repositoryOwner
+      properties:
+        repositoryOwner:
+          $ref: "#/components/schemas/GitHubOwnerValue"
+        repositoryName:
+          $ref: "#/components/schemas/GitHubRepositoryValue"
+        number:
+          type: integer
+          minimum: 1
+    IssueClaimUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - archived
+        - pullRequest
+        - status
+        - version
+      properties:
+        status:
+          $ref: "#/components/schemas/IssueClaimStatus"
+        archived:
+          type: boolean
+        pullRequest:
+          oneOf:
+            - $ref: "#/components/schemas/PullRequestReference"
+            - type: "null"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    UpstreamReferenceState:
+      type: string
+      enum:
+        - unverified
+        - open
+        - closed
+        - merged
+        - missing
+        - inaccessible
+    IssueClaim:
+      type: object
+      additionalProperties: false
+      required:
+        - archived
+        - createdAt
+        - id
+        - issueNumber
+        - observedIssueState
+        - observedPrState
+        - pullRequest
+        - repositoryName
+        - repositoryOwner
+        - status
+        - updatedAt
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        repositoryOwner:
+          $ref: "#/components/schemas/GitHubOwnerValue"
+        repositoryName:
+          $ref: "#/components/schemas/GitHubRepositoryValue"
+        issueNumber:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/IssueClaimStatus"
+        archived:
+          type: boolean
+        pullRequest:
+          oneOf:
+            - $ref: "#/components/schemas/PullRequestReference"
+            - type: "null"
+        observedIssueState:
+          $ref: "#/components/schemas/UpstreamReferenceState"
+        observedPrState:
+          $ref: "#/components/schemas/UpstreamReferenceState"
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    IssueClaimSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - archived
+        - implementing
+        - merged
+        - notStarted
+        - prSubmitted
+        - researching
+        - total
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          maximum: 200
+        notStarted:
+          type: integer
+          minimum: 0
+          maximum: 200
+        researching:
+          type: integer
+          minimum: 0
+          maximum: 200
+        implementing:
+          type: integer
+          minimum: 0
+          maximum: 200
+        prSubmitted:
+          type: integer
+          minimum: 0
+          maximum: 200
+        merged:
+          type: integer
+          minimum: 0
+          maximum: 200
+        archived:
+          type: integer
+          minimum: 0
+          maximum: 200
+    IssueClaimEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: "#/components/schemas/IssueClaim"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    IssueClaimListEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - pagination
+            - summary
+          properties:
+            items:
+              type: array
+              maxItems: 50
+              items:
+                $ref: "#/components/schemas/IssueClaim"
+            pagination:
+              $ref: "#/components/schemas/AccountPagination"
+            summary:
+              $ref: "#/components/schemas/IssueClaimSummary"
         meta:
           $ref: "#/components/schemas/Meta"
     BookmarkWriteRequest:
@@ -2938,13 +3353,14 @@ components:
           required:
             - bookmarks
             - generatedAt
+            - issueClaims
             - preferences
             - savedSearches
             - schemaVersion
           properties:
             schemaVersion:
               type: integer
-              const: 1
+              const: 2
             generatedAt:
               type: string
               format: date-time
@@ -2953,6 +3369,11 @@ components:
               maxItems: 200
               items:
                 $ref: "#/components/schemas/Bookmark"
+            issueClaims:
+              type: array
+              maxItems: 200
+              items:
+                $ref: "#/components/schemas/IssueClaim"
             savedSearches:
               type: array
               maxItems: 50
@@ -3000,6 +3421,7 @@ components:
       required:
         - bookmarks
         - identities
+        - issueClaims
         - preferences
         - savedSearches
         - sessions
@@ -3009,6 +3431,10 @@ components:
           format: int64
           minimum: 0
         identities:
+          type: integer
+          format: int64
+          minimum: 0
+        issueClaims:
           type: integer
           format: int64
           minimum: 0

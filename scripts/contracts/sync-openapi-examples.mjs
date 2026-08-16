@@ -39,6 +39,11 @@ const definitions = [
     "account-bookmarks.success.json",
   ],
   [
+    "AccountIssueClaimsSuccess",
+    "Account-owned contribution task board",
+    "account-issue-claims.success.json",
+  ],
+  [
     "AccountSavedSearchesSuccess",
     "Deterministic account-owned saved-search page",
     "account-saved-searches.success.json",

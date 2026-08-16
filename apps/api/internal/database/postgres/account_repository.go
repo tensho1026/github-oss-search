@@ -104,6 +104,7 @@ func (repository *AccountRepository) OwnedDataSummary(
 		&summary.Identities,
 		&summary.Sessions,
 		&summary.Bookmarks,
+		&summary.IssueClaims,
 		&summary.SavedSearches,
 		&summary.Preferences,
 	)
@@ -153,6 +154,7 @@ const ownedDataSummarySQL = `SELECT
     (SELECT count(*) FROM github_identities WHERE account_id = $1),
     (SELECT count(*) FROM auth_sessions WHERE account_id = $1),
     (SELECT count(*) FROM bookmarks WHERE account_id = $1),
+    (SELECT count(*) FROM issue_claims WHERE account_id = $1),
     (SELECT count(*) FROM saved_searches WHERE account_id = $1),
     (SELECT count(*) FROM user_preferences WHERE account_id = $1)
 WHERE EXISTS (SELECT 1 FROM accounts WHERE id = $1)`

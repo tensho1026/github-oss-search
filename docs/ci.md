@@ -89,13 +89,13 @@ request ID, and graceful shutdown smoke test.
 - bounded analysis: at most 5 ms, 256 KiB, and 200 allocations per operation;
 - recommendation scoring: at most 1 ms, 128 KiB, and 1,000 allocations per operation;
 - largest JavaScript asset: no more than 75 KiB gzip;
-- all JavaScript and CSS assets: no more than 205 KiB gzip.
+- all JavaScript and CSS assets: no more than 207 KiB gzip.
 
-The 205 KiB aggregate allowance includes the independently loaded account
-workspace, while the 75 KiB per-asset ceiling keeps shared and anonymous route
-chunks tightly bounded. Raise coverage expectations as features gain tests.
-Any budget change requires measured justification in the pull request and must
-not conceal a regression.
+The 207 KiB aggregate allowance includes the independently loaded account
+workspace and contribution task board, while the 75 KiB per-asset ceiling keeps
+shared and anonymous route chunks tightly bounded. Raise coverage expectations
+as features gain tests. Any budget change requires measured justification in
+the pull request and must not conceal a regression.
 
 The API-contract job also executes all tracked HTTPYAC requests against an
 ephemeral loopback server. It checks complete operation coverage, negative

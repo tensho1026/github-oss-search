@@ -23,6 +23,7 @@ import {
 import { cn } from "../../../shared/lib/cn";
 import { issueDetailSearchParameters } from "../../../shared/lib/issue-detail-location";
 import { BookmarkAction } from "../../account/components/BookmarkAction";
+import { IssueClaimAction } from "../../account/components/IssueClaimAction";
 import {
   scorePresentation,
   skillPresentation,
@@ -314,6 +315,13 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
             repositoryName: item.repository.name,
             repositoryOwner: item.repository.owner,
             targetType: "issue",
+          }}
+        />
+        <IssueClaimAction
+          request={{
+            issueNumber: item.issue.number,
+            repositoryName: item.repository.name,
+            repositoryOwner: item.repository.owner,
           }}
         />
       </CardFooter>

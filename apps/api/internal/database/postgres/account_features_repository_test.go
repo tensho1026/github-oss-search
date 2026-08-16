@@ -554,9 +554,23 @@ func (row valueRow) Scan(destinations ...any) error {
 			}
 			*destination = typed
 		case **int:
+			if value == nil {
+				*destination = nil
+				continue
+			}
 			typed, ok := value.(int)
 			if !ok {
 				return errors.New("unexpected nullable integer value")
+			}
+			*destination = &typed
+		case **string:
+			if value == nil {
+				*destination = nil
+				continue
+			}
+			typed, ok := value.(string)
+			if !ok {
+				return errors.New("unexpected nullable string value")
 			}
 			*destination = &typed
 		case *int64:

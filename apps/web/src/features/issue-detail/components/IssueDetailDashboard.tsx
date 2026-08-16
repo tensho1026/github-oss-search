@@ -38,6 +38,7 @@ import {
   warningPresentation,
 } from "../../issue-search/model/search-presentation";
 import { BookmarkAction } from "../../account/components/BookmarkAction";
+import { IssueClaimAction } from "../../account/components/IssueClaimAction";
 import {
   categoryLabel,
   qualitySignalLabel,
@@ -359,13 +360,20 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               <Badge variant="warning">Archived repository</Badge>
             ) : null}
           </div>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-3">
             <BookmarkAction
               request={{
                 issueNumber: data.issue.number,
                 repositoryName: data.repository.name,
                 repositoryOwner: data.repository.owner,
                 targetType: "issue",
+              }}
+            />
+            <IssueClaimAction
+              request={{
+                issueNumber: data.issue.number,
+                repositoryName: data.repository.name,
+                repositoryOwner: data.repository.owner,
               }}
             />
           </div>

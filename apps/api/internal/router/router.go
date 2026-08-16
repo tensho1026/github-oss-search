@@ -264,6 +264,42 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		authHandler.Logout,
 	)
 	api.GET(
+		"/account/issue-claims",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedRead,
+		accountHandler.ListIssueClaims,
+	)
+	api.PUT(
+		"/account/issue-claims",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedMutation,
+		accountHandler.UpsertIssueClaim,
+	)
+	api.PATCH(
+		"/account/issue-claims/:issueClaimID",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedMutation,
+		accountHandler.UpdateIssueClaim,
+	)
+	api.DELETE(
+		"/account/issue-claims/:issueClaimID",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedMutation,
+		accountHandler.DeleteIssueClaim,
+	)
+	api.GET(
 		"/account/bookmarks",
 		middleware.Timeout(
 			dependencies.Config.NormalRequestTimeout,

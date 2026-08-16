@@ -71,6 +71,70 @@ export type AuthLogoutEnvelope = {
   meta: Meta;
 };
 
+export type IssueClaimWriteRequest = {
+  repositoryOwner: GitHubOwnerValue;
+  repositoryName: GitHubRepositoryValue;
+  issueNumber: number;
+};
+
+export type IssueClaimStatus =
+  "not_started" | "researching" | "implementing" | "pr_submitted" | "merged";
+
+export type PullRequestReference = {
+  repositoryOwner: GitHubOwnerValue;
+  repositoryName: GitHubRepositoryValue;
+  number: number;
+};
+
+export type IssueClaimUpdateRequest = {
+  status: IssueClaimStatus;
+  archived: boolean;
+  pullRequest: PullRequestReference | null;
+  version: number;
+};
+
+export type UpstreamReferenceState =
+  "unverified" | "open" | "closed" | "merged" | "missing" | "inaccessible";
+
+export type IssueClaim = {
+  id: string;
+  repositoryOwner: GitHubOwnerValue;
+  repositoryName: GitHubRepositoryValue;
+  issueNumber: number;
+  status: IssueClaimStatus;
+  archived: boolean;
+  pullRequest: PullRequestReference | null;
+  observedIssueState: UpstreamReferenceState;
+  observedPrState: UpstreamReferenceState;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type IssueClaimSummary = {
+  total: number;
+  notStarted: number;
+  researching: number;
+  implementing: number;
+  prSubmitted: number;
+  merged: number;
+  archived: number;
+};
+
+export type IssueClaimEnvelope = {
+  data: IssueClaim;
+  meta: Meta;
+};
+
+export type IssueClaimListEnvelope = {
+  data: {
+    items: Array<IssueClaim>;
+    pagination: AccountPagination;
+    summary: IssueClaimSummary;
+  };
+  meta: Meta;
+};
+
 export type BookmarkWriteRequest =
   | {
       targetType: "issue";
@@ -209,9 +273,10 @@ export type DeletionEnvelope = {
 
 export type AccountExportEnvelope = {
   data: {
-    schemaVersion: 1;
+    schemaVersion: 2;
     generatedAt: string;
     bookmarks: Array<Bookmark>;
+    issueClaims: Array<IssueClaim>;
     savedSearches: Array<SavedSearch>;
     preferences: Preferences | null;
   };
@@ -233,6 +298,7 @@ export type AccountDeleteEnvelope = {
 export type OwnedDataSummary = {
   bookmarks: number;
   identities: number;
+  issueClaims: number;
   preferences: number;
   savedSearches: number;
   sessions: number;
@@ -1352,6 +1418,11 @@ export type AccountPerPage = number;
 export type BookmarkId = string;
 
 /**
+ * Opaque account-owned contribution task identifier.
+ */
+export type IssueClaimId = string;
+
+/**
  * Opaque account-owned saved-search identifier.
  */
 export type SavedSearchId = string;
@@ -2095,6 +2166,312 @@ export type LogoutAuthSessionResponses = {
 
 export type LogoutAuthSessionResponse =
   LogoutAuthSessionResponses[keyof LogoutAuthSessionResponses];
+
+export type ListAccountIssueClaimsData = {
+  body?: never;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: {
+    /**
+     * One-based page over a quota-bounded owned collection.
+     */
+    page?: number;
+    /**
+     * Bounded number of account-owned rows per page.
+     */
+    perPage?: number;
+  };
+  url: "/api/account/issue-claims";
+};
+
+export type ListAccountIssueClaimsErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not in the configured allowlist.
+   */
+  403: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type ListAccountIssueClaimsError =
+  ListAccountIssueClaimsErrors[keyof ListAccountIssueClaimsErrors];
+
+export type ListAccountIssueClaimsResponses = {
+  /**
+   * An ownership-isolated contribution task page.
+   */
+  200: IssueClaimListEnvelope;
+};
+
+export type ListAccountIssueClaimsResponse =
+  ListAccountIssueClaimsResponses[keyof ListAccountIssueClaimsResponses];
+
+export type UpsertAccountIssueClaimData = {
+  /**
+   * The normalized public issue reference to add privately.
+   */
+  body: IssueClaimWriteRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/account/issue-claims";
+};
+
+export type UpsertAccountIssueClaimErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * The account quota was reached, the optimistic version was stale, or a
+   * case-insensitive saved-search name already exists.
+   *
+   */
+  409: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpsertAccountIssueClaimError =
+  UpsertAccountIssueClaimErrors[keyof UpsertAccountIssueClaimErrors];
+
+export type UpsertAccountIssueClaimResponses = {
+  /**
+   * The inserted or existing account-owned task.
+   */
+  200: IssueClaimEnvelope;
+};
+
+export type UpsertAccountIssueClaimResponse =
+  UpsertAccountIssueClaimResponses[keyof UpsertAccountIssueClaimResponses];
+
+export type DeleteAccountIssueClaimData = {
+  body?: never;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path: {
+    /**
+     * Opaque account-owned contribution task identifier.
+     */
+    issueClaimID: string;
+  };
+  query: {
+    /**
+     * Current positive optimistic-concurrency version.
+     */
+    version: number;
+  };
+  url: "/api/account/issue-claims/{issueClaimID}";
+};
+
+export type DeleteAccountIssueClaimErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * The resource is missing or is owned by another account. Those cases
+   * are intentionally indistinguishable.
+   *
+   */
+  404: ErrorEnvelope;
+  /**
+   * The account quota was reached, the optimistic version was stale, or a
+   * case-insensitive saved-search name already exists.
+   *
+   */
+  409: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type DeleteAccountIssueClaimError =
+  DeleteAccountIssueClaimErrors[keyof DeleteAccountIssueClaimErrors];
+
+export type DeleteAccountIssueClaimResponses = {
+  /**
+   * The owned task was deleted.
+   */
+  200: DeletionEnvelope;
+};
+
+export type DeleteAccountIssueClaimResponse =
+  DeleteAccountIssueClaimResponses[keyof DeleteAccountIssueClaimResponses];
+
+export type UpdateAccountIssueClaimData = {
+  /**
+   * The complete personal workflow state at the current version.
+   */
+  body: IssueClaimUpdateRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path: {
+    /**
+     * Opaque account-owned contribution task identifier.
+     */
+    issueClaimID: string;
+  };
+  query?: never;
+  url: "/api/account/issue-claims/{issueClaimID}";
+};
+
+export type UpdateAccountIssueClaimErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * The resource is missing or is owned by another account. Those cases
+   * are intentionally indistinguishable.
+   *
+   */
+  404: ErrorEnvelope;
+  /**
+   * The account quota was reached, the optimistic version was stale, or a
+   * case-insensitive saved-search name already exists.
+   *
+   */
+  409: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpdateAccountIssueClaimError =
+  UpdateAccountIssueClaimErrors[keyof UpdateAccountIssueClaimErrors];
+
+export type UpdateAccountIssueClaimResponses = {
+  /**
+   * The updated owned task.
+   */
+  200: IssueClaimEnvelope;
+};
+
+export type UpdateAccountIssueClaimResponse =
+  UpdateAccountIssueClaimResponses[keyof UpdateAccountIssueClaimResponses];
 
 export type ListAccountBookmarksData = {
   body?: never;
