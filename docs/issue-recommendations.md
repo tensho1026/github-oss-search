@@ -130,6 +130,30 @@ unavailable; they are never misleading zeroes.
 - Duration summaries use the median and nearest-rank 90th percentile.
   Non-positive and over-180-day outliers are excluded.
 
+### Maintainer Response Score
+
+The dedicated Maintainer Response Score is a one-to-five assessment derived
+from the bounded, maintainer-only first issue response and first pull request
+review samples above. Each sample contributes in proportion to its size:
+
+| Median response time | Base level |
+| -------------------- | ---------: |
+| Up to 24 hours       |          5 |
+| Up to 3 days         |          4 |
+| Up to 7 days         |          3 |
+| Up to 14 days        |          2 |
+| More than 14 days    |          1 |
+
+Response coverage is `(sampled issues - unanswered sampled issues) / sampled
+issues`. Coverage below 75%, 50%, or 25% caps the level at 3, 2, or 1
+respectively, so quick replies to a small subset cannot hide unanswered work.
+The response includes the level, label, confidence, sample size, window,
+coverage, and component duration aggregates. PR merge time is displayed as
+context but does not imply that every acceptable contribution will be merged.
+
+This is historical, bounded evidence. It does not guarantee that a maintainer
+will respond to or merge a future contribution.
+
 ## Conservative risks
 
 Warnings contain a stable code, severity, fixed message, and normalized

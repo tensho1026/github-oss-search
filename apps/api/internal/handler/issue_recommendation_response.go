@@ -13,12 +13,26 @@ type evidenceResponse struct {
 }
 
 type recommendationResponse struct {
-	Score      int                             `json:"score"`
-	Breakdown  []scoreComponentResponse        `json:"breakdown"`
-	SkillMatch skillMatchResponse              `json:"skillMatch"`
-	Reasons    []string                        `json:"reasons"`
-	Warnings   []recommendationWarningResponse `json:"warnings"`
-	Claim      claimEvidenceResponse           `json:"claim"`
+	Score              int                                  `json:"score"`
+	Breakdown          []scoreComponentResponse             `json:"breakdown"`
+	SkillMatch         skillMatchResponse                   `json:"skillMatch"`
+	MaintainerResponse maintainerResponseAssessmentResponse `json:"maintainerResponse"`
+	Reasons            []string                             `json:"reasons"`
+	Warnings           []recommendationWarningResponse      `json:"warnings"`
+	Claim              claimEvidenceResponse                `json:"claim"`
+}
+
+type maintainerResponseAssessmentResponse struct {
+	Status             issue.AggregateStatus     `json:"status"`
+	Level              int                       `json:"level"`
+	Label              string                    `json:"label"`
+	Confidence         issue.Confidence          `json:"confidence"`
+	SampleSize         int                       `json:"sampleSize"`
+	WindowDays         int                       `json:"windowDays"`
+	ResponseCoverage   ratioAggregateResponse    `json:"responseCoverage"`
+	FirstIssueResponse durationAggregateResponse `json:"firstIssueResponse"`
+	FirstPullReview    durationAggregateResponse `json:"firstPullReview"`
+	PullRequestMerge   durationAggregateResponse `json:"pullRequestMerge"`
 }
 
 type scoreComponentResponse struct {
@@ -216,6 +230,26 @@ func newRecommendationResponse(
 			Matched:     recommendation.SkillMatch.Matched,
 			Denominator: recommendation.SkillMatch.Denominator,
 			Skills:      skills,
+		},
+		MaintainerResponse: maintainerResponseAssessmentResponse{
+			Status:     recommendation.MaintainerResponse.Status,
+			Level:      recommendation.MaintainerResponse.Level,
+			Label:      recommendation.MaintainerResponse.Label,
+			Confidence: recommendation.MaintainerResponse.Confidence,
+			SampleSize: recommendation.MaintainerResponse.SampleSize,
+			WindowDays: recommendation.MaintainerResponse.WindowDays,
+			ResponseCoverage: newRatioAggregateResponse(
+				recommendation.MaintainerResponse.ResponseCoverage,
+			),
+			FirstIssueResponse: newDurationAggregateResponse(
+				recommendation.MaintainerResponse.FirstIssueResponse,
+			),
+			FirstPullReview: newDurationAggregateResponse(
+				recommendation.MaintainerResponse.FirstPullReview,
+			),
+			PullRequestMerge: newDurationAggregateResponse(
+				recommendation.MaintainerResponse.PullRequestMerge,
+			),
 		},
 		Reasons:  cloneResponseSlice(recommendation.Reasons),
 		Warnings: warnings,

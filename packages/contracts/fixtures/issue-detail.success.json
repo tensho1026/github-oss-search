@@ -228,6 +228,51 @@
         "confidence": "low",
         "evidence": []
       },
+      "maintainerResponse": {
+        "confidence": "low",
+        "firstIssueResponse": {
+          "confidence": "low",
+          "medianSeconds": null,
+          "percentile90Seconds": null,
+          "sampleSize": 0,
+          "status": "unavailable",
+          "truncated": false,
+          "windowDays": 0
+        },
+        "firstPullReview": {
+          "confidence": "low",
+          "medianSeconds": null,
+          "percentile90Seconds": null,
+          "sampleSize": 0,
+          "status": "unavailable",
+          "truncated": false,
+          "windowDays": 0
+        },
+        "label": "",
+        "level": 0,
+        "pullRequestMerge": {
+          "confidence": "low",
+          "medianSeconds": null,
+          "percentile90Seconds": null,
+          "sampleSize": 0,
+          "status": "unavailable",
+          "truncated": false,
+          "windowDays": 0
+        },
+        "responseCoverage": {
+          "confidence": "low",
+          "denominator": null,
+          "numerator": null,
+          "percentage": null,
+          "sampleSize": 0,
+          "status": "unavailable",
+          "truncated": false,
+          "windowDays": 0
+        },
+        "sampleSize": 0,
+        "status": "unavailable",
+        "windowDays": 0
+      },
       "reasons": [],
       "score": 0,
       "skillMatch": {

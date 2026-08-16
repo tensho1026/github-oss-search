@@ -33,6 +33,12 @@ describe("IssueSearchResults", () => {
     expect(screen.getByText("Half a day")).toBeInTheDocument();
     expect(screen.getByText("good first issue")).toBeInTheDocument();
     expect(screen.getByText("TypeScript: matched")).toBeInTheDocument();
+    expect(screen.getByText("Maintainer response")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("5 out of 5, Very responsive"),
+    ).toHaveTextContent("★★★★★");
+    expect(screen.getByText("6 hrs")).toBeInTheDocument();
+    expect(screen.getByText("2 days")).toBeInTheDocument();
     expect(
       screen.getByText("The primary language matches your profile."),
     ).toBeInTheDocument();

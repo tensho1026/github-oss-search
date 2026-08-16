@@ -141,6 +141,7 @@ export type {
   LogoutAuthSessionErrors,
   LogoutAuthSessionResponse,
   LogoutAuthSessionResponses,
+  MaintainerResponseAssessment,
   Meta,
   OpaqueCredential,
   OssCategory,

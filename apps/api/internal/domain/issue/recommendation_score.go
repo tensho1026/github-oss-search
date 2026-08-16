@@ -22,12 +22,13 @@ func Recommend(input RecommendationInput) Recommendation {
 		input.DesiredSkills,
 	)
 	signals := normalizeRepositorySignals(input.RepositorySignals)
+	maintainerResponse := AssessMaintainerResponse(input.Activity)
 	breakdown := ScoreBreakdown{
 		SkillMatch:        scoreSkillMatch(skillMatch),
 		IssueQuality:      scoreIssueQuality(input.Analysis.Quality),
 		RepositoryQuality: scoreRepositoryQuality(signals),
 		Activity:          scoreActivity(input.Activity, now),
-		Maintainer:        scoreMaintainer(input.Activity),
+		Maintainer:        scoreMaintainer(maintainerResponse),
 		Availability: scoreAvailability(
 			input.Candidate,
 			input.Claim,
@@ -47,14 +48,15 @@ func Recommend(input RecommendationInput) Recommendation {
 	reasons = slices.Compact(reasons)
 
 	return Recommendation{
-		Score:             total,
-		Breakdown:         breakdown,
-		SkillMatch:        skillMatch,
-		RepositorySignals: signals,
-		Activity:          input.Activity,
-		Claim:             cloneClaimEvidence(input.Claim),
-		Reasons:           reasons,
-		Warnings:          recommendationWarnings(input, signals, now),
+		Score:              total,
+		Breakdown:          breakdown,
+		SkillMatch:         skillMatch,
+		RepositorySignals:  signals,
+		Activity:           input.Activity,
+		MaintainerResponse: maintainerResponse,
+		Claim:              cloneClaimEvidence(input.Claim),
+		Reasons:            reasons,
+		Warnings:           recommendationWarnings(input, signals, now),
 	}
 }
 
@@ -296,46 +298,25 @@ func scoreActivity(
 	}
 }
 
-func scoreMaintainer(activity ActivityMetrics) ScoreComponent {
-	score := durationScore(activity.IssueResponse, 5, 3, 1) +
-		durationScore(activity.PullRequestReview, 3, 2, 1) +
-		durationScore(activity.PullRequestMergeTime, 2, 1, 1)
-	reasons := make([]string, 0, 3)
-	if activity.IssueResponse.Status == AggregateAvailable {
-		reasons = append(reasons, "Issue response time uses maintainer-only samples")
+func scoreMaintainer(assessment MaintainerResponseAssessment) ScoreComponent {
+	scoreByLevel := [...]int{0, 1, 3, 6, 8, 10}
+	score := 0
+	if assessment.Status == AggregateAvailable && assessment.Level >= 1 &&
+		assessment.Level <= 5 {
+		score = scoreByLevel[assessment.Level]
 	}
-	if activity.PullRequestReview.Status == AggregateAvailable {
-		reasons = append(reasons, "Pull request review time excludes bots and drafts")
+	reasons := make([]string, 0, 2)
+	if assessment.Status == AggregateAvailable {
+		reasons = append(reasons, "Maintainer response uses bounded maintainer-only samples")
 	}
-	if activity.PullRequestMergeTime.Status == AggregateAvailable {
-		reasons = append(reasons, "Pull request merge time uses completed samples")
+	if assessment.ResponseCoverage.Status == AggregateAvailable {
+		reasons = append(reasons, "Issue response coverage includes unanswered sampled issues")
 	}
 	return ScoreComponent{
 		Name:    "maintainer_responsiveness",
 		Score:   score,
 		Maximum: MaintainerScoreMaximum,
 		Reasons: reasons,
-	}
-}
-
-func durationScore(
-	aggregate DurationAggregate,
-	fast int,
-	moderate int,
-	slow int,
-) int {
-	if aggregate.Status != AggregateAvailable || aggregate.SampleSize < 1 {
-		return 0
-	}
-	switch {
-	case aggregate.Median <= 24*time.Hour:
-		return fast
-	case aggregate.Median <= 72*time.Hour:
-		return moderate
-	case aggregate.Median <= 7*24*time.Hour:
-		return slow
-	default:
-		return 0
 	}
 }
 
