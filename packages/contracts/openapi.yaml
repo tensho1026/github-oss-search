@@ -1644,6 +1644,25 @@ components:
                     weekday: 6
                 firstDay: 2026-07-19
                 index: 0
+          contributionPortfolio:
+            analyzedAt: 2026-07-30T00:00:00Z
+            contributions:
+              - language: Go
+                mergedAt: 2026-07-20T12:00:00Z
+                number: 42
+                repositoryName: project
+                repositoryOwner: community
+                summary: "Merged public pull request in community/project: Add bounded retries"
+                title: Add bounded retries
+                url: https://github.com/community/project/pull/42
+            displayedMerged: 1
+            hasMore: true
+            languages:
+              - count: 1
+                name: Go
+            repositoryCount: 1
+            status: sampled
+            totalMerged: 2
           frameworks:
             - React
           languages:
@@ -3604,6 +3623,7 @@ components:
         - analysisWindow
         - contributions
         - contributionCalendar
+        - contributionPortfolio
         - frameworks
         - languageStatus
         - languages
@@ -3644,6 +3664,8 @@ components:
           $ref: "#/components/schemas/ContributionAnalysis"
         contributionCalendar:
           $ref: "#/components/schemas/ContributionCalendar"
+        contributionPortfolio:
+          $ref: "#/components/schemas/ContributionPortfolio"
         ossExperience:
           $ref: "#/components/schemas/OSSExperience"
         repositoryEvidence:
@@ -3674,6 +3696,95 @@ components:
         is a bounded observation and must not be presented as a total.
         `unavailable` means GitHub did not provide the segment; its value is
         not evidence of zero activity.
+    PortfolioLanguageCount:
+      type: object
+      additionalProperties: false
+      required:
+        - count
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        count:
+          type: integer
+          minimum: 1
+          maximum: 20
+    PortfolioContribution:
+      type: object
+      additionalProperties: false
+      required:
+        - mergedAt
+        - number
+        - repositoryName
+        - repositoryOwner
+        - summary
+        - title
+        - url
+      properties:
+        repositoryOwner:
+          type: string
+        repositoryName:
+          type: string
+        number:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 256
+        url:
+          type: string
+          format: uri
+          pattern: ^https://github\.com/[A-Za-z0-9-]+/[^/]+/pull/[1-9][0-9]*$
+        mergedAt:
+          type: string
+          format: date-time
+        language:
+          type: string
+        summary:
+          type: string
+          description: Conservative text assembled only from normalized facts.
+    ContributionPortfolio:
+      type: object
+      additionalProperties: false
+      required:
+        - analyzedAt
+        - contributions
+        - displayedMerged
+        - hasMore
+        - languages
+        - repositoryCount
+        - status
+        - totalMerged
+      properties:
+        status:
+          $ref: "#/components/schemas/EvidenceStatus"
+        totalMerged:
+          type: integer
+          minimum: 0
+        displayedMerged:
+          type: integer
+          minimum: 0
+          maximum: 20
+        repositoryCount:
+          type: integer
+          minimum: 0
+          maximum: 20
+        hasMore:
+          type: boolean
+        analyzedAt:
+          type: string
+          format: date-time
+        languages:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PortfolioLanguageCount"
+        contributions:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PortfolioContribution"
     EvidenceConfidence:
       type: string
       enum:

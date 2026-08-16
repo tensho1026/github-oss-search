@@ -57,6 +57,7 @@ import {
 } from "../model/profile-view";
 import { ProfileSearchForm } from "./ProfileSearchForm";
 import { ProfileExtendedAnalytics } from "./ProfileExtendedAnalytics";
+import { useAuth } from "../../auth/auth-context";
 
 type ProfileDashboardProps = {
   snapshot: ProfileSnapshot;
@@ -74,6 +75,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 
 export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
+  const { session } = useAuth();
   const { analysis, analysisMeta, user, userMeta } = snapshot;
   const [languageOrder, setLanguageOrder] = useState<LanguageOrder>("usage");
   const languages = useMemo(
@@ -380,7 +382,13 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
         </Card>
       </section>
 
-      <ProfileExtendedAnalytics analysis={analysis} />
+      <ProfileExtendedAnalytics
+        analysis={analysis}
+        showPortfolio={
+          session?.authenticated === true &&
+          session.user?.login.toLowerCase() === user.login.toLowerCase()
+        }
+      />
 
       <section aria-labelledby="repositories-heading" className="mt-5">
         <Card>

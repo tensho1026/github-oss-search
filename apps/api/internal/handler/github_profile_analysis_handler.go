@@ -71,6 +71,7 @@ type githubProfileAnalysisResponse struct {
 	RecentTechnologies   []recentTechnologyResponse      `json:"recentTechnologies"`
 	Contributions        contributionAnalysisResponse    `json:"contributions"`
 	ContributionCalendar contributionCalendarResponse    `json:"contributionCalendar"`
+	Portfolio            contributionPortfolioResponse   `json:"contributionPortfolio"`
 	OSSExperience        ossExperienceResponse           `json:"ossExperience"`
 	RepositoryEvidence   repositoryEvidenceResponse      `json:"repositoryEvidence"`
 	Proficiency          []technologyProficiencyResponse `json:"proficiency"`
@@ -132,6 +133,33 @@ type contributionDayResponse struct {
 	Weekday int    `json:"weekday"`
 	Count   int    `json:"count"`
 	Level   string `json:"level"`
+}
+
+type contributionPortfolioResponse struct {
+	Status          string                          `json:"status"`
+	TotalMerged     int                             `json:"totalMerged"`
+	DisplayedMerged int                             `json:"displayedMerged"`
+	RepositoryCount int                             `json:"repositoryCount"`
+	HasMore         bool                            `json:"hasMore"`
+	AnalyzedAt      string                          `json:"analyzedAt"`
+	Languages       []portfolioLanguageResponse     `json:"languages"`
+	Contributions   []portfolioContributionResponse `json:"contributions"`
+}
+
+type portfolioLanguageResponse struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+type portfolioContributionResponse struct {
+	RepositoryOwner string `json:"repositoryOwner"`
+	RepositoryName  string `json:"repositoryName"`
+	Number          int    `json:"number"`
+	Title           string `json:"title"`
+	URL             string `json:"url"`
+	MergedAt        string `json:"mergedAt"`
+	Language        string `json:"language,omitempty"`
+	Summary         string `json:"summary"`
 }
 
 type technologyEvidenceResponse struct {
@@ -208,6 +236,7 @@ func newGitHubProfileAnalysisResponse(
 		ContributionCalendar: newContributionCalendarResponse(
 			analysis.ContributionCalendar,
 		),
+		Portfolio:     newContributionPortfolioResponse(analysis.Portfolio),
 		OSSExperience: newOSSExperienceResponse(analysis.OSSExperience),
 		RepositoryEvidence: newRepositoryEvidenceResponse(
 			analysis.RepositoryEvidence,
@@ -258,6 +287,45 @@ func newContributionCalendarResponse(
 		response.To = calendar.To.Format(time.DateOnly)
 	}
 	return response
+}
+
+func newContributionPortfolioResponse(
+	portfolio profile.ContributionPortfolio,
+) contributionPortfolioResponse {
+	languages := make([]portfolioLanguageResponse, 0, len(portfolio.Languages))
+	for _, language := range portfolio.Languages {
+		languages = append(languages, portfolioLanguageResponse{
+			Name: language.Name, Count: language.Count,
+		})
+	}
+	items := make(
+		[]portfolioContributionResponse,
+		0,
+		len(portfolio.Contributions),
+	)
+	for _, item := range portfolio.Contributions {
+		items = append(items, portfolioContributionResponse{
+			RepositoryOwner: item.RepositoryOwner,
+			RepositoryName:  item.RepositoryName,
+			Number:          item.Number,
+			Title:           item.Title,
+			URL:             item.URL,
+			MergedAt:        item.MergedAt.Format(time.RFC3339),
+			Language:        item.Language,
+			Summary: "Merged public pull request in " + item.RepositoryOwner +
+				"/" + item.RepositoryName + ": " + item.Title,
+		})
+	}
+	return contributionPortfolioResponse{
+		Status:          string(portfolio.Status),
+		TotalMerged:     portfolio.TotalMerged,
+		DisplayedMerged: portfolio.DisplayedMerged,
+		RepositoryCount: portfolio.RepositoryCount,
+		HasMore:         portfolio.HasMore,
+		AnalyzedAt:      portfolio.AnalyzedAt.Format(time.RFC3339),
+		Languages:       languages,
+		Contributions:   items,
+	}
 }
 
 func newLanguageShareResponses(

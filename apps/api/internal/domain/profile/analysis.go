@@ -36,6 +36,7 @@ type Analysis struct {
 	RecentTechnologies   []RecentTechnology
 	Contributions        ContributionAnalysis
 	ContributionCalendar ContributionCalendar
+	Portfolio            ContributionPortfolio
 	OSSExperience        OSSExperience
 	RepositoryEvidence   RepositoryEvidence
 	Proficiency          []TechnologyProficiency

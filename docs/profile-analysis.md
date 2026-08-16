@@ -35,7 +35,9 @@ For an individual user, the query requests:
 - commit and pull-request-review counts across at most 20 public contribution
   repository groups;
 - one official GitHub contribution calendar containing at most 54 ordered
-  weeks and seven public daily cells per week.
+  weeks and seven public daily cells per week;
+- at most 20 recent public merged pull requests for a reproducible private
+  portfolio preview.
 
 An organization receives the owned and forked repository analysis.
 Individual-only star and contribution segments are `unavailable`, with a typed
@@ -168,6 +170,24 @@ repository evidence is available, and the score is at least 40. Positive lower
 or sampled evidence is medium. No public evidence is low confidence. Missing
 both primary inputs makes the level and confidence `unavailable`.
 
+## Contribution portfolio evidence
+
+The merged pull-request search is bounded to 20 public results in the same
+365-day window. The adapter accepts only canonical `github.com` pull-request
+URLs, public repository visibility, positive PR numbers, bounded titles, and a
+real merge timestamp. Duplicate canonical references are removed. The server
+derives displayed counts, distinct repositories, and language groups from the
+same displayed dataset; `totalMerged` remains an exact search count while a
+truncated item list is labeled `sampled`.
+
+Automatic summaries only restate the observed repository, merged status, and
+PR title. They do not infer impact, performance, quality, or employer
+endorsement. React renders upstream text as text and links only to the validated
+canonical URL. The portfolio card appears as a private preview only when the
+authenticated GitHub login matches the analyzed profile, and it says explicitly
+that nothing is published automatically. Anonymous profile analysis remains
+database-free and does not persist the portfolio snapshot.
+
 ## Failure and partial-data behavior
 
 A missing repository owner, rate limit, cancellation, timeout, and unusable
@@ -177,6 +197,7 @@ the usable public segments plus stable warnings such as:
 - `owned_repositories_unavailable`;
 - `contribution_activity_unavailable`;
 - `contribution_calendar_unavailable`;
+- `contribution_portfolio_unavailable`;
 - `authored_pull_requests_unavailable`;
 - `organization_activity_unavailable`;
 - `private_starred_repositories_excluded`;

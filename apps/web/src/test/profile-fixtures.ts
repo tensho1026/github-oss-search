@@ -87,6 +87,28 @@ export const profileAnalysisFixture: ProfileAnalysisEnvelope = {
         },
       ],
     },
+    contributionPortfolio: {
+      analyzedAt: "2026-07-30T00:00:00Z",
+      contributions: [
+        {
+          language: "Go",
+          mergedAt: "2026-07-20T12:00:00Z",
+          number: 42,
+          repositoryName: "project",
+          repositoryOwner: "community",
+          summary:
+            "Merged public pull request in community/project: Add bounded retries",
+          title: "Add bounded retries",
+          url: "https://github.com/community/project/pull/42",
+        },
+      ],
+      displayedMerged: 1,
+      hasMore: true,
+      languages: [{ count: 1, name: "Go" }],
+      repositoryCount: 1,
+      status: "sampled",
+      totalMerged: 2,
+    },
     frameworks: ["React", "Gin"],
     languages: [
       { name: "TypeScript", percentage: 65 },

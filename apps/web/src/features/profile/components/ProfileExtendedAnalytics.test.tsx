@@ -6,7 +6,22 @@ import { ProfileExtendedAnalytics } from "./ProfileExtendedAnalytics";
 
 describe("ProfileExtendedAnalytics", () => {
   it("renders contribution, recency, proficiency, and repository evidence", () => {
-    render(<ProfileExtendedAnalytics analysis={profileAnalysisFixture.data} />);
+    render(
+      <ProfileExtendedAnalytics
+        analysis={profileAnalysisFixture.data}
+        showPortfolio
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Private contribution portfolio preview",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "View canonical PR" }),
+    ).toHaveAttribute("href", "https://github.com/community/project/pull/42");
+    expect(screen.getByText("Observed merged")).toBeInTheDocument();
 
     expect(
       screen.getByRole("heading", { name: "Public contribution activity" }),

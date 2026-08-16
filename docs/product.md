@@ -26,6 +26,11 @@ Neon-compatible PostgreSQL adapter remains behind authentication and
 persistence ports so account behavior cannot become a hidden dependency of
 public analysis.
 
+Authenticated users analyzing their own GitHub login also receive a
+private-by-default contribution portfolio preview assembled from bounded public
+merged-PR facts. It is evidence presentation, not employment verification or
+automatic publication.
+
 IssueScout deliberately does not:
 
 - submit, assign, claim, edit, or comment on GitHub issues;
