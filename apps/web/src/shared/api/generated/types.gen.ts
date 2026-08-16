@@ -887,6 +887,22 @@ export type Recommendation = {
   stale: StaleAssessment;
 };
 
+export type MaintainerResponseAssessment = {
+  status: AggregateStatus;
+  /**
+   * Zero only when the bounded response sample is unavailable.
+   */
+  level: number;
+  label: string;
+  confidence: Confidence;
+  sampleSize: number;
+  windowDays: number;
+  responseCoverage: RatioAggregate;
+  firstIssueResponse: DurationAggregate;
+  firstPullReview: DurationAggregate;
+  pullRequestMerge: DurationAggregate;
+};
+
 export type StaleAssessment = {
   state: "fresh" | "aging" | "stale" | "unknown";
   policyVersion: "stale-v1";
@@ -903,22 +919,6 @@ export type StaleAssessment = {
   sampleSize: number;
   truncated: boolean;
   evidence: Array<Evidence>;
-};
-
-export type MaintainerResponseAssessment = {
-  status: AggregateStatus;
-  /**
-   * Zero only when the bounded response sample is unavailable.
-   */
-  level: number;
-  label: string;
-  confidence: Confidence;
-  sampleSize: number;
-  windowDays: number;
-  responseCoverage: RatioAggregate;
-  firstIssueResponse: DurationAggregate;
-  firstPullReview: DurationAggregate;
-  pullRequestMerge: DurationAggregate;
 };
 
 export type ScoreComponent = {
