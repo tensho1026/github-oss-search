@@ -71,8 +71,8 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: 1.27.0
-        version: 1.27.0(react@19.2.8)
+        specifier: 1.29.0
+        version: 1.29.0(react@19.2.8)
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -80,8 +80,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       react-hook-form:
-        specifier: 7.83.0
-        version: 7.83.0(react@19.2.8)
+        specifier: 7.84.0
+        version: 7.84.0(react@19.2.8)
       react-router:
         specifier: 8.3.0
         version: 8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -4641,10 +4641,10 @@ packages:
         integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==,
       }
 
-  lucide-react@1.27.0:
+  lucide-react@1.29.0:
     resolution:
       {
-        integrity: sha512-rJicGl/3Fly/E0rOH1YmPZ6e49JCnKknh1ox1vpHnkfjujAkKA6sqUZvH3MTAaXXjgexyUwgNwTJzTtYuAFYJw==,
+        integrity: sha512-Xs9QFG5+9sNX04MdKVT4++umA+hJ2qsJVlRlRWHQ7qZobXgMiNHSpZ5eZm8JUoGCdNyoEdXoEwa8HVr0DNjOQg==,
       }
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -5306,10 +5306,10 @@ packages:
     peerDependencies:
       react: ^19.2.8
 
-  react-hook-form@7.83.0:
+  react-hook-form@7.84.0:
     resolution:
       {
-        integrity: sha512-AXt8cMCmx5a7u4uvpb2uRFVrWQhllI4pV+LSykxIac/hjt44TnQkmX9BKuQi2i+LDC62esmiLpilkav+kjVf/A==,
+        integrity: sha512-+hWvQP6GLco56mDwrbU4XnHix8t1z90ltZsDIrREl+jnQFQxYLX8oAzqe/Xn8nHpmoXTY5M6oEXrAhbP1qevNQ==,
       }
     engines: { node: ">=18.0.0" }
     peerDependencies:
@@ -8904,7 +8904,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@1.27.0(react@19.2.8):
+  lucide-react@1.29.0(react@19.2.8):
     dependencies:
       react: 19.2.8
 
@@ -9410,7 +9410,7 @@ snapshots:
       react: 19.2.8
       scheduler: 0.27.0
 
-  react-hook-form@7.83.0(react@19.2.8):
+  react-hook-form@7.84.0(react@19.2.8):
     dependencies:
       react: 19.2.8
 
