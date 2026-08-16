@@ -17,9 +17,15 @@ func Recommend(input RecommendationInput) Recommendation {
 		now = input.Candidate.Issue.UpdatedAt.UTC()
 	}
 
-	skillMatch := assessSkillMatch(
+	contributorProfile := input.ContributorProfile
+	if len(contributorProfile.Skills) == 0 && len(input.DesiredSkills) > 0 {
+		contributorProfile = contributorProfileFromExplicitSkills(
+			input.DesiredSkills,
+		)
+	}
+	skillMatch := assessContributionMatch(
 		input.Analysis.RequiredTechnologies,
-		input.DesiredSkills,
+		contributorProfile,
 	)
 	signals := normalizeRepositorySignals(input.RepositorySignals)
 	maintainerResponse := AssessMaintainerResponse(input.Activity)
@@ -62,16 +68,14 @@ func Recommend(input RecommendationInput) Recommendation {
 	}
 }
 
-func assessSkillMatch(
+func assessContributionMatch(
 	required []RequiredTechnology,
-	desired []string,
+	profile ContributorProfile,
 ) SkillMatchAssessment {
-	desiredSet := make(map[string]struct{}, len(desired))
-	for _, skill := range desired {
-		normalized := normalizeSkill(skill)
-		if normalized != "" {
-			desiredSet[normalized] = struct{}{}
-		}
+	profile = normalizeContributorProfile(profile)
+	contributorByName := make(map[string]ContributorSkill, len(profile.Skills))
+	for _, skill := range profile.Skills {
+		contributorByName[normalizeSkill(skill.Name)] = skill
 	}
 
 	requiredByName := make(map[string]RequiredTechnology, len(required))
@@ -105,36 +109,135 @@ func assessSkillMatch(
 
 	matches := make([]SkillMatch, 0, len(keys))
 	matched := 0
+	partial := 0
 	denominator := 0
 	for _, key := range keys {
 		technology := requiredByName[key]
 		status := MatchUnknown
-		if technology.Confidence != ConfidenceLow && len(desiredSet) > 0 {
+		confidence := ConfidenceLow
+		var contributorEvidence []Evidence
+		if technology.Confidence != ConfidenceLow &&
+			profile.Status != ContributionProfileUnavailable {
 			denominator++
-			if _, exists := desiredSet[key]; exists {
-				status = MatchMatched
-				matched++
+			if contributor, exists := contributorByName[key]; exists {
+				contributorEvidence = append(
+					[]Evidence(nil),
+					contributor.Evidence...,
+				)
+				confidence = minimumConfidence(
+					technology.Confidence,
+					contributor.Confidence,
+				)
+				if contributor.Strength >= 3 &&
+					contributor.Confidence != ConfidenceLow {
+					status = MatchMatched
+					matched++
+				} else {
+					status = MatchPartial
+					partial++
+				}
 			} else {
 				status = MatchUnmatched
+				confidence = technology.Confidence
 			}
 		}
 		matches = append(matches, SkillMatch{
-			Technology: technology.Name,
-			Status:     status,
-			Evidence:   append([]Evidence(nil), technology.Evidence...),
+			Technology:          technology.Name,
+			Status:              status,
+			Confidence:          confidence,
+			RequirementEvidence: append([]Evidence(nil), technology.Evidence...),
+			ContributorEvidence: contributorEvidence,
 		})
 	}
 
 	percentage := 0
 	if denominator > 0 {
-		percentage = roundedPercentage(matched, denominator)
+		percentage = roundedPercentage(matched*2+partial, denominator*2)
 	}
 	return SkillMatchAssessment{
-		Percentage:  percentage,
-		Matched:     matched,
-		Denominator: denominator,
-		Skills:      matches,
+		Percentage:   percentage,
+		Matched:      matched,
+		Partial:      partial,
+		Denominator:  denominator,
+		Status:       profile.Status,
+		Personalized: profile.Personalized,
+		Version:      profile.Version,
+		Skills:       matches,
 	}
+}
+
+func contributorProfileFromExplicitSkills(skills []string) ContributorProfile {
+	result := ContributorProfile{
+		Status:  ContributionProfileAvailable,
+		Version: ContributionMatchScoreVersion,
+		Skills:  make([]ContributorSkill, 0, len(skills)),
+	}
+	for _, value := range skills {
+		name := strings.TrimSpace(value)
+		if name == "" {
+			continue
+		}
+		result.Skills = append(result.Skills, ContributorSkill{
+			Name:       name,
+			Strength:   5,
+			Confidence: ConfidenceHigh,
+			Evidence: []Evidence{{
+				RuleID:      "contribution-match.explicit-skill",
+				Source:      EvidenceDerived,
+				Description: "technology was explicitly selected for this recommendation",
+			}},
+		})
+	}
+	if len(result.Skills) == 0 {
+		result.Status = ContributionProfileUnavailable
+	}
+	return result
+}
+
+func normalizeContributorProfile(profile ContributorProfile) ContributorProfile {
+	if profile.Version == "" {
+		profile.Version = ContributionMatchScoreVersion
+	}
+	if profile.Status != ContributionProfileAvailable &&
+		profile.Status != ContributionProfilePartial {
+		profile.Status = ContributionProfileUnavailable
+	}
+	byName := make(map[string]ContributorSkill, len(profile.Skills))
+	for _, skill := range profile.Skills {
+		name := strings.TrimSpace(skill.Name)
+		key := normalizeSkill(name)
+		if key == "" || skill.Strength < 1 || skill.Strength > 5 {
+			continue
+		}
+		skill.Name = name
+		skill.Evidence = append([]Evidence(nil), skill.Evidence...)
+		current, exists := byName[key]
+		if !exists || skill.Strength > current.Strength ||
+			(skill.Strength == current.Strength &&
+				confidenceRank(skill.Confidence) > confidenceRank(current.Confidence)) {
+			byName[key] = skill
+		}
+	}
+	keys := make([]string, 0, len(byName))
+	for key := range byName {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	profile.Skills = make([]ContributorSkill, 0, len(keys))
+	for _, key := range keys {
+		profile.Skills = append(profile.Skills, byName[key])
+	}
+	if len(profile.Skills) == 0 {
+		profile.Status = ContributionProfileUnavailable
+	}
+	return profile
+}
+
+func minimumConfidence(left, right Confidence) Confidence {
+	if confidenceRank(left) <= confidenceRank(right) {
+		return left
+	}
+	return right
 }
 
 func normalizeSkill(value string) string {
@@ -145,11 +248,16 @@ func scoreSkillMatch(match SkillMatchAssessment) ScoreComponent {
 	score := scaleScore(match.Percentage, SkillScoreMaximum)
 	reasons := []string{}
 	if match.Denominator == 0 {
-		reasons = append(reasons, "Skill match is unavailable")
+		reasons = append(reasons, "Contribution match is unavailable")
+	} else if match.Personalized {
+		reasons = append(
+			reasons,
+			"Contribution match uses bounded public GitHub profile evidence",
+		)
 	} else {
 		reasons = append(
 			reasons,
-			"Skill match is based on explicit required technologies",
+			"Contribution match uses explicitly selected technologies",
 		)
 	}
 	return ScoreComponent{

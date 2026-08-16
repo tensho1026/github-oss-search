@@ -1,5 +1,10 @@
 {
   "data": {
+    "contributionProfile": {
+      "cacheHit": false,
+      "status": "unavailable",
+      "version": "v1"
+    },
     "items": [],
     "pagination": {
       "hasNext": false,

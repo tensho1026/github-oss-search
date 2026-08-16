@@ -11,15 +11,18 @@ detail views never silently use different rules.
 sequenceDiagram
     participant Browser
     participant Search as Search use case
+    participant Profile as Profile analysis
     participant Detail as Recommendation service
     participant Cache as Detail LRU cache
     participant GitHub as GitHub GraphQL
     participant Rules as Pure domain rules
 
     Browser->>Search: POST /api/issues/search
+    Search->>Profile: Bounded public profile evidence
+    Profile-->>Search: Proficiency, confidence, sampling status
     Search->>Search: Filter at most 50 candidates
     loop Distinct repositories among at most 20 candidates
-        Search->>Detail: Validated reference + desired skills
+        Search->>Detail: Validated reference + contribution profile
         Detail->>Cache: Canonical owner/repository/number key
         alt Cache hit
             Cache-->>Detail: Cloned normalized snapshot
@@ -51,7 +54,7 @@ Every component has a fixed maximum. The component maximums sum to exactly
 
 | Component                 | Maximum | Inputs                                                |
 | ------------------------- | ------: | ----------------------------------------------------- |
-| Skill match               |      30 | Explicit matched/denominator percentage               |
+| Contribution match        |      30 | Public-profile matched/partial denominator percentage |
 | Issue quality             |      20 | Nine issue-description signals                        |
 | Repository quality        |      15 | README, CONTRIBUTING, CI, tests, Code of Conduct      |
 | Activity                  |      15 | Last update, sampled PR merge ratio, CI, contributors |
@@ -61,18 +64,30 @@ Every component has a fixed maximum. The component maximums sum to exactly
 Unknown evidence earns no points but is not converted to observed absence.
 Clients can distinguish signal states (`present`, `absent`, `not_applicable`,
 `unknown`), aggregate states (`available`, `unavailable`), and match states
-(`matched`, `unmatched`, `unknown`).
+(`matched`, `partial`, `unmatched`, `unknown`).
 
-### Skill denominator
+### Contribution Match Score
 
 A required technology enters the denominator only when its confidence is
-medium or high and the caller supplied at least one desired skill.
-Low-confidence requirements remain `unknown`. The percentage is
-`round(matched / denominator * 100)`. A zero denominator produces a zero
-percentage plus unknown entries, not a claim that the user has no skills.
+medium or high and the bounded public profile contains usable technology
+evidence. Technologies with profile proficiency level 3-5 and at least medium
+confidence are `matched`; lower-strength or low-confidence observations are
+`partial`. Low-confidence requirements remain `unknown`. The percentage is
+`round((2 * matched + partial) / (2 * denominator) * 100)`.
 
-Search uses `languages` and `frameworks` as desired skills. Detail accepts
-repeatable values:
+Every result exposes profile status (`available`, `partial`, or `unavailable`),
+whether the result is personalized, per-technology requirement and contributor
+evidence, confidence, and scoring model version `v1`. Missing, rate-limited, or
+empty profile evidence produces an unavailable denominator and unknown entries,
+not a claim that the contributor has zero skill.
+
+Search analyzes the validated `username` through the existing bounded public
+profile cache. When profile analysis fails, search remains usable and emits
+`contribution_profile_incomplete`; explicitly selected languages/frameworks
+remain a non-personalized fallback. Signed-in clients prefill the profile name
+from the current GitHub session without requesting additional OAuth scopes.
+
+Detail still accepts explicit repeatable values:
 
 ```text
 GET /api/issues/openai/openai-go/42?skills=Go&skills=PostgreSQL
@@ -242,8 +257,8 @@ GitHub's search API reporting a partial result window.
 
 ## Privacy, security, and verification
 
-- The GitHub token stays server-side; this anonymous flow never accesses the
-  database.
+- The GitHub token stays server-side; public-profile matching never accesses
+  the database or private contribution data.
 - `maximumEffort` is a closed enum and is never interpolated into GitHub search
   syntax.
 - Queries and samples are bounded, response bodies have an eight-MiB limit,

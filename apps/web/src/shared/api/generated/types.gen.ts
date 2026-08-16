@@ -757,10 +757,20 @@ export type IssueSearchEnvelope = {
 };
 
 export type IssueSearchResult = {
+  contributionProfile: ContributionProfileSummary;
   items: Array<IssueSearchItem>;
   pagination: SearchPagination;
   searchSummary: SearchSummary;
   warnings: Array<SearchWarning>;
+};
+
+export type ContributionProfileSummary = {
+  /**
+   * Completeness of bounded public profile evidence used for matching.
+   */
+  status: "available" | "partial" | "unavailable";
+  cacheHit: boolean;
+  version: "v1";
 };
 
 export type IssueSearchItem = {
@@ -877,7 +887,10 @@ export type ExclusionCount = {
 };
 
 export type SearchWarning = {
-  code: "github_search_incomplete" | "issue_enrichment_incomplete";
+  code:
+    | "github_search_incomplete"
+    | "issue_enrichment_incomplete"
+    | "contribution_profile_incomplete";
   message: string;
 };
 
@@ -949,14 +962,20 @@ export type ScoreComponent = {
 export type SkillMatch = {
   percentage: number;
   matched: number;
+  partial: number;
   denominator: number;
+  status: "available" | "partial" | "unavailable";
+  personalized: boolean;
+  version: "v1";
   skills: Array<SkillMatchItem>;
 };
 
 export type SkillMatchItem = {
   technology: string;
-  status: "matched" | "unmatched" | "unknown";
-  evidence: Array<Evidence>;
+  status: "matched" | "partial" | "unmatched" | "unknown";
+  confidence: Confidence;
+  requirementEvidence: Array<Evidence>;
+  contributorEvidence: Array<Evidence>;
 };
 
 export type RecommendationWarning = {

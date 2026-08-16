@@ -18,6 +18,7 @@ import (
 type RecommendIssueInput struct {
 	Reference               issue.Reference
 	DesiredSkills           []string
+	ContributorProfile      issue.ContributorProfile
 	IncludeRepositoryHealth bool
 }
 
@@ -95,7 +96,13 @@ func (usecase *recommendIssue) Execute(
 	}
 	key := input.Reference.CacheKey()
 	if cached, found, err := usecase.cache.Get(ctx, key); err == nil && found {
-		return usecase.output(cached, input.DesiredSkills, true, usecase.healthSnapshot(ctx, input)), nil
+		return usecase.output(
+			cached,
+			input.DesiredSkills,
+			input.ContributorProfile,
+			true,
+			usecase.healthSnapshot(ctx, input),
+		), nil
 	} else if err != nil && ctx.Err() != nil {
 		return RecommendIssueOutput{}, mapIssueDetailError(err)
 	}
@@ -130,6 +137,7 @@ func (usecase *recommendIssue) Execute(
 	return usecase.output(
 		load.detail,
 		input.DesiredSkills,
+		input.ContributorProfile,
 		load.cacheHit,
 		usecase.healthSnapshot(ctx, input),
 	), nil
@@ -153,6 +161,7 @@ type issueDetailLoad struct {
 func (usecase *recommendIssue) output(
 	detail port.GitHubIssueDetailResult,
 	desiredSkills []string,
+	contributorProfile issue.ContributorProfile,
 	cacheHit bool,
 	openSSF issue.OpenSSFSnapshot,
 ) RecommendIssueOutput {
@@ -173,7 +182,7 @@ func (usecase *recommendIssue) output(
 		detail.Candidate, detail.Dependencies, detail.RepositorySignals,
 		detail.Activity,
 		issue.DetectClaim(detail.Comments, detail.CommentsTruncated),
-		history, desiredSkills, usecase.now(),
+		history, desiredSkills, contributorProfile, usecase.now(),
 	)
 	return RecommendIssueOutput{
 		Item: item,
@@ -231,6 +240,7 @@ func (usecase *recommendIssue) EvaluateCandidate(
 			LinkedPullRequestsTruncated: true,
 		},
 		desiredSkills,
+		issue.ContributorProfile{},
 		usecase.now(),
 	)
 }
@@ -243,6 +253,7 @@ func evaluateIssueRecommendation(
 	claim issue.ClaimEvidence,
 	history issue.IssueHistory,
 	desiredSkills []string,
+	contributorProfile issue.ContributorProfile,
 	now time.Time,
 ) issue.RankedIssue {
 	hasMaintainerGuidance := false
@@ -259,14 +270,15 @@ func evaluateIssueRecommendation(
 		HasMaintainerGuidance: hasMaintainerGuidance,
 	})
 	recommendation := issue.Recommend(issue.RecommendationInput{
-		Candidate:         candidate,
-		Analysis:          analysis,
-		DesiredSkills:     append([]string(nil), desiredSkills...),
-		RepositorySignals: repositorySignals,
-		Activity:          activity,
-		Claim:             claim,
-		History:           history,
-		Now:               now,
+		Candidate:          candidate,
+		Analysis:           analysis,
+		DesiredSkills:      append([]string(nil), desiredSkills...),
+		ContributorProfile: contributorProfile,
+		RepositorySignals:  repositorySignals,
+		Activity:           activity,
+		Claim:              claim,
+		History:            history,
+		Now:                now,
 	})
 	return issue.RankedIssue{
 		Candidate:      candidate,

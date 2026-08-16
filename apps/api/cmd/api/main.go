@@ -130,6 +130,7 @@ func main() {
 				cfg.IssueDetailAnalysisLimit,
 			),
 		),
+		usecase.WithContributionProfileAnalysis(analyzeGitHubProfile),
 	)
 	if err != nil {
 		logger.Error("compose issue search usecase", "error", err)

@@ -65,6 +65,69 @@ func TestRecommendUsesExplicitSkillDenominator(t *testing.T) {
 	}
 }
 
+func TestRecommendUsesExplainablePublicContributionProfile(t *testing.T) {
+	t.Parallel()
+	input := completeRecommendationInput(time.Now())
+	input.DesiredSkills = nil
+	input.ContributorProfile = ContributorProfile{
+		Status:       ContributionProfilePartial,
+		Personalized: true,
+		Version:      ContributionMatchScoreVersion,
+		Skills: []ContributorSkill{
+			{Name: "Go", Strength: 4, Confidence: ConfidenceHigh},
+			{Name: "React", Strength: 2, Confidence: ConfidenceMedium},
+		},
+	}
+	input.Analysis.RequiredTechnologies = []RequiredTechnology{
+		{Name: "Go", Confidence: ConfidenceHigh},
+		{Name: "React", Confidence: ConfidenceMedium},
+		{Name: "PostgreSQL", Confidence: ConfidenceHigh},
+	}
+
+	got := Recommend(input).SkillMatch
+
+	if got.Percentage != 50 || got.Matched != 1 || got.Partial != 1 ||
+		got.Denominator != 3 || !got.Personalized ||
+		got.Status != ContributionProfilePartial ||
+		got.Version != ContributionMatchScoreVersion {
+		t.Fatalf("contribution match = %+v", got)
+	}
+	statuses := map[string]MatchStatus{}
+	for _, skill := range got.Skills {
+		statuses[skill.Technology] = skill.Status
+	}
+	want := map[string]MatchStatus{
+		"Go":         MatchMatched,
+		"React":      MatchPartial,
+		"PostgreSQL": MatchUnmatched,
+	}
+	if !reflect.DeepEqual(statuses, want) {
+		t.Fatalf("statuses = %#v, want %#v", statuses, want)
+	}
+}
+
+func TestRecommendDoesNotTurnUnavailableProfileIntoZeroMatch(t *testing.T) {
+	t.Parallel()
+	input := completeRecommendationInput(time.Now())
+	input.DesiredSkills = nil
+	input.ContributorProfile = ContributorProfile{
+		Status:       ContributionProfileUnavailable,
+		Personalized: true,
+		Version:      ContributionMatchScoreVersion,
+	}
+
+	got := Recommend(input).SkillMatch
+	if got.Percentage != 0 || got.Denominator != 0 ||
+		got.Status != ContributionProfileUnavailable {
+		t.Fatalf("unavailable contribution match = %+v", got)
+	}
+	for _, skill := range got.Skills {
+		if skill.Status != MatchUnknown {
+			t.Fatalf("skill = %+v, want unknown", skill)
+		}
+	}
+}
+
 func TestRecommendDoesNotTreatUnknownRepositorySignalsAsAbsent(t *testing.T) {
 	t.Parallel()
 	input := completeRecommendationInput(time.Now())

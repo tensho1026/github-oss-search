@@ -29,7 +29,8 @@ export function IssueSearchResults({
   isFetching,
   onPageChange,
 }: IssueSearchResultsProps) {
-  const { items, pagination, searchSummary, warnings } = envelope.data;
+  const { contributionProfile, items, pagination, searchSummary, warnings } =
+    envelope.data;
   if (items.length === 0) {
     const outOfRange =
       pagination.total > 0 &&
@@ -87,6 +88,10 @@ export function IssueSearchResults({
             <Icon icon={Gauge} />
             {formatCompactNumber(searchSummary.candidatesChecked)} checked ·{" "}
             {formatCompactNumber(searchSummary.enrichmentAttempted)} enriched
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Contribution profile: {contributionProfile.status} · model{" "}
+            {contributionProfile.version}
           </span>
         </CardHeader>
         {envelope.meta.rateLimitRemaining !== undefined ? (

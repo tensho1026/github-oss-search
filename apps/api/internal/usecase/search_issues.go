@@ -36,17 +36,20 @@ type SearchIssuesPagination struct {
 // SearchIssuesOutput retains operational metadata without exposing GitHub
 // payloads directly to the transport layer.
 type SearchIssuesOutput struct {
-	Items                []issue.RankedIssue
-	Pagination           SearchIssuesPagination
-	ExclusionCounts      map[issue.ExclusionReason]int
-	CandidatesChecked    int
-	UpstreamTotal        int
-	EnrichmentAttempted  int
-	EnrichmentFailed     int
-	GitHubIncomplete     bool
-	EnrichmentIncomplete bool
-	RateLimit            port.RateLimit
-	CacheHit             bool
+	Items                         []issue.RankedIssue
+	Pagination                    SearchIssuesPagination
+	ExclusionCounts               map[issue.ExclusionReason]int
+	CandidatesChecked             int
+	UpstreamTotal                 int
+	EnrichmentAttempted           int
+	EnrichmentFailed              int
+	GitHubIncomplete              bool
+	EnrichmentIncomplete          bool
+	ContributionProfileStatus     issue.ContributionProfileStatus
+	ContributionProfileIncomplete bool
+	ContributionProfileCacheHit   bool
+	RateLimit                     port.RateLimit
+	CacheHit                      bool
 }
 
 // SearchIssues returns a post-filtered application page over one bounded
@@ -62,19 +65,34 @@ type SearchIssues interface {
 }
 
 type searchIssues struct {
-	searcher       port.GitHubIssueSearcher
-	cache          port.IssueSearchCache
-	resultLimit    int
-	recommender    IssueRecommender
-	analysisLimit  int
-	maxConcurrency int
-	requests       coalesce.Group[string, port.IssueSearchCacheEntry]
-	now            func() time.Time
+	searcher        port.GitHubIssueSearcher
+	cache           port.IssueSearchCache
+	resultLimit     int
+	recommender     IssueRecommender
+	profileAnalyzer AnalyzeGitHubProfile
+	analysisLimit   int
+	maxConcurrency  int
+	requests        coalesce.Group[string, port.IssueSearchCacheEntry]
+	now             func() time.Time
 }
 
 // SearchIssuesOption configures optional bounded detail enrichment while
 // preserving the candidate-only constructor used by isolated search tests.
 type SearchIssuesOption func(*searchIssues) error
+
+// WithContributionProfileAnalysis enables bounded public-profile evidence for
+// Contribution Match. Profile failure remains non-fatal to issue discovery.
+func WithContributionProfileAnalysis(
+	analyzer AnalyzeGitHubProfile,
+) SearchIssuesOption {
+	return func(usecase *searchIssues) error {
+		if analyzer == nil {
+			return fmt.Errorf("profile analyzer is required")
+		}
+		usecase.profileAnalyzer = analyzer
+		return nil
+	}
+}
 
 // WithIssueRecommendationEnrichment enables detailed analysis for at most
 // analysisLimit eligible candidates with bounded parallel GitHub requests.
@@ -234,10 +252,13 @@ func (usecase *searchIssues) issueSearchOutput(
 	input SearchIssuesInput,
 	cacheHit bool,
 ) (SearchIssuesOutput, error) {
+	contributorProfile, profileMeta, profileRateLimit :=
+		usecase.loadContributionProfile(ctx, input.Criteria)
 	ranked, recommendationMeta, err := usecase.recommendCandidates(
 		ctx,
 		entry.Candidates,
 		input.Criteria,
+		contributorProfile,
 	)
 	if err != nil {
 		return SearchIssuesOutput{}, mapIssueSearchError(err)
@@ -262,6 +283,7 @@ func (usecase *searchIssues) issueSearchOutput(
 	}
 
 	rateLimit := mergeRateLimits(entry.RateLimit, recommendationMeta.rateLimit)
+	rateLimit = mergeRateLimits(rateLimit, profileRateLimit)
 	exclusionCounts := cloneExclusionCounts(entry.ExclusionCounts)
 	if staleExcluded > 0 {
 		exclusionCounts[issue.ExclusionStale] += staleExcluded
@@ -275,15 +297,18 @@ func (usecase *searchIssues) issueSearchOutput(
 			TotalPages: totalPages,
 			HasNext:    input.Pagination.Page < totalPages,
 		},
-		ExclusionCounts:      exclusionCounts,
-		CandidatesChecked:    entry.CandidatesChecked,
-		UpstreamTotal:        entry.UpstreamTotal,
-		EnrichmentAttempted:  recommendationMeta.attempted,
-		EnrichmentFailed:     recommendationMeta.failed,
-		GitHubIncomplete:     entry.IncompleteResults,
-		EnrichmentIncomplete: recommendationMeta.incomplete,
-		RateLimit:            rateLimit,
-		CacheHit:             cacheHit,
+		ExclusionCounts:               exclusionCounts,
+		CandidatesChecked:             entry.CandidatesChecked,
+		UpstreamTotal:                 entry.UpstreamTotal,
+		EnrichmentAttempted:           recommendationMeta.attempted,
+		EnrichmentFailed:              recommendationMeta.failed,
+		GitHubIncomplete:              entry.IncompleteResults,
+		EnrichmentIncomplete:          recommendationMeta.incomplete,
+		ContributionProfileStatus:     profileMeta.status,
+		ContributionProfileIncomplete: profileMeta.incomplete,
+		ContributionProfileCacheHit:   profileMeta.cacheHit,
+		RateLimit:                     rateLimit,
+		CacheHit:                      cacheHit,
 	}, nil
 }
 
@@ -304,6 +329,28 @@ func filterRankedIssuesByStale(
 		filtered = append(filtered, candidate)
 	}
 	return filtered, excluded
+}
+
+func (usecase *searchIssues) loadContributionProfile(
+	ctx context.Context,
+	criteria issue.SearchCriteria,
+) (issue.ContributorProfile, contributionProfileMeta, port.RateLimit) {
+	explicit := explicitContributionProfile(desiredIssueSkills(criteria))
+	if usecase.profileAnalyzer == nil {
+		return explicit, contributionProfileMeta{
+			status:     explicit.Status,
+			incomplete: explicit.Status != issue.ContributionProfileAvailable,
+		}, port.RateLimit{}
+	}
+	output, err := usecase.profileAnalyzer.Execute(ctx, criteria.Username())
+	if err != nil {
+		return explicit, contributionProfileMeta{
+			status:     issue.ContributionProfileUnavailable,
+			incomplete: true,
+		}, port.RateLimit{}
+	}
+	profile, meta := contributionProfileFromAnalysis(output.Analysis, output.CacheHit)
+	return profile, meta, output.RateLimit
 }
 
 func filterRankedIssuesByEffort(
@@ -335,6 +382,7 @@ func (usecase *searchIssues) recommendCandidates(
 	ctx context.Context,
 	candidates []issue.Candidate,
 	criteria issue.SearchCriteria,
+	contributorProfile issue.ContributorProfile,
 ) ([]issue.RankedIssue, issueRecommendationMeta, error) {
 	desiredSkills := desiredIssueSkills(criteria)
 	ranked := make([]issue.RankedIssue, len(candidates))
@@ -381,8 +429,9 @@ func (usecase *searchIssues) recommendCandidates(
 			output, err := usecase.recommender.Execute(
 				groupContext,
 				RecommendIssueInput{
-					Reference:     reference,
-					DesiredSkills: desiredSkills,
+					Reference:          reference,
+					DesiredSkills:      desiredSkills,
+					ContributorProfile: contributorProfile,
 				},
 			)
 			if err != nil {
@@ -417,6 +466,7 @@ func (usecase *searchIssues) recommendCandidates(
 						output.Item.Recommendation,
 						output.Dependencies,
 						desiredSkills,
+						contributorProfile,
 						usecase.now(),
 					)
 				}
@@ -432,6 +482,7 @@ func (usecase *searchIssues) recommendCandidates(
 			usecase,
 			candidate,
 			desiredSkills,
+			contributorProfile,
 			index < limit,
 		)
 	}
@@ -443,6 +494,7 @@ func sharedRepositoryRecommendation(
 	repositoryRecommendation issue.Recommendation,
 	dependencies []string,
 	desiredSkills []string,
+	contributorProfile issue.ContributorProfile,
 	now time.Time,
 ) issue.RankedIssue {
 	ranked := evaluateIssueRecommendation(
@@ -456,6 +508,7 @@ func sharedRepositoryRecommendation(
 			LinkedPullRequestsTruncated: true,
 		},
 		desiredSkills,
+		contributorProfile,
 		now,
 	)
 	ranked.Recommendation.Warnings = append(
@@ -479,10 +532,11 @@ func fallbackRecommendation(
 	recommender *searchIssues,
 	candidate issue.Candidate,
 	desiredSkills []string,
+	contributorProfile issue.ContributorProfile,
 	enrichmentFailed bool,
 ) issue.RankedIssue {
 	var ranked issue.RankedIssue
-	if recommender.recommender != nil {
+	if recommender.recommender != nil && !contributorProfile.Personalized {
 		ranked = recommender.recommender.EvaluateCandidate(
 			candidate,
 			desiredSkills,
@@ -502,6 +556,7 @@ func fallbackRecommendation(
 				LinkedPullRequestsTruncated: true,
 			},
 			desiredSkills,
+			contributorProfile,
 			recommender.now(),
 		)
 	}

@@ -33,6 +33,7 @@ export type {
   CompleteGitHubOAuthErrors,
   Confidence,
   ContributionAnalysis,
+  ContributionProfileSummary,
   CountAggregate,
   CreateAccountSavedSearchData,
   CreateAccountSavedSearchError,

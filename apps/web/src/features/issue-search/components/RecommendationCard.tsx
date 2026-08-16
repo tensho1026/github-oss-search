@@ -169,11 +169,15 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="font-semibold" id={`skill-match-${rank}`}>
-                Skill match
+                Contribution match
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 {item.recommendation.skillMatch.matched} of{" "}
-                {item.recommendation.skillMatch.denominator} comparable skills
+                {item.recommendation.skillMatch.denominator} requirements
+                matched
+                {item.recommendation.skillMatch.partial > 0
+                  ? ` · ${item.recommendation.skillMatch.partial} partial`
+                  : ""}
               </p>
             </div>
             <strong className="font-mono text-xl text-accent">
@@ -196,6 +200,11 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
               </span>
             )}
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            {item.recommendation.skillMatch.personalized
+              ? `Public GitHub profile evidence · ${item.recommendation.skillMatch.status} · model ${item.recommendation.skillMatch.version}`
+              : "Explicitly selected technology evidence"}
+          </p>
         </section>
 
         <section

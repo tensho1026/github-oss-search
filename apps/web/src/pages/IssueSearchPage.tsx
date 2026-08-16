@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Icon } from "../components/ui/icon";
+import { useAuth } from "../features/auth/auth-context";
 import { useIssueSearch } from "../features/issue-search/api/useIssueSearch";
 import { SaveSearchAction } from "../features/account/components/SaveSearchAction";
 import { IssueSearchForm } from "../features/issue-search/components/IssueSearchForm";
@@ -25,16 +26,32 @@ import {
   decodeSearchParams,
   encodeSearchParams,
   toIssueSearchRequest,
+  validateSearchFilters,
   type SearchFilters,
 } from "../features/issue-search/model/search-filters";
 
 export function IssueSearchPage() {
+  const { session } = useAuth();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const serializedSearch = searchParameters.toString();
-  const location = useMemo(
-    () => decodeSearchParams(new URLSearchParams(serializedSearch)),
-    [serializedSearch],
-  );
+  const location = useMemo(() => {
+    const decoded = decodeSearchParams(new URLSearchParams(serializedSearch));
+    if (
+      decoded.filters.username ||
+      !session?.authenticated ||
+      !session.user?.login
+    ) {
+      return decoded;
+    }
+    const filters = { ...decoded.filters, username: session.user.login };
+    const errors = validateSearchFilters(filters);
+    return {
+      ...decoded,
+      errors,
+      filters,
+      valid: Object.keys(errors).length === 0,
+    };
+  }, [serializedSearch, session]);
   const query = useIssueSearch(location);
 
   function submit(filters: SearchFilters) {
@@ -84,7 +101,9 @@ export function IssueSearchPage() {
       <header className="max-w-3xl">
         <Badge variant="accent">
           <Icon icon={Search} />
-          Anonymous public search
+          {session?.authenticated
+            ? "Personalized public search"
+            : "Anonymous public search"}
         </Badge>
         <h1 className="mt-5 text-4xl font-semibold tracking-[-0.055em] text-balance sm:text-5xl">
           Find an issue you can realistically finish.
