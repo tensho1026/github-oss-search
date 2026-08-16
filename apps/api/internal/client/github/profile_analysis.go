@@ -77,6 +77,18 @@ const (
         nodes { ...ProfileRepository }
       }
       contributionsCollection(from: $windowFrom, to: $windowTo) {
+      contributionCalendar {
+        totalContributions
+        weeks {
+          firstDay
+          contributionDays {
+            date
+            weekday
+            contributionCount
+            contributionLevel
+          }
+        }
+      }
       commitContributionsByRepository(maxRepositories: $repositoryLimit) {
         repository { id visibility }
         contributions { totalCount }
@@ -483,6 +495,8 @@ func normalizeGraphQLProfileAnalysis(
 		pullRequestSearch,
 		issueSearch,
 		repositoryLimit,
+		windowFrom,
+		windowTo,
 	)
 	if err != nil {
 		return port.GitHubProfileAnalysisResult{}, err
@@ -597,6 +611,8 @@ func normalizeProfileContributions(
 	pullRequestSearch *graphQLProfileSearch,
 	issueSearch *graphQLProfileSearch,
 	repositoryLimit int,
+	windowFrom time.Time,
+	windowTo time.Time,
 ) (profile.ContributionSnapshot, []profile.Warning, error) {
 	warnings := make([]profile.Warning, 0, 3)
 	result := profile.ContributionSnapshot{}
@@ -606,6 +622,18 @@ func normalizeProfileContributions(
 			Message: "Public commit and review activity is unavailable",
 		})
 	} else {
+		calendar, calendarWarning, err := normalizeContributionCalendar(
+			contributions.Calendar,
+			windowFrom,
+			windowTo,
+		)
+		if err != nil {
+			return profile.ContributionSnapshot{}, nil, err
+		}
+		result.Calendar = calendar
+		if calendarWarning != nil {
+			warnings = append(warnings, *calendarWarning)
+		}
 		commits, err := sumPublicContributionGroups(
 			contributions.Commits,
 			repositoryLimit,
@@ -684,6 +712,112 @@ func normalizeProfileContributions(
 		result.Available = true
 	}
 	return result, warnings, nil
+}
+
+func normalizeContributionCalendar(
+	calendar *graphQLContributionCalendar,
+	windowFrom time.Time,
+	windowTo time.Time,
+) (profile.ContributionCalendar, *profile.Warning, error) {
+	if calendar == nil || len(calendar.Weeks) == 0 {
+		return profile.ContributionCalendar{
+				Status: profile.EvidenceUnavailable,
+			}, &profile.Warning{
+				Code:    "contribution_calendar_unavailable",
+				Message: "The public contribution calendar is unavailable",
+			}, nil
+	}
+	if len(calendar.Weeks) > 54 || calendar.TotalContributions < 0 {
+		return profile.ContributionCalendar{}, nil, upstreamDecodeError(
+			"GitHub GraphQL contribution calendar response",
+			errors.New("contains invalid calendar bounds"),
+		)
+	}
+	windowStart := dateOnly(windowFrom)
+	windowEnd := dateOnly(windowTo)
+	weeks := make([]profile.ContributionWeek, 0, len(calendar.Weeks))
+	var previous time.Time
+	total := 0
+	for weekIndex, upstreamWeek := range calendar.Weeks {
+		firstDay, err := time.Parse(time.DateOnly, upstreamWeek.FirstDay)
+		if err != nil || len(upstreamWeek.Days) == 0 || len(upstreamWeek.Days) > 7 {
+			return profile.ContributionCalendar{}, nil, upstreamDecodeError(
+				"GitHub GraphQL contribution calendar response",
+				fmt.Errorf("week %d is malformed", weekIndex),
+			)
+		}
+		days := make([]profile.ContributionDay, 0, len(upstreamWeek.Days))
+		for dayIndex, upstreamDay := range upstreamWeek.Days {
+			day, err := normalizeContributionDay(upstreamDay)
+			if err != nil || day.Date.Before(windowStart) || day.Date.After(windowEnd) ||
+				(!previous.IsZero() && !day.Date.After(previous)) {
+				return profile.ContributionCalendar{}, nil, upstreamDecodeError(
+					"GitHub GraphQL contribution calendar response",
+					fmt.Errorf("week %d day %d is malformed", weekIndex, dayIndex),
+				)
+			}
+			if dayIndex == 0 && !day.Date.Equal(firstDay) {
+				return profile.ContributionCalendar{}, nil, upstreamDecodeError(
+					"GitHub GraphQL contribution calendar response",
+					errors.New("week firstDay does not match its first cell"),
+				)
+			}
+			previous = day.Date
+			total += day.Count
+			days = append(days, day)
+		}
+		weeks = append(weeks, profile.ContributionWeek{
+			Index:    weekIndex,
+			FirstDay: firstDay,
+			Days:     days,
+		})
+	}
+	if total != calendar.TotalContributions {
+		return profile.ContributionCalendar{}, nil, upstreamDecodeError(
+			"GitHub GraphQL contribution calendar response",
+			errors.New("total does not match normalized daily cells"),
+		)
+	}
+	return profile.ContributionCalendar{
+		Status: profile.EvidenceExact,
+		Total:  total,
+		From:   weeks[0].Days[0].Date,
+		To:     weeks[len(weeks)-1].Days[len(weeks[len(weeks)-1].Days)-1].Date,
+		Weeks:  weeks,
+	}, nil, nil
+}
+
+func normalizeContributionDay(
+	upstream graphQLContributionDay,
+) (profile.ContributionDay, error) {
+	date, err := time.Parse(time.DateOnly, upstream.Date)
+	if err != nil || upstream.Count < 0 || upstream.Weekday < 0 ||
+		upstream.Weekday > 6 || int(date.Weekday()) != upstream.Weekday {
+		return profile.ContributionDay{}, errors.New("invalid contribution day")
+	}
+	levels := map[string]profile.ContributionLevel{
+		"NONE":            profile.ContributionNone,
+		"FIRST_QUARTILE":  profile.ContributionFirst,
+		"SECOND_QUARTILE": profile.ContributionSecond,
+		"THIRD_QUARTILE":  profile.ContributionThird,
+		"FOURTH_QUARTILE": profile.ContributionFourth,
+	}
+	level, ok := levels[upstream.Level]
+	if !ok || (upstream.Count == 0 && level != profile.ContributionNone) ||
+		(upstream.Count > 0 && level == profile.ContributionNone) {
+		return profile.ContributionDay{}, errors.New("invalid contribution level")
+	}
+	return profile.ContributionDay{
+		Date:    date,
+		Weekday: upstream.Weekday,
+		Count:   upstream.Count,
+		Level:   level,
+	}, nil
+}
+
+func dateOnly(value time.Time) time.Time {
+	value = value.UTC()
+	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func sumPublicContributionGroups(
@@ -844,10 +978,28 @@ type graphQLProfileManifest struct {
 }
 
 type graphQLProfileContributions struct {
+	Calendar     *graphQLContributionCalendar      `json:"contributionCalendar"`
 	Commits      []graphQLProfileContributionGroup `json:"commitContributionsByRepository"`
 	Issues       []graphQLProfileContributionGroup `json:"issueContributionsByRepository"`
 	PullRequests []graphQLProfileContributionGroup `json:"pullRequestContributionsByRepository"`
 	Reviews      []graphQLProfileContributionGroup `json:"pullRequestReviewContributionsByRepository"`
+}
+
+type graphQLContributionCalendar struct {
+	TotalContributions int                       `json:"totalContributions"`
+	Weeks              []graphQLContributionWeek `json:"weeks"`
+}
+
+type graphQLContributionWeek struct {
+	FirstDay string                   `json:"firstDay"`
+	Days     []graphQLContributionDay `json:"contributionDays"`
+}
+
+type graphQLContributionDay struct {
+	Date    string `json:"date"`
+	Weekday int    `json:"weekday"`
+	Count   int    `json:"contributionCount"`
+	Level   string `json:"contributionLevel"`
 }
 
 type graphQLProfileContributionGroup struct {

@@ -127,6 +127,44 @@ type ContributionSnapshot struct {
 	PullRequestsOpened  CountEvidence
 	PullRequestReviews  CountEvidence
 	RepositoriesTouched CountEvidence
+	Calendar            ContributionCalendar
+}
+
+// ContributionLevel is GitHub's normalized contribution-calendar intensity.
+type ContributionLevel string
+
+// ContributionLevel values are ordered from an empty day through the fourth
+// public contribution quartile.
+const (
+	ContributionNone   ContributionLevel = "none"
+	ContributionFirst  ContributionLevel = "first_quartile"
+	ContributionSecond ContributionLevel = "second_quartile"
+	ContributionThird  ContributionLevel = "third_quartile"
+	ContributionFourth ContributionLevel = "fourth_quartile"
+)
+
+// ContributionDay is one public day at a server-authoritative grid position.
+type ContributionDay struct {
+	Date    time.Time
+	Weekday int
+	Count   int
+	Level   ContributionLevel
+}
+
+// ContributionWeek is one ordered column in the contribution calendar.
+type ContributionWeek struct {
+	Index    int
+	FirstDay time.Time
+	Days     []ContributionDay
+}
+
+// ContributionCalendar is a bounded public one-year contribution grid.
+type ContributionCalendar struct {
+	Status EvidenceStatus
+	Total  int
+	From   time.Time
+	To     time.Time
+	Weeks  []ContributionWeek
 }
 
 // RepositorySample summarizes coverage and primary technologies for one
@@ -222,6 +260,9 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		Frameworks:         frameworks,
 		RecentTechnologies: recent,
 		Contributions:      contributions,
+		ContributionCalendar: cloneContributionCalendar(
+			snapshot.Contributions.Calendar,
+		),
 		OSSExperience:      analyzeOSSExperience(contributions),
 		RepositoryEvidence: repositoryEvidence,
 		Proficiency: buildTechnologyProficiency(
@@ -234,6 +275,21 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		RepositoriesAnalyzed: len(snapshot.Owned.Repositories),
 		Warnings:             slices.Clone(snapshot.Warnings),
 	}
+}
+
+func cloneContributionCalendar(
+	calendar ContributionCalendar,
+) ContributionCalendar {
+	weeks := make([]ContributionWeek, 0, len(calendar.Weeks))
+	for _, week := range calendar.Weeks {
+		week.Days = slices.Clone(week.Days)
+		weeks = append(weeks, week)
+	}
+	calendar.Weeks = weeks
+	if calendar.Status == "" {
+		calendar.Status = EvidenceUnavailable
+	}
+	return calendar
 }
 
 func normalizeWindow(from, to time.Time) AnalysisWindow {

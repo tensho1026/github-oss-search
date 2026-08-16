@@ -35,6 +35,7 @@ type Analysis struct {
 	Frameworks           []string
 	RecentTechnologies   []RecentTechnology
 	Contributions        ContributionAnalysis
+	ContributionCalendar ContributionCalendar
 	OSSExperience        OSSExperience
 	RepositoryEvidence   RepositoryEvidence
 	Proficiency          []TechnologyProficiency

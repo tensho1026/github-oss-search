@@ -356,6 +356,7 @@ export type ProfileAnalysis = {
   frameworks: Array<string>;
   recentTechnologies: Array<RecentTechnology>;
   contributions: ContributionAnalysis;
+  contributionCalendar: ContributionCalendar;
   ossExperience: OssExperience;
   repositoryEvidence: ProfileRepositoryEvidence;
   proficiency: Array<TechnologyProficiency>;
@@ -428,6 +429,49 @@ export type ContributionAnalysis = {
    *
    */
   repositoriesTouched: EvidenceCount;
+};
+
+/**
+ * Server-normalized GitHub contribution intensity.
+ */
+export type ContributionLevel =
+  | "none"
+  | "first_quartile"
+  | "second_quartile"
+  | "third_quartile"
+  | "fourth_quartile";
+
+export type ContributionDay = {
+  date: string;
+  /**
+   * Sunday is 0 and Saturday is 6.
+   */
+  weekday: number;
+  count: number;
+  level: ContributionLevel;
+};
+
+export type ContributionWeek = {
+  index: number;
+  firstDay: string;
+  days: Array<ContributionDay>;
+};
+
+export type ContributionCalendar = {
+  /**
+   * Exact public calendar data or an unavailable segment.
+   */
+  status: EvidenceStatus;
+  /**
+   * Sum of the normalized daily public contribution counts.
+   */
+  total: number;
+  from?: string;
+  to?: string;
+  /**
+   * Ordered week columns; each day includes its row position.
+   */
+  weeks: Array<ContributionWeek>;
 };
 
 export type TechnologyEvidence = {

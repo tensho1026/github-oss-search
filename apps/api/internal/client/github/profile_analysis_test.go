@@ -50,6 +50,7 @@ func TestGetProfileAnalysisUsesOnePublicBoundedGraphQLSnapshot(
 			"author:octocat",
 			"created:>=2025-07-30T12:00:00+00:00",
 			"created:<=2026-07-30T12:00:00+00:00",
+			"contributionCalendar",
 		} {
 			if !strings.Contains(
 				payload.Query+payload.Variables.PullRequestQuery+
@@ -132,6 +133,13 @@ func TestGetProfileAnalysisUsesOnePublicBoundedGraphQLSnapshot(
 		contributions.RepositoriesTouched.Value != 2 ||
 		contributions.RepositoriesTouched.Complete {
 		t.Fatalf("contributions = %+v", contributions)
+	}
+	if contributions.Calendar.Status != "exact" ||
+		contributions.Calendar.Total != 3 ||
+		len(contributions.Calendar.Weeks) != 1 ||
+		len(contributions.Calendar.Weeks[0].Days) != 7 ||
+		contributions.Calendar.Weeks[0].Days[1].Level != "first_quartile" {
+		t.Fatalf("calendar = %+v", contributions.Calendar)
 	}
 	if len(result.Snapshot.Warnings) != 1 ||
 		result.Snapshot.Warnings[0].Code !=
@@ -401,6 +409,63 @@ func TestGetProfileAnalysisValidatesLimitsBeforeUpstream(t *testing.T) {
 	}
 }
 
+func TestNormalizeContributionCalendarRejectsMalformedDailyEvidence(t *testing.T) {
+	t.Parallel()
+	windowFrom := time.Date(2024, time.February, 1, 0, 0, 0, 0, time.UTC)
+	windowTo := time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC)
+	valid := graphQLContributionCalendar{
+		TotalContributions: 2,
+		Weeks: []graphQLContributionWeek{{
+			FirstDay: "2024-02-28",
+			Days: []graphQLContributionDay{
+				{Date: "2024-02-28", Weekday: 3, Level: "NONE"},
+				{Date: "2024-02-29", Weekday: 4, Count: 2, Level: "SECOND_QUARTILE"},
+			},
+		}},
+	}
+	calendar, warning, err := normalizeContributionCalendar(
+		&valid,
+		windowFrom,
+		windowTo,
+	)
+	if err != nil || warning != nil || calendar.Total != 2 ||
+		calendar.Weeks[0].Days[1].Date.Day() != 29 {
+		t.Fatalf("calendar = %+v, warning = %+v, err = %v", calendar, warning, err)
+	}
+
+	for name, mutate := range map[string]func(*graphQLContributionCalendar){
+		"malformed date": func(value *graphQLContributionCalendar) {
+			value.Weeks[0].Days[1].Date = "2024-02-30"
+		},
+		"negative count": func(value *graphQLContributionCalendar) {
+			value.Weeks[0].Days[1].Count = -1
+		},
+		"invalid level": func(value *graphQLContributionCalendar) {
+			value.Weeks[0].Days[1].Level = "NONE"
+		},
+		"mismatched total": func(value *graphQLContributionCalendar) {
+			value.TotalContributions = 3
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			candidate := valid
+			candidate.Weeks = append([]graphQLContributionWeek(nil), valid.Weeks...)
+			candidate.Weeks[0].Days = append(
+				[]graphQLContributionDay(nil),
+				valid.Weeks[0].Days...,
+			)
+			mutate(&candidate)
+			if _, _, err := normalizeContributionCalendar(
+				&candidate,
+				windowFrom,
+				windowTo,
+			); err == nil {
+				t.Fatal("expected malformed calendar to be rejected")
+			}
+		})
+	}
+}
+
 func containsString(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {
@@ -522,6 +587,21 @@ const completeProfileAnalysisFixture = `{
 				]
 			},
 			"contributionsCollection":{
+				"contributionCalendar":{
+					"totalContributions":3,
+					"weeks":[{
+						"firstDay":"2026-07-19",
+						"contributionDays":[
+							{"date":"2026-07-19","weekday":0,"contributionCount":0,"contributionLevel":"NONE"},
+							{"date":"2026-07-20","weekday":1,"contributionCount":1,"contributionLevel":"FIRST_QUARTILE"},
+							{"date":"2026-07-21","weekday":2,"contributionCount":0,"contributionLevel":"NONE"},
+							{"date":"2026-07-22","weekday":3,"contributionCount":2,"contributionLevel":"SECOND_QUARTILE"},
+							{"date":"2026-07-23","weekday":4,"contributionCount":0,"contributionLevel":"NONE"},
+							{"date":"2026-07-24","weekday":5,"contributionCount":0,"contributionLevel":"NONE"},
+							{"date":"2026-07-25","weekday":6,"contributionCount":0,"contributionLevel":"NONE"}
+						]
+					}]
+				},
 				"commitContributionsByRepository":[
 					{
 						"repository":{"id":"R1","visibility":"PUBLIC"},

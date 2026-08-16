@@ -29,6 +29,37 @@
       },
       "windowDays": 365
     },
+    "contributionCalendar": {
+      "from": "2026-07-19",
+      "status": "exact",
+      "to": "2026-07-25",
+      "total": 3,
+      "weeks": [
+        {
+          "days": [
+            { "count": 0, "date": "2026-07-19", "level": "none", "weekday": 0 },
+            {
+              "count": 1,
+              "date": "2026-07-20",
+              "level": "first_quartile",
+              "weekday": 1
+            },
+            { "count": 0, "date": "2026-07-21", "level": "none", "weekday": 2 },
+            {
+              "count": 2,
+              "date": "2026-07-22",
+              "level": "second_quartile",
+              "weekday": 3
+            },
+            { "count": 0, "date": "2026-07-23", "level": "none", "weekday": 4 },
+            { "count": 0, "date": "2026-07-24", "level": "none", "weekday": 5 },
+            { "count": 0, "date": "2026-07-25", "level": "none", "weekday": 6 }
+          ],
+          "firstDay": "2026-07-19",
+          "index": 0
+        }
+      ]
+    },
     "frameworks": ["React"],
     "languages": [
       {

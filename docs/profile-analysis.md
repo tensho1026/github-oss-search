@@ -33,7 +33,9 @@ For an individual user, the query requests:
 - exact public authored issue and pull-request search counts for the 365-day
   window;
 - commit and pull-request-review counts across at most 20 public contribution
-  repository groups.
+  repository groups;
+- one official GitHub contribution calendar containing at most 54 ordered
+  weeks and seven public daily cells per week.
 
 An organization receives the owned and forked repository analysis.
 Individual-only star and contribution segments are `unavailable`, with a typed
@@ -63,6 +65,24 @@ describes interest and never increases a proficiency score.
 The anonymous route does not open a database connection, transaction, query,
 or write. Usernames, upstream payloads, and derived analyses are not persisted.
 Only a bounded, process-local, deep-copied LRU entry is retained for 30 minutes.
+
+## Public contribution calendar
+
+The adapter normalizes GitHub's official `contributionCalendar` into ordered
+week columns. Each day contains an ISO date, Sunday-zero weekday row, public
+contribution count, and one of five intensity levels. It rejects malformed
+dates, negative counts, invalid levels, duplicate or out-of-order dates, cells
+outside the analysis window, more than 54 weeks, or a total that differs from
+the sum of daily cells. This preserves leap days and year boundaries without
+letting React recalculate counts, levels, or cell order.
+
+The profile page renders the complete grid in a horizontally scrollable table,
+with month and weekday labels, a Less/More legend, and focusable day
+descriptions. An unavailable calendar is non-fatal: repository, technology,
+and contribution metrics still render with a
+`contribution_calendar_unavailable` warning. Organization profiles always use
+that unavailable state. No calendar data is persisted and no broader OAuth
+scope is requested.
 
 ## Exact, sampled, and unavailable
 
@@ -156,6 +176,7 @@ the usable public segments plus stable warnings such as:
 
 - `owned_repositories_unavailable`;
 - `contribution_activity_unavailable`;
+- `contribution_calendar_unavailable`;
 - `authored_pull_requests_unavailable`;
 - `organization_activity_unavailable`;
 - `private_starred_repositories_excluded`;
