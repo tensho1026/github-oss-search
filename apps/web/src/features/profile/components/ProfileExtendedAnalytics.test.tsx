@@ -31,6 +31,13 @@ describe("ProfileExtendedAnalytics", () => {
     expect(screen.getAllByRole("link", { name: "View evidence" })).toHaveLength(
       3,
     );
+    expect(
+      screen.getByRole("heading", { name: "Contribution Streak" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Evidence" })).toHaveAttribute(
+      "href",
+      "https://github.com/community/project/pull/42",
+    );
 
     expect(
       screen.getByRole("heading", { name: "Public contribution activity" }),

@@ -169,6 +169,7 @@ export function ProfileExtendedAnalytics({
         <ContributionPortfolioPreview analysis={analysis} />
       ) : null}
       <OSSJourneyTimeline analysis={analysis} />
+      <ContributionStreakCard analysis={analysis} />
       <section aria-labelledby="contribution-activity-heading" className="mt-5">
         <div className="grid gap-5">
           <ContributionCalendar calendar={analysis.contributionCalendar} />
@@ -404,6 +405,67 @@ export function ProfileExtendedAnalytics({
         </Card>
       </section>
     </>
+  );
+}
+
+function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
+  const streak = analysis.contributionStreak;
+  return (
+    <section aria-labelledby="contribution-streak-heading" className="mt-5">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle id="contribution-streak-heading">
+                Contribution Streak
+              </CardTitle>
+            </div>
+            <EvidenceBadge status={streak.status} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid grid-cols-3 gap-3">
+            {[
+              ["Current", streak.currentWeeks],
+              ["Longest", streak.longestWeeks],
+              ["Active weeks", streak.qualifyingWeeks],
+            ].map(([label, value]) => (
+              <div className="rounded-xl bg-muted p-3" key={label}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 text-xl font-semibold">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {streak.status === "unavailable" ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Weekly contribution evidence is unavailable.
+            </p>
+          ) : (
+            <ul className="mt-4 grid gap-2" aria-label="Qualifying weeks">
+              {streak.weeks.map((week) => (
+                <li
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
+                  key={week.startedAt}
+                >
+                  <span className="text-sm">
+                    {formatDate(week.startedAt)} · {week.eventCount} verified
+                    event{week.eventCount === 1 ? "" : "s"}
+                  </span>
+                  <a
+                    className="text-accent hover:underline"
+                    href={week.evidenceUrls[0]}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Evidence
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 

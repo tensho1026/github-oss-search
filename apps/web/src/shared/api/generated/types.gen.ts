@@ -358,6 +358,7 @@ export type ProfileAnalysis = {
   contributions: ContributionAnalysis;
   contributionCalendar: ContributionCalendar;
   contributionPortfolio: ContributionPortfolio;
+  contributionStreak: ContributionStreak;
   ossJourney: OssJourney;
   ossExperience: OssExperience;
   repositoryEvidence: ProfileRepositoryEvidence;
@@ -429,6 +430,24 @@ export type OssJourney = {
    *
    */
   milestones: Array<JourneyMilestone>;
+};
+
+export type StreakWeek = {
+  startedAt: string;
+  endedAt: string;
+  eventCount: number;
+  evidenceUrls: Array<string>;
+};
+
+export type ContributionStreak = {
+  status: EvidenceStatus;
+  analyzedAt: string;
+  timezone: "UTC";
+  weekStartsOn: "monday";
+  currentWeeks: number;
+  longestWeeks: number;
+  qualifyingWeeks: number;
+  weeks: Array<StreakWeek>;
 };
 
 export type EvidenceConfidence = "high" | "medium" | "low" | "unavailable";

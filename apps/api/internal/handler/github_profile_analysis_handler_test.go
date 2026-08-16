@@ -109,6 +109,17 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 						RepositoryName: "community/project",
 					}},
 				},
+				Streak: profile.ContributionStreak{
+					Status: profile.EvidenceSampled, AnalyzedAt: now,
+					Timezone: "UTC", WeekStartsOn: "monday",
+					CurrentWeeks: 1, LongestWeeks: 1, QualifyingWeeks: 1,
+					Weeks: []profile.StreakWeek{{
+						StartedAt:    time.Date(2026, time.July, 27, 0, 0, 0, 0, time.UTC),
+						EndedAt:      time.Date(2026, time.August, 2, 23, 59, 59, 0, time.UTC),
+						EventCount:   1,
+						EvidenceURLs: []string{"https://github.com/community/project/pull/42"},
+					}},
+				},
 				OSSExperience: profile.OSSExperience{
 					Level:      "active",
 					Confidence: profile.ConfidenceHigh,
@@ -215,6 +226,8 @@ func TestGitHubProfileAnalysisHandlerGet(t *testing.T) {
 		`"ossJourney":{"status":"sampled","analyzedAt":"2026-07-30T12:00:00Z"`,
 		`"id":"merged:community/project#42","kind":"merged_pull_request"`,
 		`"evidenceUrl":"https://github.com/community/project/pull/42"`,
+		`"contributionStreak":{"status":"sampled","analyzedAt":"2026-07-30T12:00:00Z","timezone":"UTC","weekStartsOn":"monday","currentWeeks":1,"longestWeeks":1,"qualifyingWeeks":1`,
+		`"eventCount":1,"evidenceUrls":["https://github.com/community/project/pull/42"]`,
 		`"ossExperience":{"level":"active","confidence":"high","publicOnly":true`,
 		`"owned":{"status":"sampled","observed":2,"total":5`,
 		`"starred":{"status":"sampled","observed":1,"total":null`,

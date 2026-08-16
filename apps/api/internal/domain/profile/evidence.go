@@ -180,6 +180,26 @@ type OSSJourney struct {
 	Milestones []JourneyMilestone
 }
 
+// StreakWeek groups canonical merged-PR evidence into one UTC Monday week.
+type StreakWeek struct {
+	StartedAt    time.Time
+	EndedAt      time.Time
+	EventCount   int
+	EvidenceURLs []string
+}
+
+// ContributionStreak summarizes consecutive verified public activity weeks.
+type ContributionStreak struct {
+	Status          EvidenceStatus
+	AnalyzedAt      time.Time
+	Timezone        string
+	WeekStartsOn    string
+	CurrentWeeks    int
+	LongestWeeks    int
+	QualifyingWeeks int
+	Weeks           []StreakWeek
+}
+
 // ContributionSnapshot records public contribution counts before domain
 // normalization.
 type ContributionSnapshot struct {
@@ -310,6 +330,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	contributions := analyzeContributions(snapshot.Contributions)
 	portfolio := analyzePortfolio(snapshot.Portfolio, window.To)
 	journey := analyzeJourney(portfolio)
+	streak := analyzeContributionStreak(portfolio)
 	repositoryEvidence := RepositoryEvidence{
 		Owned:       analyzeRepositoryCollection(snapshot.Owned, window.From),
 		Contributed: analyzeRepositoryCollection(snapshot.Contributed, window.From),
@@ -329,6 +350,7 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		),
 		Portfolio:          portfolio,
 		Journey:            journey,
+		Streak:             streak,
 		OSSExperience:      analyzeOSSExperience(contributions),
 		RepositoryEvidence: repositoryEvidence,
 		Proficiency: buildTechnologyProficiency(
@@ -356,6 +378,79 @@ func cloneContributionCalendar(
 		calendar.Status = EvidenceUnavailable
 	}
 	return calendar
+}
+
+func analyzeContributionStreak(portfolio ContributionPortfolio) ContributionStreak {
+	result := ContributionStreak{
+		Status: portfolio.Status, AnalyzedAt: portfolio.AnalyzedAt,
+		Timezone: "UTC", WeekStartsOn: "monday", Weeks: []StreakWeek{},
+	}
+	if portfolio.Status == EvidenceUnavailable {
+		return result
+	}
+	type weekBucket struct {
+		start time.Time
+		urls  []string
+	}
+	buckets := make(map[string]*weekBucket)
+	for _, contribution := range portfolio.Contributions {
+		start := startOfUTCWeek(contribution.MergedAt)
+		key := start.Format("2006-01-02")
+		bucket, exists := buckets[key]
+		if !exists {
+			bucket = &weekBucket{start: start, urls: []string{}}
+			buckets[key] = bucket
+		}
+		if !slices.Contains(bucket.urls, contribution.URL) {
+			bucket.urls = append(bucket.urls, contribution.URL)
+		}
+	}
+	starts := make([]time.Time, 0, len(buckets))
+	for _, bucket := range buckets {
+		slices.Sort(bucket.urls)
+		starts = append(starts, bucket.start)
+	}
+	slices.SortFunc(starts, func(left, right time.Time) int { return left.Compare(right) })
+	longest := 0
+	run := 0
+	for index, start := range starts {
+		if index == 0 || start.Sub(starts[index-1]) == 7*24*time.Hour {
+			run++
+		} else {
+			run = 1
+		}
+		longest = max(longest, run)
+	}
+	current := 0
+	currentWeek := startOfUTCWeek(portfolio.AnalyzedAt)
+	for index := len(starts) - 1; index >= 0; index-- {
+		expected := currentWeek.AddDate(0, 0, -7*current)
+		if !starts[index].Equal(expected) {
+			break
+		}
+		current++
+	}
+	weeks := make([]StreakWeek, 0, len(starts))
+	for index := len(starts) - 1; index >= 0; index-- {
+		bucket := buckets[starts[index].Format("2006-01-02")]
+		weeks = append(weeks, StreakWeek{
+			StartedAt:  bucket.start,
+			EndedAt:    bucket.start.AddDate(0, 0, 7).Add(-time.Nanosecond),
+			EventCount: len(bucket.urls), EvidenceURLs: slices.Clone(bucket.urls),
+		})
+	}
+	result.CurrentWeeks = current
+	result.LongestWeeks = longest
+	result.QualifyingWeeks = len(starts)
+	result.Weeks = weeks
+	return result
+}
+
+func startOfUTCWeek(value time.Time) time.Time {
+	value = value.UTC()
+	day := time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, time.UTC)
+	daysSinceMonday := (int(day.Weekday()) + 6) % 7
+	return day.AddDate(0, 0, -daysSinceMonday)
 }
 
 func analyzeJourney(portfolio ContributionPortfolio) OSSJourney {
