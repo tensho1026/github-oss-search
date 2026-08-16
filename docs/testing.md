@@ -182,7 +182,7 @@ the same file.
 | Recommendation bytes                                 |   128 KiB/op |
 | Recommendation allocations                           |     1,000/op |
 | Largest JavaScript asset                             |  75 KiB gzip |
-| All JavaScript and CSS                               | 205 KiB gzip |
+| All JavaScript and CSS                               | 207 KiB gzip |
 
 Production-oriented orchestration tests additionally prove a 50-candidate
 window, exactly 20 unique detail leaders, no more than five active detail
