@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router";
 
 import { appConfig, appRoutes } from "../../shared/config/app-config";
+import { useI18n } from "../../shared/i18n/i18n-context";
 import { AccountControl } from "../../features/auth/components/AccountControl";
 import { AuthFeedback } from "../../features/auth/components/AuthFeedback";
 import { Button } from "../ui/button";
@@ -15,6 +16,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { Icon } from "../ui/icon";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 type Theme = "dark" | "light";
@@ -27,9 +29,11 @@ function preferredTheme(): Theme {
 }
 
 function Brand() {
+  const { t } = useI18n();
+
   return (
     <Link
-      aria-label={`${appConfig.productName} home`}
+      aria-label={t("brand.home", { productName: appConfig.productName })}
       className="inline-flex items-center gap-3 rounded-lg font-semibold tracking-[-0.02em] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
       to={appRoutes.home}
     >
@@ -40,7 +44,7 @@ function Brand() {
         <span className="absolute -top-3 -right-2 size-7 rounded-full bg-accent/20" />
         IS
       </span>
-      <span>{appConfig.productName}</span>
+      <span className="hidden min-[400px]:inline">{appConfig.productName}</span>
     </Link>
   );
 }
@@ -52,12 +56,14 @@ function ThemeToggle({
   onChange: () => void;
   theme: Theme;
 }) {
+  const { t } = useI18n();
   const nextTheme = theme === "dark" ? "light" : "dark";
+  const label = t(nextTheme === "light" ? "theme.useLight" : "theme.useDark");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          aria-label={`Use ${nextTheme} theme`}
+          aria-label={label}
           onClick={onChange}
           size="icon"
           variant="ghost"
@@ -65,40 +71,43 @@ function ThemeToggle({
           <Icon icon={theme === "dark" ? Sun : MoonStar} />
         </Button>
       </TooltipTrigger>
-      <TooltipContent>Use {nextTheme} theme</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }
 
 function NavigationLinks() {
+  const { t } = useI18n();
+
   return (
     <>
       <Link
         className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         to="/#how-it-works"
       >
-        How it works
+        {t("nav.howItWorks")}
       </Link>
       <Link
         className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         to={appRoutes.search}
       >
-        Find issues
+        {t("nav.findIssues")}
       </Link>
       <Link
         className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         to={appRoutes.repositories}
       >
-        Discover repositories
+        {t("nav.discoverRepositories")}
       </Link>
       <Button asChild size="small" variant="outline">
-        <Link to="/#analyze">Analyze a profile</Link>
+        <Link to="/#analyze">{t("nav.analyzeProfile")}</Link>
       </Button>
     </>
   );
 }
 
 export function AppShell() {
+  const { t } = useI18n();
   const [theme, setTheme] = useState<Theme>(preferredTheme);
 
   useEffect(() => {
@@ -111,16 +120,17 @@ export function AppShell() {
         className="fixed top-3 left-3 z-[100] -translate-y-20 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background transition-transform focus:translate-y-0"
         href="#main-content"
       >
-        Skip to content
+        {t("a11y.skipToContent")}
       </a>
       <header className="sticky top-0 z-40 border-b border-border/75 bg-background/78 backdrop-blur-xl">
         <div className="mx-auto flex h-18 w-full max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Brand />
           <nav
-            aria-label="Primary navigation"
+            aria-label={t("nav.primary")}
             className="hidden items-center gap-1 sm:flex"
           >
             <NavigationLinks />
+            <LanguageSwitcher />
             <ThemeToggle
               onChange={() =>
                 setTheme((current) => (current === "dark" ? "light" : "dark"))
@@ -130,6 +140,7 @@ export function AppShell() {
             <AccountControl />
           </nav>
           <div className="flex items-center gap-1 sm:hidden">
+            <LanguageSwitcher compact />
             <AccountControl />
             <ThemeToggle
               onChange={() =>
@@ -139,23 +150,19 @@ export function AppShell() {
             />
             <Dialog>
               <DialogTrigger asChild>
-                <Button
-                  aria-label="Open navigation"
-                  size="icon"
-                  variant="ghost"
-                >
+                <Button aria-label={t("nav.open")} size="icon" variant="ghost">
                   <Icon icon={Menu} />
                 </Button>
               </DialogTrigger>
               <DialogContent className="top-4 right-4 left-auto w-[min(88vw,22rem)] translate-x-0 translate-y-0">
                 <DialogHeader>
-                  <DialogTitle>Navigate IssueScout</DialogTitle>
+                  <DialogTitle>{t("nav.dialogTitle")}</DialogTitle>
                   <DialogDescription>
-                    Analyze a public GitHub profile without creating an account.
+                    {t("nav.dialogDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <nav
-                  aria-label="Mobile navigation"
+                  aria-label={t("nav.mobile")}
                   className="grid items-stretch gap-2"
                 >
                   <NavigationLinks />
@@ -171,8 +178,8 @@ export function AppShell() {
       </main>
       <footer className="border-t border-border/75">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-          <p>Public GitHub data, explained—not guessed.</p>
-          <p>No account or database required for profile analysis.</p>
+          <p>{t("footer.evidence")}</p>
+          <p>{t("footer.anonymous")}</p>
         </div>
       </footer>
     </div>

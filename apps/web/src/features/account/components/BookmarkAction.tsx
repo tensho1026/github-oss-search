@@ -12,11 +12,13 @@ import {
 import { ApiError } from "../../../shared/api/client";
 import type { BookmarkWriteRequest } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { useAuth } from "../../auth/auth-context";
 import { upsertBookmark } from "../api/account";
 import { AccountRequestAlert } from "./AccountRequestAlert";
 
 export function BookmarkAction({ request }: { request: BookmarkWriteRequest }) {
+  const { t } = useI18n();
   const { markSessionExpired, session, signIn } = useAuth();
   const queryClient = useQueryClient();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -62,24 +64,22 @@ export function BookmarkAction({ request }: { request: BookmarkWriteRequest }) {
         variant="outline"
       >
         {mutation.isPending
-          ? "Saving…"
+          ? t("bookmark.saving")
           : savedTarget === targetKey
-            ? "Bookmarked"
-            : "Bookmark"}
+            ? t("bookmark.saved")
+            : t("bookmark.save")}
       </Button>
       <Dialog onOpenChange={setPromptOpen} open={promptOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save this reference to your workspace</DialogTitle>
+            <DialogTitle>{t("bookmark.dialogTitle")}</DialogTitle>
             <DialogDescription>
-              Bookmarks store only the repository and optional issue number.
-              Sign-in is never required to keep exploring, and IssueScout will
-              return to this exact page after authorization.
+              {t("bookmark.dialogDescription")}
             </DialogDescription>
           </DialogHeader>
           {session?.configured === false ? (
             <p className="text-sm text-muted-foreground">
-              Sign-in is not configured in this environment.
+              {t("workspace.notConfigured")}
             </p>
           ) : (
             <Button
@@ -87,7 +87,7 @@ export function BookmarkAction({ request }: { request: BookmarkWriteRequest }) {
                 signIn();
               }}
             >
-              Sign in with GitHub
+              {t("workspace.signInGitHub")}
             </Button>
           )}
         </DialogContent>

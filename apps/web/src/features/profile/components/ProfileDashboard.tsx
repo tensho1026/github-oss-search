@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { appRoutes, externalLinks } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import {
   formatCompactNumber,
   formatDate,
@@ -64,10 +65,11 @@ type ProfileDashboardProps = {
 };
 
 function Metric({ label, value }: { label: string; value: number }) {
+  const { locale } = useI18n();
   return (
     <div className="rounded-xl bg-muted p-3 text-center">
       <p className="text-lg font-semibold tracking-[-0.03em]">
-        {formatCompactNumber(value)}
+        {formatCompactNumber(value, locale)}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
@@ -76,6 +78,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 
 export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
   const { session } = useAuth();
+  const { locale, t } = useI18n();
   const { analysis, analysisMeta, user, userMeta } = snapshot;
   const [languageOrder, setLanguageOrder] = useState<LanguageOrder>("usage");
   const languages = useMemo(
@@ -126,7 +129,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
         to={appRoutes.home}
       >
         <Icon icon={ArrowLeft} />
-        Analyze another profile
+        {t("profile.another")}
       </Link>
 
       <section
@@ -137,7 +140,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
           <CardHeader className="border-b border-border bg-muted/50">
             <div className="flex items-start gap-4">
               <img
-                alt={`${user.login} GitHub avatar`}
+                alt={t("profile.avatar", { login: user.login })}
                 className="size-20 rounded-2xl border border-border bg-muted object-cover shadow-sm"
                 height={80}
                 referrerPolicy="no-referrer"
@@ -145,7 +148,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                 width={80}
               />
               <div className="min-w-0 flex-1">
-                <Badge variant="accent">Public profile</Badge>
+                <Badge variant="accent">{t("profile.public")}</Badge>
                 <h1
                   className="mt-3 truncate text-2xl font-semibold tracking-[-0.04em]"
                   id="profile-heading"
@@ -164,13 +167,16 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               </div>
             </div>
             <CardDescription className="mt-3">
-              {user.bio || "No public bio is available for this profile."}
+              {user.bio || t("profile.noBio")}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-3 gap-2 p-4 sm:p-5">
-            <Metric label="Repositories" value={user.publicRepos} />
-            <Metric label="Followers" value={user.followers} />
-            <Metric label="Following" value={user.following} />
+            <Metric
+              label={t("profile.repositories")}
+              value={user.publicRepos}
+            />
+            <Metric label={t("profile.followers")} value={user.followers} />
+            <Metric label={t("profile.following")} value={user.following} />
           </CardContent>
         </Card>
 
@@ -179,25 +185,26 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-xs tracking-[0.16em] text-accent uppercase">
-                  Technology fingerprint
+                  {t("profile.fingerprint")}
                 </p>
                 <CardTitle className="mt-2 text-2xl">
-                  Built from public repository evidence
+                  {t("profile.evidenceTitle")}
                 </CardTitle>
               </div>
               <Badge variant="neutral">
-                {analysis.repositoriesAnalyzed} repositories analyzed
+                {t("profile.analyzed", {
+                  count: analysis.repositoriesAnalyzed,
+                })}
               </Badge>
             </div>
             <CardDescription>
-              Languages and frameworks are normalized from a bounded set of
-              public, non-fork repositories.
+              {t("profile.evidenceDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {technologies.length > 0 ? (
               <ul
-                aria-label="Detected technologies"
+                aria-label={t("profile.detectedTechnologies")}
                 className="flex flex-wrap gap-2"
               >
                 {technologies.map((technology) => (
@@ -211,19 +218,17 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               </ul>
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-muted/50 p-5">
-                <p className="font-semibold">No technology signal yet</p>
+                <p className="font-semibold">{t("profile.noTechnology")}</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  This profile has no eligible public repository language or
-                  framework evidence in the bounded window.
+                  {t("profile.noTechnologyDescription")}
                 </p>
               </div>
             )}
             {rateLimitRemaining !== undefined ? (
               <p className="mt-5 text-xs text-muted-foreground">
-                GitHub API requests remaining:{" "}
-                <strong className="text-foreground">
-                  {formatCompactNumber(rateLimitRemaining)}
-                </strong>
+                {t("profile.rateRemaining", {
+                  count: formatCompactNumber(rateLimitRemaining, locale),
+                })}
               </p>
             ) : null}
           </CardContent>
@@ -231,13 +236,13 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
       </section>
 
       {analysis.warnings.length > 0 ? (
-        <div className="mt-5 grid gap-3" aria-label="Analysis warnings">
+        <div className="mt-5 grid gap-3" aria-label={t("profile.warnings")}>
           {analysis.warnings.map((warning, index) => (
             <Alert
               key={`${warning.code}-${warning.repository ?? index}`}
               variant="warning"
             >
-              <AlertTitle>Some evidence was unavailable</AlertTitle>
+              <AlertTitle>{t("profile.warningTitle")}</AlertTitle>
               <AlertDescription>
                 {warning.message}
                 {warning.repository ? ` (${warning.repository})` : ""}
@@ -251,26 +256,21 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
         <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-mono text-xs tracking-[0.16em] text-accent uppercase">
-              Next step
+              {t("profile.nextStep")}
             </p>
-            <CardTitle className="mt-2">
-              Turn this profile into a bounded issue search
-            </CardTitle>
-            <CardDescription>
-              Detected languages and frameworks are prefilled. Review every
-              filter before GitHub search begins.
-            </CardDescription>
+            <CardTitle className="mt-2">{t("profile.searchTitle")}</CardTitle>
+            <CardDescription>{t("profile.searchDescription")}</CardDescription>
           </div>
           <div className="mt-3 flex flex-wrap gap-3 sm:mt-0">
             <Button asChild className="shrink-0">
               <Link to={issueSearchTarget}>
-                Find matching issues
+                {t("profile.findIssues")}
                 <Icon icon={ArrowUpRight} />
               </Link>
             </Button>
             <Button asChild className="shrink-0" variant="outline">
               <Link to={repositoryDiscoveryTarget}>
-                Discover repositories
+                {t("profile.discoverRepositories")}
                 <Icon icon={ArrowUpRight} />
               </Link>
             </Button>
@@ -286,15 +286,15 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
           <CardHeader className="flex-row items-start justify-between gap-4">
             <div>
               <CardTitle id="languages-heading">
-                Language distribution
+                {t("profile.languageDistribution")}
               </CardTitle>
               <CardDescription>
-                Share of the bounded repository sample.
+                {t("profile.languageDistributionDescription")}
               </CardDescription>
             </div>
             <div>
               <label className="sr-only" htmlFor="language-order">
-                Sort languages
+                {t("profile.sortLanguages")}
               </label>
               <Select
                 onValueChange={(value) =>
@@ -302,12 +302,17 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                 }
                 value={languageOrder}
               >
-                <SelectTrigger aria-label="Sort languages" id="language-order">
+                <SelectTrigger
+                  aria-label={t("profile.sortLanguages")}
+                  id="language-order"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="usage">Most used</SelectItem>
-                  <SelectItem value="alphabetical">A–Z</SelectItem>
+                  <SelectItem value="usage">{t("profile.mostUsed")}</SelectItem>
+                  <SelectItem value="alphabetical">
+                    {t("profile.alphabetical")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -343,8 +348,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               </ul>
             ) : (
               <p className="rounded-xl bg-muted p-5 text-sm leading-6 text-muted-foreground">
-                No primary language percentages were available in the analyzed
-                repository window.
+                {t("profile.noLanguages")}
               </p>
             )}
           </CardContent>
@@ -352,9 +356,9 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Framework evidence</CardTitle>
+            <CardTitle>{t("profile.frameworkEvidence")}</CardTitle>
             <CardDescription>
-              Detected from bounded manifest files, never guessed from trends.
+              {t("profile.frameworkDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -374,8 +378,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               </ul>
             ) : (
               <p className="rounded-xl bg-muted p-5 text-sm leading-6 text-muted-foreground">
-                No supported framework dependency was detected. This is an
-                explicit empty result, not a negative skill judgment.
+                {t("profile.noFramework")}
               </p>
             )}
           </CardContent>
@@ -393,10 +396,11 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
       <section aria-labelledby="repositories-heading" className="mt-5">
         <Card>
           <CardHeader>
-            <CardTitle id="repositories-heading">Repository evidence</CardTitle>
+            <CardTitle id="repositories-heading">
+              {t("profile.repositoryEvidence")}
+            </CardTitle>
             <CardDescription>
-              Featured by public star count for display only. Recommendation
-              scoring remains on the API.
+              {t("profile.repositoryEvidenceDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -415,14 +419,16 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                           <Icon icon={BookOpen} />
                         </span>
                         {repository.isArchived ? (
-                          <Badge variant="warning">Archived</Badge>
+                          <Badge variant="warning">
+                            {t("profile.archived")}
+                          </Badge>
                         ) : null}
                       </div>
                       <p className="mt-4 truncate font-semibold">
                         {repository.name}
                       </p>
                       <p className="mt-2 line-clamp-2 flex-1 text-sm leading-6 text-muted-foreground">
-                        {repository.description || "No public description."}
+                        {repository.description || t("profile.noDescription")}
                       </p>
                       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         {repository.mainLanguage ? (
@@ -430,16 +436,18 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                         ) : null}
                         <span className="inline-flex items-center gap-1">
                           <Icon className="size-3.5" icon={Star} />
-                          {formatCompactNumber(repository.stars)}
+                          {formatCompactNumber(repository.stars, locale)}
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Icon className="size-3.5" icon={GitFork} />
-                          {formatCompactNumber(repository.forks)}
+                          {formatCompactNumber(repository.forks, locale)}
                         </span>
                       </div>
                       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Icon className="size-3.5" icon={Eye} />
-                        Updated {formatDate(repository.updatedAt)}
+                        {t("profile.updated", {
+                          date: formatDate(repository.updatedAt, locale),
+                        })}
                       </p>
                     </a>
                   </li>
@@ -452,11 +460,10 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                   icon={Users}
                 />
                 <p className="mt-3 font-semibold">
-                  No eligible public repositories
+                  {t("profile.noRepositories")}
                 </p>
                 <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                  The account exists, but the bounded profile window contains no
-                  public, non-fork repositories to analyze.
+                  {t("profile.noRepositoriesDescription")}
                 </p>
               </div>
             )}
@@ -466,11 +473,8 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
 
       <Card className="mt-5 border-accent/20">
         <CardHeader>
-          <CardTitle>Analyze a different public profile</CardTitle>
-          <CardDescription>
-            Server state stays in the query cache; this form controls only the
-            next route.
-          </CardDescription>
+          <CardTitle>{t("profile.different")}</CardTitle>
+          <CardDescription>{t("profile.differentDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ProfileSearchForm compact />

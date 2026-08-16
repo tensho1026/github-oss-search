@@ -23,10 +23,10 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { Slider } from "../../../components/ui/slider";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import {
   createDefaultRepositoryFilters,
   normalizeRepositoryFilters,
-  repositoryFilterDescriptions,
   repositoryFilterOptions,
   validateRepositoryFilters,
   type RepositoryFilterErrors,
@@ -83,6 +83,7 @@ export function RepositoryDiscoveryForm({
   locationErrors,
   onSubmit,
 }: RepositoryDiscoveryFormProps) {
+  const { locale, t } = useI18n();
   const {
     control,
     formState: { errors },
@@ -105,10 +106,16 @@ export function RepositoryDiscoveryForm({
   const readiness =
     useWatch({ control, name: "minimumReadiness" }) ??
     defaultValues.minimumReadiness;
-  const difficultyLabel =
-    repositoryFilterOptions.difficulties.find(
-      (option) => option.value === difficulty,
-    )?.label ?? `Level ${difficulty}`;
+  const difficultyKeys = [
+    "issueForm.difficulty1",
+    "issueForm.difficulty2",
+    "issueForm.difficulty3",
+    "issueForm.difficulty4",
+    "issueForm.difficulty5",
+  ] as const;
+  const difficultyLabel = t(
+    difficultyKeys[difficulty - 1] ?? "issueForm.difficulty3",
+  );
 
   const submit = handleSubmit((values) => {
     const normalized = normalizeRepositoryFilters({ ...values, page: 1 });
@@ -128,7 +135,8 @@ export function RepositoryDiscoveryForm({
   });
 
   function errorFor(field: keyof RepositoryFilters): string | undefined {
-    return messageFor(errors, field) ?? locationErrors?.[field];
+    const error = messageFor(errors, field) ?? locationErrors?.[field];
+    return error && locale === "ja" ? t("repositoryForm.invalidField") : error;
   }
 
   const languagesError = errorFor("languages");
@@ -156,13 +164,17 @@ export function RepositoryDiscoveryForm({
     >
       {locationErrors?.form ? (
         <Alert variant="danger">
-          <AlertDescription>{locationErrors.form}</AlertDescription>
+          <AlertDescription>
+            {locale === "ja"
+              ? t("repositoryForm.invalidUrl")
+              : locationErrors.form}
+          </AlertDescription>
         </Alert>
       ) : null}
 
       <fieldset className="grid gap-5">
         <legend className="mb-1 text-sm font-semibold">
-          Technology and purpose
+          {t("repositoryForm.technologyPurpose")}
         </legend>
         <div className="grid gap-5 xl:grid-cols-2">
           <Controller
@@ -170,10 +182,10 @@ export function RepositoryDiscoveryForm({
             name="languages"
             render={({ field }) => (
               <Field
-                description={repositoryFilterDescriptions.languages}
+                description={t("repositoryForm.languagesDescription")}
                 error={languagesError}
                 htmlFor="repository-languages"
-                label="Languages"
+                label={t("issueForm.languages")}
               >
                 <MultiSelect
                   aria-describedby={fieldDescribedBy(
@@ -185,8 +197,8 @@ export function RepositoryDiscoveryForm({
                   id="repository-languages"
                   onValuesChange={field.onChange}
                   options={repositoryFilterOptions.languages}
-                  placeholder="Any primary language"
-                  searchLabel="Search repository languages"
+                  placeholder={t("repositoryForm.anyLanguage")}
+                  searchLabel={t("repositoryForm.searchLanguages")}
                   values={field.value}
                 />
               </Field>
@@ -197,10 +209,10 @@ export function RepositoryDiscoveryForm({
             name="technologies"
             render={({ field }) => (
               <Field
-                description={repositoryFilterDescriptions.technologies}
+                description={t("repositoryForm.technologiesDescription")}
                 error={technologiesError}
                 htmlFor="repository-technologies"
-                label="Frameworks and technologies"
+                label={t("repositoryForm.technologies")}
               >
                 <MultiSelect
                   aria-describedby={fieldDescribedBy(
@@ -212,8 +224,8 @@ export function RepositoryDiscoveryForm({
                   id="repository-technologies"
                   onValuesChange={field.onChange}
                   options={repositoryFilterOptions.technologies}
-                  placeholder="Any technology"
-                  searchLabel="Search repository technologies"
+                  placeholder={t("repositoryForm.anyTechnology")}
+                  searchLabel={t("repositoryForm.searchTechnologies")}
                   values={field.value}
                 />
               </Field>
@@ -226,10 +238,10 @@ export function RepositoryDiscoveryForm({
             name="licenses"
             render={({ field }) => (
               <Field
-                description={repositoryFilterDescriptions.licenses}
+                description={t("repositoryForm.licensesDescription")}
                 error={licensesError}
                 htmlFor="repository-licenses"
-                label="SPDX licenses"
+                label={t("repositoryForm.licenses")}
               >
                 <MultiSelect
                   aria-describedby={fieldDescribedBy(
@@ -241,8 +253,8 @@ export function RepositoryDiscoveryForm({
                   id="repository-licenses"
                   onValuesChange={field.onChange}
                   options={repositoryFilterOptions.licenses}
-                  placeholder="Any recognized license"
-                  searchLabel="Search SPDX licenses"
+                  placeholder={t("repositoryForm.anyLicense")}
+                  searchLabel={t("repositoryForm.searchLicenses")}
                   values={field.value}
                 />
               </Field>
@@ -253,10 +265,10 @@ export function RepositoryDiscoveryForm({
             name="categories"
             render={({ field }) => (
               <Field
-                description={repositoryFilterDescriptions.categories}
+                description={t("repositoryForm.categoriesDescription")}
                 error={categoriesError}
                 htmlFor="repository-categories"
-                label="OSS categories"
+                label={t("repositoryForm.categories")}
               >
                 <MultiSelect
                   aria-describedby={fieldDescribedBy(
@@ -268,8 +280,8 @@ export function RepositoryDiscoveryForm({
                   id="repository-categories"
                   onValuesChange={field.onChange}
                   options={repositoryFilterOptions.categories}
-                  placeholder="Any category"
-                  searchLabel="Search OSS categories"
+                  placeholder={t("repositoryForm.anyCategory")}
+                  searchLabel={t("repositoryForm.searchCategories")}
                   values={field.value}
                 />
               </Field>
@@ -280,14 +292,14 @@ export function RepositoryDiscoveryForm({
 
       <fieldset className="grid gap-5">
         <legend className="mb-1 text-sm font-semibold">
-          Popularity and activity
+          {t("repositoryForm.popularity")}
         </legend>
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <Field
-            description="Inclusive lower bound."
+            description={t("repositoryForm.inclusiveLowerBound")}
             error={minimumStarsError}
             htmlFor="repository-minimum-stars"
-            label="Minimum stars"
+            label={t("repositoryForm.minimumStars")}
           >
             <Input
               aria-describedby={fieldDescribedBy(
@@ -304,10 +316,10 @@ export function RepositoryDiscoveryForm({
             />
           </Field>
           <Field
-            description="Inclusive lower bound."
+            description={t("repositoryForm.inclusiveLowerBound")}
             error={minimumForksError}
             htmlFor="repository-minimum-forks"
-            label="Minimum forks"
+            label={t("repositoryForm.minimumForks")}
           >
             <Input
               aria-describedby={fieldDescribedBy(
@@ -324,10 +336,10 @@ export function RepositoryDiscoveryForm({
             />
           </Field>
           <Field
-            description="Repositories need at least this many."
+            description={t("repositoryForm.minimumOpenIssuesDescription")}
             error={minimumOpenIssuesError}
             htmlFor="repository-minimum-open-issues"
-            label="Minimum open issues"
+            label={t("repositoryForm.minimumOpenIssues")}
           >
             <Input
               aria-describedby={fieldDescribedBy(
@@ -347,10 +359,10 @@ export function RepositoryDiscoveryForm({
             />
           </Field>
           <Field
-            description="Keeps the issue surface manageable."
+            description={t("repositoryForm.maximumOpenIssuesDescription")}
             error={maximumOpenIssuesError}
             htmlFor="repository-maximum-open-issues"
-            label="Maximum open issues"
+            label={t("repositoryForm.maximumOpenIssues")}
           >
             <Input
               aria-describedby={fieldDescribedBy(
@@ -372,10 +384,10 @@ export function RepositoryDiscoveryForm({
         </div>
         <Field
           className="max-w-sm"
-          description="Maximum age of the latest public push, from 1 to 3650 days."
+          description={t("repositoryForm.recencyDescription")}
           error={recencyError}
           htmlFor="repository-recency"
-          label="Updated within days"
+          label={t("repositoryForm.recency")}
         >
           <Input
             aria-describedby={fieldDescribedBy(
@@ -400,14 +412,16 @@ export function RepositoryDiscoveryForm({
 
       <fieldset className="grid gap-5">
         <legend className="mb-1 text-sm font-semibold">
-          Contribution readiness
+          {t("repositoryForm.readiness")}
         </legend>
         <div className="grid gap-5 xl:grid-cols-2">
           <Field
-            description={`Current maximum: ${difficultyLabel}. The server explains this preliminary repository-level estimate.`}
+            description={t("repositoryForm.currentMaximum", {
+              label: difficultyLabel,
+            })}
             error={difficultyError}
             htmlFor="repository-difficulty"
-            label="Maximum difficulty"
+            label={t("repositoryForm.maximumDifficulty")}
           >
             <Slider
               aria-describedby={fieldDescribedBy(
@@ -429,10 +443,10 @@ export function RepositoryDiscoveryForm({
             />
           </Field>
           <Field
-            description={`Current minimum: ${readiness}/100. The server combines bounded public quality signals.`}
+            description={t("repositoryForm.currentMinimum", { readiness })}
             error={readinessError}
             htmlFor="repository-readiness"
-            label="Minimum readiness"
+            label={t("repositoryForm.minimumReadiness")}
           >
             <Slider
               aria-describedby={fieldDescribedBy(
@@ -441,7 +455,7 @@ export function RepositoryDiscoveryForm({
                 Boolean(readinessError),
               )}
               aria-invalid={Boolean(readinessError)}
-              aria-valuetext={`${readiness} out of 100`}
+              aria-valuetext={t("repositoryForm.readinessValue", { readiness })}
               id="repository-readiness"
               max={100}
               min={0}
@@ -460,10 +474,10 @@ export function RepositoryDiscoveryForm({
             name="hasJapaneseReadme"
             render={({ field }) => (
               <Field
-                description="Japanese detection is heuristic evidence, not guaranteed language classification."
+                description={t("repositoryForm.japaneseReadmeDescription")}
                 error={japaneseReadmeError}
                 htmlFor="repository-japanese-readme"
-                label="Japanese README"
+                label={t("repositoryForm.japaneseReadme")}
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger
@@ -481,7 +495,13 @@ export function RepositoryDiscoveryForm({
                   <SelectContent>
                     {repositoryFilterOptions.japaneseReadmes.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t(
+                          option.value === "any"
+                            ? "repositoryForm.readmeAny"
+                            : option.value === "yes"
+                              ? "repositoryForm.readmeYes"
+                              : "repositoryForm.readmeNo",
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -494,10 +514,10 @@ export function RepositoryDiscoveryForm({
             name="forkPolicy"
             render={({ field }) => (
               <Field
-                description="Choose whether GitHub forks are eligible."
+                description={t("repositoryForm.forkPolicyDescription")}
                 error={forkPolicyError}
                 htmlFor="repository-fork-policy"
-                label="Fork policy"
+                label={t("repositoryForm.forkPolicy")}
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger
@@ -515,7 +535,13 @@ export function RepositoryDiscoveryForm({
                   <SelectContent>
                     {repositoryFilterOptions.forkPolicies.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t(
+                          option.value === "exclude"
+                            ? "repositoryForm.forksExclude"
+                            : option.value === "include"
+                              ? "repositoryForm.forksInclude"
+                              : "repositoryForm.forksOnly",
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -530,9 +556,9 @@ export function RepositoryDiscoveryForm({
           render={({ field }) => (
             <Toggle
               checked={field.value}
-              description="Hide repositories that no longer accept changes."
+              description={t("repositoryForm.excludeArchivedDescription")}
               id="repository-exclude-archived"
-              label="Exclude archived repositories"
+              label={t("repositoryForm.excludeArchived")}
               onChange={field.onChange}
             />
           )}
@@ -545,10 +571,10 @@ export function RepositoryDiscoveryForm({
         render={({ field }) => (
           <Field
             className="max-w-xs"
-            description="The server remains the pagination source of truth."
+            description={t("repositoryForm.pageSizeDescription")}
             error={pageSizeError}
             htmlFor="repository-page-size"
-            label="Results per page"
+            label={t("repositoryForm.pageSize")}
           >
             <Select
               onValueChange={(value) => field.onChange(Number(value))}
@@ -572,7 +598,7 @@ export function RepositoryDiscoveryForm({
                     key={option.value}
                     value={option.value.toString()}
                   >
-                    {option.label}
+                    {t("issueForm.perPage", { count: option.value })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -584,7 +610,9 @@ export function RepositoryDiscoveryForm({
       <div className="flex flex-wrap gap-3 border-t border-border pt-5">
         <Button disabled={disabled} type="submit">
           <Icon icon={Search} />
-          {disabled ? "Searching…" : "Discover repositories"}
+          {disabled
+            ? t("repositoryForm.searching")
+            : t("repositoryForm.submit")}
         </Button>
         <Button
           disabled={disabled}
@@ -593,7 +621,7 @@ export function RepositoryDiscoveryForm({
           variant="ghost"
         >
           <Icon icon={RotateCcw} />
-          Reset filters
+          {t("repositoryForm.reset")}
         </Button>
       </div>
     </form>

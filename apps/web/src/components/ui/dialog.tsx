@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { cn } from "../../shared/lib/cn";
+import { useI18n } from "../../shared/i18n/i18n-context";
 import { Icon } from "./icon";
 
 export function Dialog(
@@ -31,25 +32,29 @@ export function DialogClose(
 export const DialogContent = forwardRef<
   ElementRef<typeof DialogPrimitive.Content>,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ children, className, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
-    <DialogPrimitive.Content
-      className={cn(
-        "fixed top-1/2 left-1/2 z-50 grid max-h-[85vh] w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-      ref={ref}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute top-4 right-4 grid size-10 place-items-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-        <Icon icon={X} />
-        <span className="sr-only">Close dialog</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
+>(({ children, className, ...props }, ref) => {
+  const { t } = useI18n();
+
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[85vh] w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute top-4 right-4 grid size-10 place-items-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <Icon icon={X} />
+          <span className="sr-only">{t("dialog.close")}</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+});
 
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 

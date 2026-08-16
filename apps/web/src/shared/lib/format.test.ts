@@ -35,4 +35,11 @@ describe("display formatters", () => {
   ])("formats the duration %s as %s", (seconds, expected) => {
     expect(formatDuration(seconds)).toBe(expected);
   });
+
+  it("formats durations for Japanese application copy", () => {
+    expect(formatDuration(null, "ja")).toBe("利用不可");
+    expect(formatDuration(120, "ja")).toBe("2分");
+    expect(formatDuration(7200, "ja")).toBe("2時間");
+    expect(formatDuration(172_800, "ja")).toBe("2日");
+  });
 });

@@ -36,74 +36,71 @@ import {
   PopoverTrigger,
 } from "../components/ui/popover";
 import { ProfileSearchForm } from "../features/profile/components/ProfileSearchForm";
-
-const recommendationSignals = [
-  {
-    detail: "Languages, frameworks, and manifest evidence",
-    icon: Braces,
-    label: "Technology fit",
-    score: "30",
-  },
-  {
-    detail: "Description clarity, scope, and verification",
-    icon: FileCheck2,
-    label: "Issue quality",
-    score: "20",
-  },
-  {
-    detail: "Docs, tests, CI, activity, and responsiveness",
-    icon: Activity,
-    label: "Project signals",
-    score: "40",
-  },
-  {
-    detail: "Assignments and conservative claim detection",
-    icon: GitPullRequestArrow,
-    label: "Availability",
-    score: "10",
-  },
-] as const;
-
-const journeySteps = [
-  {
-    description:
-      "We inspect up to 20 public, non-fork repositories—never private data.",
-    icon: Radar,
-    number: "01",
-    title: "Read the public signal",
-  },
-  {
-    description:
-      "Languages and frameworks are normalized from repository and manifest evidence.",
-    icon: Braces,
-    number: "02",
-    title: "Build your technology map",
-  },
-  {
-    description:
-      "Every future recommendation shows its score, evidence, and uncertainty.",
-    icon: Gauge,
-    number: "03",
-    title: "Explain the match",
-  },
-] as const;
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function HomePage() {
+  const { t } = useI18n();
+  const recommendationSignals = [
+    {
+      detail: t("home.signalTechnologyDetail"),
+      icon: Braces,
+      label: t("home.signalTechnology"),
+      score: "30",
+    },
+    {
+      detail: t("home.signalIssueDetail"),
+      icon: FileCheck2,
+      label: t("home.signalIssue"),
+      score: "20",
+    },
+    {
+      detail: t("home.signalProjectDetail"),
+      icon: Activity,
+      label: t("home.signalProject"),
+      score: "40",
+    },
+    {
+      detail: t("home.signalAvailabilityDetail"),
+      icon: GitPullRequestArrow,
+      label: t("home.signalAvailability"),
+      score: "10",
+    },
+  ] as const;
+  const journeySteps = [
+    {
+      description: t("home.stepReadDescription"),
+      icon: Radar,
+      number: "01",
+      title: t("home.stepReadTitle"),
+    },
+    {
+      description: t("home.stepMapDescription"),
+      icon: Braces,
+      number: "02",
+      title: t("home.stepMapTitle"),
+    },
+    {
+      description: t("home.stepExplainDescription"),
+      icon: Gauge,
+      number: "03",
+      title: t("home.stepExplainTitle"),
+    },
+  ] as const;
+
   return (
     <>
       <section className="mx-auto grid w-full max-w-7xl gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.72fr)] lg:items-center lg:gap-18 lg:px-10 lg:py-28">
         <div>
           <Badge variant="accent">
             <Icon icon={Sparkles} />
-            Open source, matched to your real work
+            {t("home.badge")}
           </Badge>
           <h1 className="mt-7 max-w-4xl text-5xl leading-[0.98] font-semibold tracking-[-0.065em] text-balance sm:text-6xl lg:text-[5.25rem]">
-            Your next contribution,{" "}
-            <span className="text-accent">decoded.</span>
+            {t("home.heroPrefix")}{" "}
+            <span className="text-accent">{t("home.heroAccent")}</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
-            Turn a public GitHub profile into an evidence-based technology map,
-            then use it to find issues you can realistically finish.
+            {t("home.heroDescription")}
           </p>
 
           <Card
@@ -115,9 +112,9 @@ export function HomePage() {
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Icon className="size-3.5" icon={LockKeyhole} />
-                  No sign-in
+                  {t("home.noSignIn")}
                 </span>
-                <span>Public data only</span>
+                <span>{t("home.publicOnly")}</span>
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
@@ -125,13 +122,11 @@ export function HomePage() {
                       type="button"
                     >
                       <Icon className="size-3.5" icon={Info} />
-                      What gets analyzed?
+                      {t("home.analysisQuestion")}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="start">
-                    IssueScout reads the same public profile and repository
-                    metadata visible to anyone on GitHub. This anonymous flow
-                    never opens a database connection.
+                    {t("home.analysisAnswer")}
                   </PopoverContent>
                 </Popover>
               </div>
@@ -149,13 +144,15 @@ export function HomePage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-mono text-xs tracking-[0.16em] text-accent uppercase">
-                    Explainable model
+                    {t("home.explainableModel")}
                   </p>
-                  <CardTitle className="mt-2">Recommendation anatomy</CardTitle>
+                  <CardTitle className="mt-2">
+                    {t("home.recommendationAnatomy")}
+                  </CardTitle>
                 </div>
                 <div className="grid size-18 place-items-center rounded-full border-8 border-accent-soft bg-surface font-mono text-xl font-bold text-accent">
                   100
-                  <span className="sr-only">points total</span>
+                  <span className="sr-only">{t("home.pointsTotal")}</span>
                 </div>
               </div>
             </CardHeader>
@@ -192,33 +189,32 @@ export function HomePage() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-mono text-xs tracking-[0.18em] text-accent uppercase">
-                From profile to proof
+                {t("home.proofEyebrow")}
               </p>
               <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-[-0.045em] text-balance sm:text-4xl">
-                A clear path from what you built to what you can build next.
+                {t("home.proofTitle")}
               </h2>
             </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Icon icon={CircleHelp} />
-                  See the evidence model
+                  {t("home.evidenceButton")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Evidence before confidence</DialogTitle>
+                  <DialogTitle>{t("home.evidenceTitle")}</DialogTitle>
                   <DialogDescription>
-                    IssueScout separates facts, bounded samples, and heuristics
-                    so a recommendation never looks more certain than its data.
+                    {t("home.evidenceDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-3">
                   {[
-                    "Repository language is medium-confidence evidence.",
-                    "A matching manifest dependency is high-confidence evidence.",
-                    "Missing or partial data stays explicitly unknown.",
-                    "Every score component has a fixed maximum.",
+                    t("home.evidenceLanguage"),
+                    t("home.evidenceManifest"),
+                    t("home.evidenceUnknown"),
+                    t("home.evidenceMaximum"),
                   ].map((item) => (
                     <div
                       className="flex gap-3 rounded-xl bg-muted p-4 text-sm leading-6"
@@ -259,21 +255,19 @@ export function HomePage() {
         <Card className="grid overflow-hidden border-accent/20 lg:grid-cols-[1fr_auto] lg:items-center">
           <CardHeader className="p-7 sm:p-10">
             <Badge className="w-fit" variant="success">
-              Anonymous by design
+              {t("home.anonymousBadge")}
             </Badge>
             <CardTitle className="mt-3 text-2xl sm:text-3xl">
-              Start with a username. Keep control of the journey.
+              {t("home.controlTitle")}
             </CardTitle>
             <CardDescription className="max-w-2xl text-base">
-              Profile analysis is read-only, public, and database-free. You can
-              retry, change profiles, or leave without leaving account data
-              behind.
+              {t("home.controlDescription")}
             </CardDescription>
           </CardHeader>
           <div className="p-7 pt-0 sm:p-10 sm:pt-0 lg:pt-10">
             <Button asChild size="large">
               <a href="#analyze">
-                Analyze your profile
+                {t("home.analyzeYours")}
                 <Icon icon={ArrowUpRight} />
               </a>
             </Button>

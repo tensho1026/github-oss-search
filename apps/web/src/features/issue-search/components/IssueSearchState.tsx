@@ -15,8 +15,11 @@ import {
 import { Icon } from "../../../components/ui/icon";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { searchErrorPresentation } from "../model/search-presentation";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 
 export function IssueSearchBeforeState() {
+  const { t } = useI18n();
+
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-4 p-8 text-center sm:p-12">
@@ -24,10 +27,11 @@ export function IssueSearchBeforeState() {
           <Icon className="size-6" icon={Search} />
         </span>
         <div>
-          <h2 className="text-xl font-semibold">Shape a realistic search</h2>
+          <h2 className="text-xl font-semibold">
+            {t("issueSearch.beforeTitle")}
+          </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Choose filters, then run a bounded GitHub search. The resulting URL
-            restores the exact conditions and page without storing result data.
+            {t("issueSearch.beforeDescription")}
           </p>
         </div>
       </CardContent>
@@ -36,6 +40,8 @@ export function IssueSearchBeforeState() {
 }
 
 export function IssueSearchInvalidState() {
+  const { t } = useI18n();
+
   return (
     <Card>
       <CardContent className="grid justify-items-center gap-4 p-8 text-center sm:p-12">
@@ -43,10 +49,11 @@ export function IssueSearchInvalidState() {
           <Icon className="size-6" icon={SearchX} />
         </span>
         <div>
-          <h2 className="text-xl font-semibold">Fix the shared search URL</h2>
+          <h2 className="text-xl font-semibold">
+            {t("issueSearch.invalidTitle")}
+          </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            No API request was sent. Correct the highlighted filter values and
-            submit to replace this invalid URL with a validated one.
+            {t("issueSearch.invalidDescription")}
           </p>
         </div>
       </CardContent>
@@ -55,9 +62,11 @@ export function IssueSearchInvalidState() {
 }
 
 export function IssueSearchLoadingState() {
+  const { t } = useI18n();
+
   return (
     <div
-      aria-label="Searching ranked issues"
+      aria-label={t("issueSearch.loading")}
       className="grid gap-5"
       role="status"
     >
@@ -91,6 +100,7 @@ export function IssueSearchErrorState({
   isFetching,
   onRetry,
 }: IssueSearchErrorStateProps) {
+  const { t } = useI18n();
   const presentation = searchErrorPresentation(error);
   return (
     <Card className="overflow-hidden">
@@ -100,7 +110,7 @@ export function IssueSearchErrorState({
         </span>
         <div>
           <p className="font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
-            Issue search
+            {t("issueSearch.errorEyebrow")}
           </p>
           <CardTitle className="mt-3 text-3xl">{presentation.title}</CardTitle>
           <p className="mt-4 max-w-xl leading-7 text-muted-foreground">
@@ -109,10 +119,11 @@ export function IssueSearchErrorState({
         </div>
         {presentation.requestId ? (
           <Alert variant={presentation.tone}>
-            <AlertTitle>Reference for support</AlertTitle>
+            <AlertTitle>{t("issueSearch.supportReference")}</AlertTitle>
             <AlertDescription>
-              Request ID:{" "}
-              <code className="font-mono">{presentation.requestId}</code>
+              {t("issueSearch.requestId", {
+                requestId: presentation.requestId,
+              })}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -123,7 +134,7 @@ export function IssueSearchErrorState({
                 className={isFetching ? "animate-spin" : undefined}
                 icon={RefreshCw}
               />
-              {isFetching ? "Retrying…" : "Retry search"}
+              {isFetching ? t("issueSearch.retrying") : t("issueSearch.retry")}
             </Button>
           </div>
         ) : null}

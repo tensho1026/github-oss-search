@@ -11,6 +11,7 @@ import {
 } from "../../../components/ui/dialog";
 import { ApiError } from "../../../shared/api/client";
 import type { IssueClaimWriteRequest } from "../../../shared/api/generated";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { queryKeys } from "../../../shared/query/query-keys";
 import { useAuth } from "../../auth/auth-context";
 import { upsertIssueClaim } from "../api/account";
@@ -21,6 +22,7 @@ export function IssueClaimAction({
 }: {
   request: IssueClaimWriteRequest;
 }) {
+  const { t } = useI18n();
   const { markSessionExpired, session, signIn } = useAuth();
   const queryClient = useQueryClient();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -62,26 +64,25 @@ export function IssueClaimAction({
         variant="outline"
       >
         {mutation.isPending
-          ? "Adding…"
+          ? t("claims.adding")
           : saved
-            ? "Added to task board"
-            : "Try this issue"}
+            ? t("claims.added")
+            : t("claims.try")}
       </Button>
       <Dialog onOpenChange={setPromptOpen} open={promptOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add this issue to your task board</DialogTitle>
+            <DialogTitle>{t("claims.dialogTitle")}</DialogTitle>
             <DialogDescription>
-              This is your private IssueScout progress state. It does not assign
-              the GitHub issue, post a comment, or imply maintainer approval.
+              {t("claims.dialogDescription")}
             </DialogDescription>
           </DialogHeader>
           {session?.configured === false ? (
             <p className="text-sm text-muted-foreground">
-              Sign-in is not configured in this environment.
+              {t("claims.notConfigured")}
             </p>
           ) : (
-            <Button onClick={() => signIn()}>Sign in with GitHub</Button>
+            <Button onClick={() => signIn()}>{t("claims.signIn")}</Button>
           )}
         </DialogContent>
       </Dialog>

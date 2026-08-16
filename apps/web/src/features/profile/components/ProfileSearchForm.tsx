@@ -8,6 +8,7 @@ import { fieldDescribedBy } from "../../../components/ui/field-utils";
 import { Icon } from "../../../components/ui/icon";
 import { Input } from "../../../components/ui/input";
 import { appRoutes } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import {
   gitHubUsernameLimits,
   validateGitHubUsername,
@@ -25,14 +26,12 @@ type ProfileSearchFormProps = {
 };
 
 const usernameInputId = "github-username";
-const usernameDescription =
-  "Public profiles only. Enter the login shown in a GitHub profile URL.";
-
 export function ProfileSearchForm({
   className,
   compact = false,
   defaultUsername = "",
 }: ProfileSearchFormProps) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const {
     formState: { errors, isSubmitting },
@@ -52,12 +51,24 @@ export function ProfileSearchForm({
   });
   const usernameRegistration = register("username", {
     maxLength: {
-      message: `GitHub usernames contain at most ${gitHubUsernameLimits.maximumLength} characters.`,
+      message: t("profileForm.tooLong", {
+        maximum: gitHubUsernameLimits.maximumLength,
+      }),
       value: gitHubUsernameLimits.maximumLength,
     },
     validate(value) {
       const validation = validateGitHubUsername(value);
-      return validation.valid ? true : validation.message;
+      if (validation.valid) {
+        return true;
+      }
+      return t(
+        validation.code === "empty"
+          ? "profileForm.required"
+          : validation.code === "too_long"
+            ? "profileForm.tooLong"
+            : "profileForm.invalid",
+        { maximum: gitHubUsernameLimits.maximumLength },
+      );
     },
   });
   const error = errors.username?.message;
@@ -78,10 +89,10 @@ export function ProfileSearchForm({
     >
       <Field
         className={compact ? "gap-2" : undefined}
-        description={compact ? undefined : usernameDescription}
+        description={compact ? undefined : t("profileForm.description")}
         error={error}
         htmlFor={usernameInputId}
-        label="GitHub username"
+        label={t("profileForm.username")}
       >
         <div className="relative">
           <span
@@ -115,7 +126,7 @@ export function ProfileSearchForm({
         size={compact ? "default" : "large"}
         type="submit"
       >
-        Analyze profile
+        {t("profileForm.submit")}
         <Icon icon={ArrowRight} />
       </Button>
     </form>

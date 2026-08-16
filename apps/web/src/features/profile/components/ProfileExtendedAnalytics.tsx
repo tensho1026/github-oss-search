@@ -14,6 +14,7 @@ import type {
   ProfileRepositorySample,
   TechnologyEvidence,
 } from "../../../shared/api/generated";
+import { useI18n, type Locale } from "../../../shared/i18n/i18n-context";
 import { formatCompactNumber, formatDate } from "../../../shared/lib/format";
 import { ContributionCalendar } from "./ContributionCalendar";
 
@@ -22,28 +23,60 @@ type ProfileExtendedAnalyticsProps = {
   showPortfolio?: boolean;
 };
 
-function enumLabel(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
+function enumLabel(value: string, locale: Locale): string {
+  const japaneseLabels: Record<string, string> = {
+    contributed: "コントリビューション",
+    completed: "完了",
+    exact: "正確",
+    forked: "Fork",
+    high: "高",
+    in_progress: "進行中",
+    locked: "未解放",
+    low: "低",
+    medium: "中",
+    merged_pull_request: "マージ済みPR",
+    owned: "所有",
+    repository_first: "初回リポジトリ",
+    sampled: "サンプル",
+    starred: "スター",
+    technology_first: "初回技術",
+    unavailable: "利用不可",
+  };
+  if (locale === "ja" && japaneseLabels[value]) {
+    return japaneseLabels[value];
+  }
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function EvidenceBadge({ status }: { status: EvidenceStatus }) {
+  const { locale } = useI18n();
   const tone =
     status === "exact"
       ? "success"
       : status === "sampled"
         ? "warning"
         : "neutral";
-  return <Badge variant={tone}>{enumLabel(status)}</Badge>;
+  return <Badge variant={tone}>{enumLabel(status, locale)}</Badge>;
 }
 
 function ConfidenceBadge({ confidence }: { confidence: EvidenceConfidence }) {
+  const { locale } = useI18n();
   const tone =
     confidence === "high"
       ? "success"
       : confidence === "medium"
         ? "warning"
         : "neutral";
-  return <Badge variant={tone}>{enumLabel(confidence)} confidence</Badge>;
+  return (
+    <Badge variant={tone}>
+      {locale === "ja"
+        ? `確度${enumLabel(confidence, locale)}`
+        : `${enumLabel(confidence, locale)} confidence`}
+    </Badge>
+  );
 }
 
 function EvidenceMetric({
@@ -53,6 +86,7 @@ function EvidenceMetric({
   count: EvidenceCount;
   label: string;
 }) {
+  const { locale, t } = useI18n();
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-4">
       <div className="flex justify-end">
@@ -60,8 +94,8 @@ function EvidenceMetric({
       </div>
       <p className="mt-4 text-2xl font-semibold tracking-[-0.04em]">
         {count.status === "unavailable"
-          ? "Unavailable"
-          : formatCompactNumber(count.value)}
+          ? t("analytics.unavailable")
+          : formatCompactNumber(count.value, locale)}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
@@ -69,10 +103,11 @@ function EvidenceMetric({
 }
 
 function EvidenceList({ evidence }: { evidence: TechnologyEvidence[] }) {
+  const { locale, t } = useI18n();
   if (evidence.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No bounded public evidence was returned.
+        {t("analytics.noEvidence")}
       </p>
     );
   }
@@ -83,9 +118,9 @@ function EvidenceList({ evidence }: { evidence: TechnologyEvidence[] }) {
           className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/55 px-3 py-2 text-sm"
           key={`${item.kind}-${item.status}`}
         >
-          <span>{enumLabel(item.kind)}</span>
+          <span>{enumLabel(item.kind, locale)}</span>
           <span className="flex items-center gap-2">
-            <strong>{formatCompactNumber(item.value)}</strong>
+            <strong>{formatCompactNumber(item.value, locale)}</strong>
             <EvidenceBadge status={item.status} />
           </span>
         </li>
@@ -101,6 +136,7 @@ function RepositorySample({
   label: string;
   sample: ProfileRepositorySample;
 }) {
+  const { locale, t } = useI18n();
   return (
     <li className="rounded-xl border border-border bg-muted/30 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -109,20 +145,24 @@ function RepositorySample({
       </div>
       <p className="mt-4 text-2xl font-semibold">
         {sample.status === "unavailable"
-          ? "Unavailable"
-          : formatCompactNumber(sample.observed)}
+          ? t("analytics.unavailable")
+          : formatCompactNumber(sample.observed, locale)}
       </p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
         {sample.status === "unavailable"
-          ? "GitHub did not provide this public segment."
+          ? t("analytics.segmentUnavailable")
           : sample.total === null
-            ? `Observed in a bounded window of up to ${sample.limit}.`
-            : `${formatCompactNumber(sample.total)} public total · bounded limit ${sample.limit}.`}
+            ? t("analytics.observedWindow", { limit: sample.limit })
+            : t("analytics.totalWindow", {
+                limit: sample.limit,
+                total: formatCompactNumber(sample.total, locale),
+              })}
       </p>
       {sample.status !== "unavailable" ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          {formatCompactNumber(sample.activeInWindow)} active during the
-          analysis window
+          {t("analytics.activeWindow", {
+            count: formatCompactNumber(sample.activeInWindow, locale),
+          })}
         </p>
       ) : null}
       {sample.primaryTechnologies.length > 0 ? (
@@ -144,12 +184,13 @@ export function ProfileExtendedAnalytics({
   analysis,
   showPortfolio = false,
 }: ProfileExtendedAnalyticsProps) {
+  const { locale, t } = useI18n();
   const contributions = analysis.contributions;
   const repositorySamples = [
-    ["Owned", analysis.repositoryEvidence.owned],
-    ["Contributed", analysis.repositoryEvidence.contributed],
-    ["Starred", analysis.repositoryEvidence.starred],
-    ["Forked", analysis.repositoryEvidence.forked],
+    [enumLabel("owned", locale), analysis.repositoryEvidence.owned],
+    [enumLabel("contributed", locale), analysis.repositoryEvidence.contributed],
+    [enumLabel("starred", locale), analysis.repositoryEvidence.starred],
+    [enumLabel("forked", locale), analysis.repositoryEvidence.forked],
   ] as const;
 
   return (
@@ -168,39 +209,42 @@ export function ProfileExtendedAnalytics({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle id="contribution-activity-heading">
-                    Public contribution activity
+                    {t("analytics.publicContribution")}
                   </CardTitle>
                   <CardDescription>
-                    Evidence from {formatDate(analysis.analysisWindow.from)} to{" "}
-                    {formatDate(analysis.analysisWindow.to)}. Sampled counts are
-                    observations, never presented as lifetime totals.
+                    {t("analytics.window", {
+                      from: formatDate(analysis.analysisWindow.from, locale),
+                      to: formatDate(analysis.analysisWindow.to, locale),
+                    })}
                   </CardDescription>
                 </div>
                 <Badge variant="neutral">
-                  {contributions.windowDays}-day window · public only
+                  {t("analytics.daysPublic", {
+                    days: contributions.windowDays,
+                  })}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <EvidenceMetric
                 count={contributions.commits}
-                label="Observed commits"
+                label={t("analytics.commits")}
               />
               <EvidenceMetric
                 count={contributions.pullRequestsOpened}
-                label="Pull requests opened"
+                label={t("analytics.prs")}
               />
               <EvidenceMetric
                 count={contributions.pullRequestReviews}
-                label="Observed PR reviews"
+                label={t("analytics.reviews")}
               />
               <EvidenceMetric
                 count={contributions.issuesOpened}
-                label="Issues opened"
+                label={t("analytics.issues")}
               />
               <EvidenceMetric
                 count={contributions.repositoriesTouched}
-                label="Repositories touched"
+                label={t("analytics.repositories")}
               />
             </CardContent>
           </Card>
@@ -208,15 +252,14 @@ export function ProfileExtendedAnalytics({
       </section>
 
       <section
-        aria-label="OSS experience and recent technologies"
+        aria-label={t("analytics.experienceRecent")}
         className="mt-5 grid gap-5 xl:grid-cols-[0.78fr_1.22fr]"
       >
         <Card>
           <CardHeader>
-            <CardTitle className="mt-2">OSS experience signal</CardTitle>
+            <CardTitle className="mt-2">{t("analytics.experience")}</CardTitle>
             <CardDescription>
-              Rule-based server summary of public contribution evidence, not a
-              certification.
+              {t("analytics.experienceDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -228,7 +271,7 @@ export function ProfileExtendedAnalytics({
                     : "accent"
                 }
               >
-                {enumLabel(analysis.ossExperience.level)}
+                {enumLabel(analysis.ossExperience.level, locale)}
               </Badge>
               <ConfidenceBadge confidence={analysis.ossExperience.confidence} />
             </div>
@@ -240,10 +283,9 @@ export function ProfileExtendedAnalytics({
 
         <Card>
           <CardHeader>
-            <CardTitle>Recently observed technologies</CardTitle>
+            <CardTitle>{t("analytics.recent")}</CardTitle>
             <CardDescription>
-              Last use, repository sources, count, and confidence from bounded
-              public repository evidence.
+              {t("analytics.recentDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -258,20 +300,28 @@ export function ProfileExtendedAnalytics({
                       <div>
                         <p className="font-semibold">{technology.name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {enumLabel(technology.kind)} · last used{" "}
-                          {formatDate(technology.lastUsedAt)}
+                          {t("analytics.lastUsed", {
+                            date: formatDate(technology.lastUsedAt, locale),
+                            kind: enumLabel(technology.kind, locale),
+                          })}
                         </p>
                       </div>
                       <ConfidenceBadge confidence={technology.confidence} />
                     </div>
                     <p className="mt-3 text-sm text-muted-foreground">
-                      {formatCompactNumber(technology.repositoryCount)} observed
-                      repositories
+                      {t("analytics.observedRepositories", {
+                        count: formatCompactNumber(
+                          technology.repositoryCount,
+                          locale,
+                        ),
+                      })}
                     </p>
                     <ul className="mt-3 flex flex-wrap gap-2">
                       {technology.repositorySources.map((source) => (
                         <li key={source}>
-                          <Badge variant="neutral">{enumLabel(source)}</Badge>
+                          <Badge variant="neutral">
+                            {enumLabel(source, locale)}
+                          </Badge>
                         </li>
                       ))}
                     </ul>
@@ -280,8 +330,7 @@ export function ProfileExtendedAnalytics({
               </ul>
             ) : (
               <p className="rounded-xl bg-muted p-5 text-sm leading-6 text-muted-foreground">
-                No recently observed technology evidence was available in this
-                public window.
+                {t("analytics.noRecent")}
               </p>
             )}
           </CardContent>
@@ -292,11 +341,10 @@ export function ProfileExtendedAnalytics({
         <Card>
           <CardHeader>
             <CardTitle id="proficiency-heading">
-              Five-level technology diagnostics
+              {t("analytics.diagnostics")}
             </CardTitle>
             <CardDescription>
-              Server-assigned levels render their exact inputs and confidence.
-              They do not claim comprehensive skill measurement.
+              {t("analytics.diagnosticsDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -311,8 +359,8 @@ export function ProfileExtendedAnalytics({
                       <div>
                         <p className="font-semibold">{technology.name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {enumLabel(technology.kind)} ·{" "}
-                          {enumLabel(technology.label)}
+                          {enumLabel(technology.kind, locale)} ·{" "}
+                          {enumLabel(technology.label, locale)}
                         </p>
                       </div>
                       <ConfidenceBadge confidence={technology.confidence} />
@@ -331,8 +379,10 @@ export function ProfileExtendedAnalytics({
                       />
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Level {technology.level}/5 · evidence score{" "}
-                      {technology.score}/100
+                      {t("analytics.levelScore", {
+                        level: technology.level,
+                        score: technology.score,
+                      })}
                     </p>
                     <div className="mt-4">
                       <EvidenceList evidence={technology.evidence} />
@@ -342,8 +392,7 @@ export function ProfileExtendedAnalytics({
               </ul>
             ) : (
               <p className="rounded-xl bg-muted p-5 text-sm leading-6 text-muted-foreground">
-                No five-level diagnostic could be supported by the available
-                public evidence.
+                {t("analytics.noDiagnostics")}
               </p>
             )}
           </CardContent>
@@ -356,11 +405,10 @@ export function ProfileExtendedAnalytics({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <CardTitle id="repository-sources-heading">
-                  Repository source evidence
+                  {t("analytics.sourceEvidence")}
                 </CardTitle>
                 <CardDescription>
-                  Owned, contributed, starred, and forked public observations
-                  remain separate so unavailable data never looks like zero.
+                  {t("analytics.sourceDescription")}
                 </CardDescription>
               </div>
               <Badge
@@ -368,7 +416,9 @@ export function ProfileExtendedAnalytics({
                   analysis.languageStatus === "exact" ? "success" : "warning"
                 }
               >
-                Language evidence · {enumLabel(analysis.languageStatus)}
+                {t("analytics.languageEvidence", {
+                  status: enumLabel(analysis.languageStatus, locale),
+                })}
               </Badge>
             </div>
           </CardHeader>
@@ -379,8 +429,7 @@ export function ProfileExtendedAnalytics({
               ))}
             </ul>
             <p className="mt-4 text-xs text-muted-foreground">
-              Starred totals can be privacy-ambiguous for the API viewer and may
-              intentionally omit a total.
+              {t("analytics.starredNote")}
             </p>
           </CardContent>
         </Card>
@@ -390,32 +439,76 @@ export function ProfileExtendedAnalytics({
 }
 
 function OSSQuestCard({ analysis }: { analysis: ProfileAnalysis }) {
+  const { locale, t } = useI18n();
   const quest = analysis.ossQuest;
   const next = quest.items.find((item) => item.id === quest.nextQuestId);
+  const title = (id: string, fallback: string) => {
+    switch (id) {
+      case "first_issue_comment":
+        return t("analytics.quest.first_issue_comment.title");
+      case "first_pr":
+        return t("analytics.quest.first_pr.title");
+      case "first_review":
+        return t("analytics.quest.first_review.title");
+      case "first_merge":
+        return t("analytics.quest.first_merge.title");
+      case "three_repositories":
+        return t("analytics.quest.three_repositories.title");
+      default:
+        return fallback;
+    }
+  };
+  const nextAction = (id: string, fallback: string) => {
+    switch (id) {
+      case "first_issue_comment":
+        return t("analytics.quest.first_issue_comment.action");
+      case "first_pr":
+        return t("analytics.quest.first_pr.action");
+      case "first_review":
+        return t("analytics.quest.first_review.action");
+      case "first_merge":
+        return t("analytics.quest.first_merge.action");
+      case "three_repositories":
+        return t("analytics.quest.three_repositories.action");
+      default:
+        return fallback;
+    }
+  };
   return (
     <section aria-labelledby="oss-quest-heading" className="mt-5">
       <Card>
         <CardHeader>
-          <CardTitle id="oss-quest-heading">OSS Quest</CardTitle>
+          <CardTitle id="oss-quest-heading">
+            {t("analytics.questTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="grid gap-2">
             {quest.items.map((item) => (
               <li key={item.id}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold">{item.title}</span>
+                  <span className="font-semibold">
+                    {title(item.id, item.title)}
+                  </span>
                   <Badge
                     variant={
                       item.status === "completed" ? "success" : "neutral"
                     }
                   >
-                    {enumLabel(item.status)} {item.current}/{item.target}
+                    {enumLabel(item.status, locale)} {item.current}/
+                    {item.target}
                   </Badge>
                 </div>
               </li>
             ))}
           </ol>
-          {next ? <p className="mt-3">{next.nextAction}</p> : null}
+          {next ? (
+            <p className="mt-3">
+              {t("analytics.questNext", {
+                action: nextAction(next.id, next.nextAction),
+              })}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </section>
@@ -423,6 +516,7 @@ function OSSQuestCard({ analysis }: { analysis: ProfileAnalysis }) {
 }
 
 function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
+  const { locale, t } = useI18n();
   const streak = analysis.contributionStreak;
   return (
     <section aria-labelledby="contribution-streak-heading" className="mt-5">
@@ -431,7 +525,7 @@ function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle id="contribution-streak-heading">
-                Contribution Streak
+                {t("analytics.streakTitle")}
               </CardTitle>
             </div>
             <EvidenceBadge status={streak.status} />
@@ -440,9 +534,9 @@ function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
         <CardContent>
           <dl className="grid grid-cols-3 gap-3">
             {[
-              ["Current", streak.currentWeeks],
-              ["Longest", streak.longestWeeks],
-              ["Active weeks", streak.qualifyingWeeks],
+              [t("analytics.current"), streak.currentWeeks],
+              [t("analytics.longest"), streak.longestWeeks],
+              [t("analytics.activeWeeks"), streak.qualifyingWeeks],
             ].map(([label, value]) => (
               <div className="rounded-xl bg-muted p-3" key={label}>
                 <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -452,18 +546,23 @@ function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
           </dl>
           {streak.status === "unavailable" ? (
             <p className="mt-4 text-sm text-muted-foreground">
-              Weekly contribution evidence is unavailable.
+              {t("analytics.streakUnavailable")}
             </p>
           ) : (
-            <ul className="mt-4 grid gap-2" aria-label="Qualifying weeks">
+            <ul
+              className="mt-4 grid gap-2"
+              aria-label={t("analytics.qualifyingWeeks")}
+            >
               {streak.weeks.map((week) => (
                 <li
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
                   key={week.startedAt}
                 >
                   <span className="text-sm">
-                    {formatDate(week.startedAt)} · {week.eventCount} verified
-                    event{week.eventCount === 1 ? "" : "s"}
+                    {t("analytics.verifiedEvents", {
+                      count: formatCompactNumber(week.eventCount, locale),
+                      date: formatDate(week.startedAt, locale),
+                    })}
                   </span>
                   <a
                     className="text-accent hover:underline"
@@ -471,7 +570,7 @@ function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
                     rel="noreferrer"
                     target="_blank"
                   >
-                    Evidence
+                    {t("analytics.evidence")}
                   </a>
                 </li>
               ))}
@@ -484,17 +583,54 @@ function ContributionStreakCard({ analysis }: { analysis: ProfileAnalysis }) {
 }
 
 function OSSJourneyTimeline({ analysis }: { analysis: ProfileAnalysis }) {
+  const { locale, t } = useI18n();
   const journey = analysis.ossJourney;
+  const milestoneTitle = (milestone: (typeof journey.milestones)[number]) => {
+    if (milestone.kind === "merged_pull_request") {
+      return t("analytics.journeyMergedTitle", {
+        pullRequest: milestone.id.match(/#\d+$/)?.[0] ?? "",
+        repository: milestone.repositoryName,
+      });
+    }
+    if (milestone.kind === "repository_first") {
+      return t("analytics.journeyRepositoryTitle", {
+        repository: milestone.repositoryName,
+      });
+    }
+    if (milestone.kind === "technology_first") {
+      return t("analytics.journeyTechnologyTitle", {
+        technology: milestone.technology ?? "",
+      });
+    }
+    return milestone.title;
+  };
+  const milestoneDescription = (
+    milestone: (typeof journey.milestones)[number],
+  ) => {
+    if (milestone.kind === "merged_pull_request") {
+      return t("analytics.journeyMergedDescription", {
+        title: milestone.description.replace(/^Observed public merge: /, ""),
+      });
+    }
+    if (milestone.kind === "repository_first") {
+      return t("analytics.journeyRepositoryDescription");
+    }
+    if (milestone.kind === "technology_first") {
+      return t("analytics.journeyTechnologyDescription");
+    }
+    return milestone.description;
+  };
   return (
     <section aria-labelledby="oss-journey-heading" className="mt-5">
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <CardTitle id="oss-journey-heading">OSS Journey</CardTitle>
+              <CardTitle id="oss-journey-heading">
+                {t("analytics.journeyTitle")}
+              </CardTitle>
               <CardDescription>
-                A chronological timeline backed by canonical public GitHub
-                evidence. First means earliest in the observed sample.
+                {t("analytics.journeyDescription")}
               </CardDescription>
             </div>
             <EvidenceBadge status={journey.status} />
@@ -503,11 +639,11 @@ function OSSJourneyTimeline({ analysis }: { analysis: ProfileAnalysis }) {
         <CardContent>
           {journey.status === "unavailable" ? (
             <p className="text-sm text-muted-foreground">
-              No verified public journey evidence is available.
+              {t("analytics.journeyUnavailable")}
             </p>
           ) : journey.milestones.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No milestone was observed in this bounded sample.
+              {t("analytics.journeyEmpty")}
             </p>
           ) : (
             <ol className="relative grid gap-4 border-l border-border pl-5">
@@ -522,13 +658,17 @@ function OSSJourneyTimeline({ analysis }: { analysis: ProfileAnalysis }) {
                       className="font-mono text-xs text-muted-foreground"
                       dateTime={milestone.occurredAt}
                     >
-                      {formatDate(milestone.occurredAt)}
+                      {formatDate(milestone.occurredAt, locale)}
                     </time>
-                    <Badge variant="neutral">{enumLabel(milestone.kind)}</Badge>
+                    <Badge variant="neutral">
+                      {enumLabel(milestone.kind, locale)}
+                    </Badge>
                   </div>
-                  <p className="mt-1 font-semibold">{milestone.title}</p>
+                  <p className="mt-1 font-semibold">
+                    {milestoneTitle(milestone)}
+                  </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {milestone.description}
+                    {milestoneDescription(milestone)}
                   </p>
                   <a
                     className="mt-2 inline-flex rounded-md text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
@@ -536,15 +676,16 @@ function OSSJourneyTimeline({ analysis }: { analysis: ProfileAnalysis }) {
                     rel="noreferrer"
                     target="_blank"
                   >
-                    View evidence
+                    {t("analytics.viewEvidence")}
                   </a>
                 </li>
               ))}
             </ol>
           )}
           <p className="mt-4 text-xs text-muted-foreground">
-            Analyzed {formatDate(journey.analyzedAt)}. Ordering uses normalized
-            UTC timestamps and stable milestone IDs.
+            {t("analytics.journeyAnalyzed", {
+              date: formatDate(journey.analyzedAt, locale),
+            })}
           </p>
         </CardContent>
       </Card>
@@ -557,6 +698,7 @@ function ContributionPortfolioPreview({
 }: {
   analysis: ProfileAnalysis;
 }) {
+  const { locale, t } = useI18n();
   const portfolio = analysis.contributionPortfolio;
   return (
     <section aria-labelledby="portfolio-heading" className="mt-5">
@@ -565,11 +707,10 @@ function ContributionPortfolioPreview({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle id="portfolio-heading">
-                Private contribution portfolio preview
+                {t("analytics.portfolioTitle")}
               </CardTitle>
               <CardDescription>
-                Bounded public merged-PR facts for your account. Nothing here is
-                published automatically.
+                {t("analytics.portfolioDescription")}
               </CardDescription>
             </div>
             <EvidenceBadge status={portfolio.status} />
@@ -578,16 +719,16 @@ function ContributionPortfolioPreview({
         <CardContent>
           {portfolio.status === "unavailable" ? (
             <p className="text-sm text-muted-foreground">
-              Public merged pull-request evidence is unavailable.
+              {t("analytics.portfolioUnavailable")}
             </p>
           ) : (
             <>
               <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  ["Merged PRs", portfolio.totalMerged],
-                  ["Displayed", portfolio.displayedMerged],
-                  ["Repositories", portfolio.repositoryCount],
-                  ["Languages", portfolio.languages.length],
+                  [t("analytics.mergedPrs"), portfolio.totalMerged],
+                  [t("analytics.displayed"), portfolio.displayedMerged],
+                  [t("analytics.repositories"), portfolio.repositoryCount],
+                  [t("analytics.languages"), portfolio.languages.length],
                 ].map(([label, value]) => (
                   <div className="rounded-xl bg-muted p-3" key={label}>
                     <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -597,7 +738,7 @@ function ContributionPortfolioPreview({
               </dl>
               <ul
                 className="mt-4 flex flex-wrap gap-2"
-                aria-label="Portfolio languages"
+                aria-label={t("analytics.portfolioLanguages")}
               >
                 {portfolio.languages.map((language) => (
                   <li key={language.name}>
@@ -621,10 +762,15 @@ function ContributionPortfolioPreview({
                         </p>
                         <p className="mt-1 font-semibold">{item.title}</p>
                       </div>
-                      <Badge variant="success">Observed merged</Badge>
+                      <Badge variant="success">
+                        {t("analytics.observedMerged")}
+                      </Badge>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {item.summary}
+                      {t("analytics.portfolioContributionSummary", {
+                        date: formatDate(item.mergedAt, locale),
+                        repository: `${item.repositoryOwner}/${item.repositoryName}`,
+                      })}
                     </p>
                     <a
                       className="mt-3 inline-flex rounded-md text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
@@ -632,15 +778,15 @@ function ContributionPortfolioPreview({
                       rel="noreferrer"
                       target="_blank"
                     >
-                      View canonical PR
+                      {t("analytics.viewCanonicalPr")}
                     </a>
                   </li>
                 ))}
               </ul>
               <p className="mt-4 text-xs text-muted-foreground">
-                Analyzed {formatDate(portfolio.analyzedAt)}. Titles are observed
-                GitHub facts; summaries only restate repository, merge, and
-                title metadata.
+                {t("analytics.portfolioAnalyzed", {
+                  date: formatDate(portfolio.analyzedAt, locale),
+                })}
               </p>
             </>
           )}

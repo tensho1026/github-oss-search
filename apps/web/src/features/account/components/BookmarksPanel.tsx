@@ -7,6 +7,7 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { ApiError } from "../../../shared/api/client";
 import { appRoutes, externalLinks } from "../../../shared/config/app-config";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { deleteBookmark, listBookmarks } from "../api/account";
 import { AccountRequestAlert } from "./AccountRequestAlert";
 
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryFn: ({ signal }) => listBookmarks(signal),
@@ -42,7 +44,7 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
   return (
     <section aria-labelledby="bookmarks-heading" className="grid gap-5">
       <h2 className="sr-only" id="bookmarks-heading">
-        Bookmarks
+        {t("workspace.bookmarks")}
       </h2>
       {remove.error ? <AccountRequestAlert error={remove.error} /> : null}
       {query.error ? <AccountRequestAlert error={query.error} /> : null}
@@ -53,15 +55,15 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
             className="p-6 text-sm text-muted-foreground"
             role="status"
           >
-            Loading bookmarks…
+            {t("bookmarks.loading")}
           </CardContent>
         </Card>
       ) : query.data?.data.items.length === 0 ? (
         <Card>
           <CardContent className="grid justify-items-center gap-3 p-8 text-center">
-            <p className="font-semibold">No bookmarks yet</p>
+            <p className="font-semibold">{t("bookmarks.empty")}</p>
             <p className="max-w-lg text-sm text-muted-foreground">
-              Save an issue or repository while exploring public results.
+              {t("bookmarks.emptyDescription")}
             </p>
           </CardContent>
         </Card>
@@ -99,14 +101,18 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Badge variant="neutral">{bookmark.targetType}</Badge>
                         <Badge variant="warning">
-                          upstream {bookmark.upstreamState}
+                          {t("bookmarks.upstream", {
+                            state: bookmark.upstreamState,
+                          })}
                         </Badge>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {publicPath ? (
                         <Button asChild size="small" variant="outline">
-                          <Link to={publicPath}>Revalidate</Link>
+                          <Link to={publicPath}>
+                            {t("bookmarks.revalidate")}
+                          </Link>
                         </Button>
                       ) : (
                         <Button asChild size="small" variant="outline">
@@ -115,12 +121,12 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
                             rel="noreferrer"
                             target="_blank"
                           >
-                            Open GitHub
+                            {t("bookmarks.openGitHub")}
                           </a>
                         </Button>
                       )}
                       <Button
-                        aria-label={`Delete bookmark ${label}`}
+                        aria-label={t("bookmarks.deleteLabel", { label })}
                         disabled={remove.isPending}
                         onClick={() =>
                           remove.mutate({
@@ -131,7 +137,7 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
                         size="small"
                         variant="danger"
                       >
-                        Delete
+                        {t("bookmarks.delete")}
                       </Button>
                     </div>
                   </CardContent>

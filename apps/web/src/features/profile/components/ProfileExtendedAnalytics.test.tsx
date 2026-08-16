@@ -51,7 +51,7 @@ describe("ProfileExtendedAnalytics", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("img", {
-        name: "2 public contributions on 2026-07-22",
+        name: "2 public contributions on Jul 22, 2026",
       }),
     ).toBeInTheDocument();
     expect(

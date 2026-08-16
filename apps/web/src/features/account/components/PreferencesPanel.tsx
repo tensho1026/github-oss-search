@@ -25,6 +25,7 @@ import type {
   ThemePreference,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { getPreferences, updatePreferences } from "../api/account";
 import { applyPreferences, preferenceOptions } from "../model/preferences";
 import { AccountRequestAlert } from "./AccountRequestAlert";
@@ -50,6 +51,7 @@ function PreferencesForm({
   onSubmit: (request: PreferencesWriteRequest) => void;
   preferences: Preferences;
 }) {
+  const { t } = useI18n();
   const [theme, setTheme] = useState<ThemePreference>(preferences.theme);
   const [reducedMotion, setReducedMotion] = useState<ReducedMotionPreference>(
     preferences.reducedMotion,
@@ -70,7 +72,7 @@ function PreferencesForm({
 
   return (
     <form className="grid gap-5 md:grid-cols-3" onSubmit={submit}>
-      <Field htmlFor="preference-theme" label="Theme">
+      <Field htmlFor="preference-theme" label={t("preferences.theme")}>
         <Select
           onValueChange={(value) => setTheme(value as ThemePreference)}
           value={theme}
@@ -81,13 +83,19 @@ function PreferencesForm({
           <SelectContent>
             {preferenceOptions.theme.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {t(
+                  option.value === "system"
+                    ? "preferences.system"
+                    : option.value === "light"
+                      ? "preferences.light"
+                      : "preferences.dark",
+                )}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </Field>
-      <Field htmlFor="preference-motion" label="Motion">
+      <Field htmlFor="preference-motion" label={t("preferences.motion")}>
         <Select
           onValueChange={(value) =>
             setReducedMotion(value as ReducedMotionPreference)
@@ -100,13 +108,19 @@ function PreferencesForm({
           <SelectContent>
             {preferenceOptions.reducedMotion.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {t(
+                  option.value === "system"
+                    ? "preferences.system"
+                    : option.value === "reduce"
+                      ? "preferences.reduce"
+                      : "preferences.allow",
+                )}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </Field>
-      <Field htmlFor="preference-page-size" label="Results per page">
+      <Field htmlFor="preference-page-size" label={t("preferences.results")}>
         <Select
           onValueChange={(value) =>
             setResultsPerPage(Number(value) as 10 | 20 | 50)
@@ -119,7 +133,7 @@ function PreferencesForm({
           <SelectContent>
             {preferenceOptions.resultsPerPage.map((value) => (
               <SelectItem key={value} value={value.toString()}>
-                {value} results
+                {t("preferences.resultCount", { count: value })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -127,7 +141,7 @@ function PreferencesForm({
       </Field>
       <div className="md:col-span-3">
         <Button disabled={disabled} type="submit">
-          {disabled ? "Saving…" : "Save preferences"}
+          {disabled ? t("preferences.saving") : t("preferences.save")}
         </Button>
       </div>
     </form>
@@ -135,6 +149,7 @@ function PreferencesForm({
 }
 
 export function PreferencesPanel({ csrfToken, onSessionExpired }: Props) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryFn: ({ signal }) => getPreferences(signal),
@@ -165,16 +180,15 @@ export function PreferencesPanel({ csrfToken, onSessionExpired }: Props) {
     <section aria-labelledby="preferences-heading" className="grid gap-5">
       <Card>
         <CardHeader>
-          <CardTitle id="preferences-heading">Display preferences</CardTitle>
-          <CardDescription>
-            Preferences are account-owned and versioned. They never alter
-            anonymous users or require browser storage.
-          </CardDescription>
+          <CardTitle id="preferences-heading">
+            {t("preferences.title")}
+          </CardTitle>
+          <CardDescription>{t("preferences.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {query.isPending ? (
             <p className="text-sm text-muted-foreground" role="status">
-              Loading preferences…
+              {t("preferences.loading")}
             </p>
           ) : (
             <PreferencesForm

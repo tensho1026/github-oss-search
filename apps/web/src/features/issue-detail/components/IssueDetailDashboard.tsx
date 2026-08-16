@@ -24,6 +24,7 @@ import type {
   RatioAggregate,
 } from "../../../shared/api/generated";
 import { externalLinks } from "../../../shared/config/app-config";
+import { useI18n } from "../../../shared/i18n/i18n-context";
 import { cn } from "../../../shared/lib/cn";
 import {
   formatCompactNumber,
@@ -58,13 +59,6 @@ type Sample = Pick<
   CountAggregate,
   "confidence" | "sampleSize" | "truncated" | "windowDays"
 >;
-
-const healthCategoryLabels = {
-  activity: "Activity",
-  community: "Community",
-  beginner_friendly: "Beginner friendly",
-  security: "Security",
-} as const;
 
 function Section({ children, title }: { children: ReactNode; title: string }) {
   return (
@@ -107,11 +101,17 @@ function RepositoryHealthDashboard({
 }: {
   dashboard: IssueDetailEnvelope["data"]["healthDashboard"];
 }) {
+  const { locale, t } = useI18n();
+  const healthCategoryLabels = {
+    activity: t("detail.healthActivity"),
+    beginner_friendly: t("detail.healthBeginner"),
+    community: t("detail.healthCommunity"),
+    security: t("detail.healthSecurity"),
+  } as const;
   return (
-    <Section title="OSS health dashboard">
+    <Section title={t("detail.healthTitle")}>
       <p className="mb-4 text-sm text-muted-foreground">
-        Independent heuristic indicators · version {dashboard.scoreVersion}.
-        Expand a category to inspect its evidence and weights.
+        {t("detail.healthDescription", { version: dashboard.scoreVersion })}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {dashboard.categories.map((category) => (
@@ -121,23 +121,30 @@ function RepositoryHealthDashboard({
           >
             <summary className="cursor-pointer font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {healthCategoryLabels[category.name]}{" "}
-              {category.score === null ? "Unavailable" : category.score}
+              {category.score === null
+                ? t("detail.unavailable")
+                : category.score}
               <Badge className="ml-2" variant="neutral">
-                {category.status} · {category.confidence}
+                {t("detail.healthStatus", {
+                  confidence: category.confidence,
+                  status: category.status,
+                })}
               </Badge>
             </summary>
             <ul className="mt-3 grid gap-2 text-xs">
               {category.components.map((component) => (
                 <li key={component.key}>
                   <span className="font-semibold">
-                    {component.key.replaceAll("_", " ")} · weight{" "}
-                    {component.weight}%
+                    {t("detail.healthWeight", {
+                      component: component.key.replaceAll("_", " "),
+                      weight: component.weight,
+                    })}
                   </span>
                   <span className="text-muted-foreground">
                     {" "}
                     ·{" "}
                     {component.score === null
-                      ? "Unavailable"
+                      ? t("detail.unavailable")
                       : component.score}{" "}
                     · {component.source}
                   </span>
@@ -153,16 +160,20 @@ function RepositoryHealthDashboard({
               </p>
             ))}
             <p className="mt-2 text-xs text-muted-foreground">
-              Analyzed {formatDate(category.analyzedAt)}
+              {t("detail.healthAnalyzed", {
+                date: formatDate(category.analyzedAt, locale),
+              })}
               {category.sourceVersion
-                ? ` · upstream ${category.sourceVersion}`
+                ? ` · ${t("detail.healthUpstream", {
+                    version: category.sourceVersion,
+                  })}`
                 : ""}
             </p>
           </details>
         ))}
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
-        A high Security indicator does not guarantee that a repository is safe.
+        {t("detail.healthSecurityNote")}
       </p>
     </Section>
   );
@@ -179,6 +190,7 @@ function Metric({
   sample: Sample;
   value: string;
 }) {
+  const { locale, t } = useI18n();
   return (
     <div className="rounded-xl border border-border bg-muted/25 p-3">
       <dt className="text-xs font-semibold text-muted-foreground uppercase">
@@ -189,32 +201,45 @@ function Metric({
         <p className="text-xs text-muted-foreground">{detail}</p>
       ) : null}
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        {sample.windowDays}d · {sample.sampleSize} sampled · {sample.confidence}
-        {sample.truncated ? " · bounded" : ""}
+        {t("detail.sampleSummary", {
+          bounded: sample.truncated ? t("detail.bounded") : "",
+          confidence: sample.confidence,
+          count: formatCompactNumber(sample.sampleSize, locale),
+          days: formatCompactNumber(sample.windowDays, locale),
+        })}
       </p>
     </div>
   );
 }
 
-function countValue(metric: CountAggregate) {
+function countValue(
+  metric: CountAggregate,
+  unavailable: string,
+  locale: string,
+) {
   return metric.status === "available" && metric.value !== null
-    ? formatCompactNumber(metric.value)
-    : "Unavailable";
+    ? formatCompactNumber(metric.value, locale)
+    : unavailable;
 }
 
-function durationValue(metric: DurationAggregate) {
+function durationValue(
+  metric: DurationAggregate,
+  unavailable: string,
+  locale: string,
+) {
   return metric.status === "available"
-    ? formatDuration(metric.medianSeconds)
-    : "Unavailable";
+    ? formatDuration(metric.medianSeconds, locale)
+    : unavailable;
 }
 
-function ratioValue(metric: RatioAggregate) {
+function ratioValue(metric: RatioAggregate, unavailable: string) {
   return metric.status === "available" && metric.percentage !== null
     ? formatPercentage(metric.percentage)
-    : "Unavailable";
+    : unavailable;
 }
 
 export function IssueDetailDashboard({ envelope, returnTo }: Props) {
+  const { locale, t } = useI18n();
   const { data, meta } = envelope;
   const titleRef = useRef<HTMLHeadingElement>(null);
   const score = scorePresentation(data.recommendation.score);
@@ -225,46 +250,69 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
     value: string;
   }> = [
     {
-      label: "Contributors",
+      label: t("detail.contributors"),
       sample: data.activity.contributors,
-      value: countValue(data.activity.contributors),
+      value: countValue(
+        data.activity.contributors,
+        t("detail.unavailable"),
+        locale,
+      ),
     },
     {
-      label: "Pull requests opened",
+      label: t("detail.prOpened"),
       sample: data.activity.pullRequestsOpened,
-      value: countValue(data.activity.pullRequestsOpened),
+      value: countValue(
+        data.activity.pullRequestsOpened,
+        t("detail.unavailable"),
+        locale,
+      ),
     },
     {
-      label: "Stale open pull requests",
+      label: t("detail.stalePr"),
       sample: data.activity.staleOpenPullRequests,
-      value: countValue(data.activity.staleOpenPullRequests),
+      value: countValue(
+        data.activity.staleOpenPullRequests,
+        t("detail.unavailable"),
+        locale,
+      ),
     },
     {
-      label: "Unanswered issues",
+      label: t("detail.unansweredIssues"),
       sample: data.activity.unansweredIssues,
-      value: countValue(data.activity.unansweredIssues),
+      value: countValue(
+        data.activity.unansweredIssues,
+        t("detail.unavailable"),
+        locale,
+      ),
     },
     {
-      detail: `${data.activity.pullRequestMerge.numerator ?? "—"} of ${data.activity.pullRequestMerge.denominator ?? "—"} opened`,
-      label: "Pull request merge rate",
+      detail: t("detail.openedSummary", {
+        denominator: data.activity.pullRequestMerge.denominator ?? "—",
+        numerator: data.activity.pullRequestMerge.numerator ?? "—",
+      }),
+      label: t("detail.mergeRate"),
       sample: data.activity.pullRequestMerge,
-      value: ratioValue(data.activity.pullRequestMerge),
+      value: ratioValue(
+        data.activity.pullRequestMerge,
+        t("detail.unavailable"),
+      ),
     },
     ...(
       [
-        ["First issue response", data.activity.issueResponse],
-        ["First pull request review", data.activity.pullRequestReview],
-        ["Pull request merge time", data.activity.pullRequestMergeTime],
+        [t("detail.firstIssueResponse"), data.activity.issueResponse],
+        [t("detail.firstPrReview"), data.activity.pullRequestReview],
+        [t("detail.prMergeTime"), data.activity.pullRequestMergeTime],
       ] as Array<[string, DurationAggregate]>
     ).map(([label, metric]) => ({
-      detail: `90th percentile: ${
-        metric.status === "available"
-          ? formatDuration(metric.percentile90Seconds)
-          : "Unavailable"
-      }`,
+      detail: t("detail.percentile90", {
+        value:
+          metric.status === "available"
+            ? formatDuration(metric.percentile90Seconds, locale)
+            : t("detail.unavailable"),
+      }),
       label,
       sample: metric,
-      value: durationValue(metric),
+      value: durationValue(metric, t("detail.unavailable"), locale),
     })),
   ];
 
@@ -279,16 +327,13 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
         to={returnTo}
       >
         <Icon icon={ArrowLeft} />
-        Back to search results
+        {t("detail.backResults")}
       </Link>
 
       {data.inspection.incomplete ? (
         <Alert className="mt-4" variant="warning">
-          <AlertTitle>Partial GitHub inspection</AlertTitle>
-          <AlertDescription>
-            Optional samples were incomplete. Unknown and unavailable values
-            preserve that uncertainty instead of implying zero.
-          </AlertDescription>
+          <AlertTitle>{t("detail.partialTitle")}</AlertTitle>
+          <AlertDescription>{t("detail.partialDescription")}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -319,11 +364,14 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-muted-foreground">
                 {data.repository.description ||
-                  "No public repository description was provided."}
+                  t("detail.noRepositoryDescription")}
               </p>
             </div>
             <div
-              aria-label={`${data.recommendation.score} out of 100, ${score.label}`}
+              aria-label={t("detail.scoreMeter", {
+                label: score.label,
+                score: data.recommendation.score,
+              })}
               aria-valuemax={100}
               aria-valuemin={0}
               aria-valuenow={data.recommendation.score}
@@ -343,21 +391,25 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="info">
-              {data.repository.mainLanguage || "Language unknown"}
+              {data.repository.mainLanguage || t("detail.languageUnknown")}
             </Badge>
             <Badge variant="neutral">
-              {formatCompactNumber(data.repository.stars)} stars
+              {t("detail.stars", {
+                count: formatCompactNumber(data.repository.stars, locale),
+              })}
             </Badge>
             <Badge variant="neutral">
-              Difficulty {data.analysis.difficulty.level}:{" "}
-              {data.analysis.difficulty.label}
+              {t("detail.difficulty", {
+                label: data.analysis.difficulty.label,
+                level: data.analysis.difficulty.level,
+              })}
             </Badge>
             <Badge variant="neutral">{data.analysis.effort.label}</Badge>
             {data.issue.locked ? (
-              <Badge variant="warning">Conversation locked</Badge>
+              <Badge variant="warning">{t("detail.locked")}</Badge>
             ) : null}
             {data.repository.isArchived ? (
-              <Badge variant="warning">Archived repository</Badge>
+              <Badge variant="warning">{t("detail.archived")}</Badge>
             ) : null}
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
@@ -388,7 +440,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                 rel="noreferrer"
                 target="_blank"
               >
-                Open original GitHub issue
+                {t("detail.openOriginal")}
               </a>
             </Button>
           </div>
@@ -397,7 +449,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
           <Facts
             items={[
               [
-                "Author",
+                t("detail.author"),
                 <a
                   href={externalLinks.gitHubProfile(data.issue.author.login)}
                   key="author"
@@ -408,21 +460,24 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                 </a>,
               ],
               [
-                "Conversation",
-                `${formatCompactNumber(data.issue.comments)} comments`,
+                t("detail.conversation"),
+                t("detail.comments", {
+                  count: formatCompactNumber(data.issue.comments, locale),
+                }),
               ],
               [
-                "Assignees",
+                t("detail.assignees"),
                 data.issue.assignees.length > 0
                   ? data.issue.assignees
                       .map((assignee) => `@${assignee}`)
                       .join(", ")
-                  : "Unassigned",
+                  : t("detail.unassigned"),
               ],
               [
-                "Dates",
-                `${formatDate(data.issue.createdAt)} → ${formatDate(
+                t("detail.dates"),
+                `${formatDate(data.issue.createdAt, locale)} → ${formatDate(
                   data.issue.updatedAt,
+                  locale,
                 )}`,
               ],
             ]}
@@ -436,7 +491,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               ))
             ) : (
               <span className="text-sm text-muted-foreground">
-                No public labels
+                {t("detail.noLabels")}
               </span>
             )}
           </div>
@@ -445,27 +500,27 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.28fr)_minmax(19rem,0.72fr)]">
         <div className="grid min-w-0 gap-6">
-          <Section title="Issue description">
+          <Section title={t("detail.description")}>
             <SafeIssueBody body={data.issue.body} />
           </Section>
 
-          <Section title="What this work involves">
+          <Section title={t("detail.involves")}>
             <Facts
               items={[
                 [
-                  "Category",
+                  t("detail.category"),
                   data.analysis.category.matches.map(categoryLabel).join(", "),
                 ],
                 [
-                  "Difficulty",
+                  t("repositoryForm.maximumDifficulty"),
                   `${data.analysis.difficulty.label} · ${data.analysis.difficulty.confidence}`,
                 ],
                 [
-                  "Effort",
+                  t("detail.effort"),
                   `${data.analysis.effort.label} · ${data.analysis.effort.confidence}`,
                 ],
                 [
-                  "Scope",
+                  t("detail.scope"),
                   `${data.analysis.scope.fileCount.label} · ${data.analysis.scope.confidence}`,
                 ],
               ]}
@@ -481,16 +536,22 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                   signalPresentation(data.analysis.scope.databaseChange).tone
                 }
               >
-                Database:{" "}
-                {signalPresentation(data.analysis.scope.databaseChange).label}
+                {t("detail.database", {
+                  label: signalPresentation(data.analysis.scope.databaseChange)
+                    .label,
+                })}
               </Badge>
               <Badge variant="neutral">
-                Analysis: {data.analysis.confidence} confidence
+                {t("detail.analysisConfidence", {
+                  confidence: data.analysis.confidence,
+                })}
               </Badge>
             </div>
             <EvidenceList items={data.analysis.scope.evidence} />
 
-            <h3 className="mt-6 font-semibold">Required technologies</h3>
+            <h3 className="mt-6 font-semibold">
+              {t("detail.requiredTechnologies")}
+            </h3>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">
               {data.analysis.requiredTechnologies.map((technology) => (
                 <li
@@ -508,7 +569,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
             </ul>
 
             <h3 className="mt-6 font-semibold">
-              Issue quality · {data.analysis.quality.score}/100 ·{" "}
+              {t("detail.quality")} · {data.analysis.quality.score}/100 ·{" "}
               {data.analysis.quality.confidence} confidence
             </h3>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -528,7 +589,9 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                 );
               })}
             </ul>
-            <h3 className="mt-6 font-semibold">Assessment evidence</h3>
+            <h3 className="mt-6 font-semibold">
+              {t("detail.assessmentEvidence")}
+            </h3>
             <EvidenceList
               items={[
                 ...data.analysis.category.evidence,
@@ -538,16 +601,18 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
             />
           </Section>
 
-          <Section title="Why IssueScout recommends it">
+          <Section title={t("detail.why")}>
             <p className="text-xl font-semibold">
-              Contribution match: {data.recommendation.skillMatch.matched}/
-              {data.recommendation.skillMatch.denominator} ·{" "}
+              {t("detail.skillMatch")}: {data.recommendation.skillMatch.matched}
+              /{data.recommendation.skillMatch.denominator} ·{" "}
               {formatPercentage(data.recommendation.skillMatch.percentage)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {data.recommendation.skillMatch.partial} partial ·{" "}
-              {data.recommendation.skillMatch.status} evidence · model{" "}
-              {data.recommendation.skillMatch.version}
+              {t("detail.partialEvidence", {
+                count: data.recommendation.skillMatch.partial,
+                status: data.recommendation.skillMatch.status,
+                version: data.recommendation.skillMatch.version,
+              })}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {data.recommendation.skillMatch.skills.length > 0
@@ -559,7 +624,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                       {skill.technology}: {skill.status}
                     </Badge>
                   ))
-                : "No comparable skill evidence"}
+                : t("detail.noSkillEvidence")}
             </div>
             <ul className="mt-4 list-disc space-y-1 pl-5 text-sm">
               {data.recommendation.reasons.map((reason) => (
@@ -567,7 +632,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               ))}
             </ul>
 
-            <h3 className="mt-6 font-semibold">100-point score breakdown</h3>
+            <h3 className="mt-6 font-semibold">{t("detail.breakdown")}</h3>
             <ul className="mt-3 grid gap-3">
               {data.recommendation.breakdown.map((component) => (
                 <li
@@ -599,16 +664,18 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                   data.recommendation.claim.claimed ? "warning" : "success"
                 }
               >
-                {data.recommendation.claim.claimed
-                  ? "Possibly claimed"
-                  : "No claim detected"}{" "}
-                · {data.recommendation.claim.confidence} confidence
+                {t("detail.claimConfidence", {
+                  confidence: data.recommendation.claim.confidence,
+                  label: data.recommendation.claim.claimed
+                    ? t("detail.claimed")
+                    : t("detail.notClaimed"),
+                })}
               </Badge>
               <EvidenceList items={data.recommendation.claim.evidence} />
             </div>
             <div className="mt-5 rounded-xl border border-border bg-muted/25 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold">Stale Issue Detector</h3>
+                <h3 className="font-semibold">{t("detail.staleTitle")}</h3>
                 <Badge
                   variant={
                     data.recommendation.stale.state === "fresh"
@@ -618,47 +685,59 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                         : "neutral"
                   }
                 >
-                  {data.recommendation.stale.state} ·{" "}
-                  {data.recommendation.stale.confidence}
+                  {t("detail.staleStatus", {
+                    confidence: data.recommendation.stale.confidence,
+                    state: data.recommendation.stale.state,
+                  })}
                 </Badge>
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Policy {data.recommendation.stale.policyVersion} · fresh within{" "}
-                {data.recommendation.stale.freshWithinDays}d · stale after{" "}
-                {data.recommendation.stale.staleAfterDays}d ·{" "}
-                {data.recommendation.stale.sampleSize} sampled
-                {data.recommendation.stale.truncated ? " · bounded" : ""}
+                {t("detail.stalePolicy", {
+                  bounded: data.recommendation.stale.truncated
+                    ? t("detail.bounded")
+                    : "",
+                  count: formatCompactNumber(
+                    data.recommendation.stale.sampleSize,
+                    locale,
+                  ),
+                  freshDays: data.recommendation.stale.freshWithinDays,
+                  staleDays: data.recommendation.stale.staleAfterDays,
+                  version: data.recommendation.stale.policyVersion,
+                })}
               </p>
               <Facts
                 items={[
                   [
-                    "Last meaningful issue activity",
+                    t("detail.lastMeaningfulActivity"),
                     data.recommendation.stale.lastMeaningfulIssueActivityAt
                       ? formatDate(
                           data.recommendation.stale
                             .lastMeaningfulIssueActivityAt,
+                          locale,
                         )
-                      : "Unknown",
+                      : t("detail.unknown"),
                   ],
                   [
-                    "Last maintainer activity",
+                    t("detail.lastMaintainerActivity"),
                     data.recommendation.stale.lastMaintainerActivityAt
                       ? formatDate(
                           data.recommendation.stale.lastMaintainerActivityAt,
+                          locale,
                         )
-                      : "Unknown",
+                      : t("detail.unknown"),
                   ],
                   [
-                    "Last linked pull request",
+                    t("detail.lastLinkedPr"),
                     data.recommendation.stale.lastLinkedPullRequestAt
                       ? formatDate(
                           data.recommendation.stale.lastLinkedPullRequestAt,
+                          locale,
                         )
-                      : "Unknown",
+                      : t("detail.unknown"),
                   ],
                   [
-                    "Analyzed",
-                    formatDate(data.recommendation.stale.analyzedAt),
+                    t("detail.analyzed"),
+                    formatDate(data.recommendation.stale.analyzedAt, locale),
                   ],
                 ]}
               />
@@ -680,39 +759,48 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
         </div>
 
         <aside
-          aria-label="Repository and maintainer signals"
+          aria-label={t("detail.repositorySignals")}
           className="grid gap-6"
         >
           <RepositoryHealthDashboard dashboard={data.healthDashboard} />
-          <Section title="Repository snapshot">
+          <Section title={t("detail.repositorySnapshot")}>
             <Facts
               items={[
-                ["Stars", formatCompactNumber(data.repository.stars)],
-                ["Forks", formatCompactNumber(data.repository.forks)],
                 [
-                  "Open issues",
-                  formatCompactNumber(data.repository.openIssues),
+                  t("repository.stars"),
+                  formatCompactNumber(data.repository.stars, locale),
                 ],
-                ["Default branch", data.repository.defaultBranch],
-                ["Repository ID", data.repository.id],
                 [
-                  "Kind",
+                  t("detail.forks"),
+                  formatCompactNumber(data.repository.forks, locale),
+                ],
+                [
+                  t("detail.openIssues"),
+                  formatCompactNumber(data.repository.openIssues, locale),
+                ],
+                [t("detail.defaultBranch"), data.repository.defaultBranch],
+                [t("detail.repositoryId"), data.repository.id],
+                [
+                  t("detail.kind"),
                   data.repository.isFork
-                    ? "Forked repository"
-                    : "Source repository",
+                    ? t("detail.forkedRepository")
+                    : t("detail.sourceRepository"),
                 ],
-                ["Updated", formatDate(data.repository.updatedAt)],
                 [
-                  "Last pushed",
+                  t("detail.updated"),
+                  formatDate(data.repository.updatedAt, locale),
+                ],
+                [
+                  t("detail.lastPushed"),
                   data.repository.pushedAt
-                    ? formatDate(data.repository.pushedAt)
-                    : "Unknown",
+                    ? formatDate(data.repository.pushedAt, locale)
+                    : t("detail.unknown"),
                 ],
               ]}
             />
           </Section>
 
-          <Section title="Contributor readiness">
+          <Section title={t("detail.contributorReadiness")}>
             <ul className="grid gap-2">
               {data.repositoryHealth.map((signal) => {
                 const state = signalPresentation(signal.state);
@@ -730,20 +818,25 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
             </ul>
           </Section>
 
-          <Section title="Maintainer activity">
+          <Section title={t("detail.maintainerActivity")}>
             <div className="mb-4 rounded-xl border border-border bg-muted/25 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold">Maintainer Response Score</p>
+                  <p className="font-semibold">
+                    {t("detail.maintainerResponseScore")}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Bounded maintainer-only response history
+                    {t("detail.maintainerResponseDescription")}
                   </p>
                 </div>
                 {data.recommendation.maintainerResponse.status ===
                 "available" ? (
                   <div className="text-right">
                     <strong
-                      aria-label={`${data.recommendation.maintainerResponse.level} out of 5, ${data.recommendation.maintainerResponse.label}`}
+                      aria-label={t("recommendation.rating", {
+                        label: data.recommendation.maintainerResponse.label,
+                        level: data.recommendation.maintainerResponse.level,
+                      })}
                       className="block tracking-[0.08em] text-accent"
                     >
                       {formatRating(
@@ -755,39 +848,45 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
                     </span>
                   </div>
                 ) : (
-                  <Badge variant="neutral">Unavailable</Badge>
+                  <Badge variant="neutral">{t("detail.unavailable")}</Badge>
                 )}
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">
-                    Response coverage
+                    {t("detail.responseCoverage")}
                   </dt>
                   <dd className="mt-1 font-medium">
                     {ratioValue(
                       data.recommendation.maintainerResponse.responseCoverage,
+                      t("detail.unavailable"),
                     )}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">
-                    Response sample
+                    {t("detail.responseSample")}
                   </dt>
                   <dd className="mt-1 font-medium">
-                    {data.recommendation.maintainerResponse.sampleSize} ·{" "}
-                    {data.recommendation.maintainerResponse.confidence}
+                    {formatCompactNumber(
+                      data.recommendation.maintainerResponse.sampleSize,
+                      locale,
+                    )}{" "}
+                    · {data.recommendation.maintainerResponse.confidence}
                   </dd>
                 </div>
               </dl>
               <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                Historical samples do not guarantee a future response or merge.
+                {t("detail.maintainerCaveat")}
               </p>
             </div>
             <p className="mb-3 text-sm text-muted-foreground">
-              CI: {data.activity.ci} · Meaningful update:{" "}
-              {data.activity.lastMeaningfulUpdate
-                ? formatDate(data.activity.lastMeaningfulUpdate)
-                : "Unknown"}
+              {t("detail.activitySummary", {
+                ci: data.activity.ci,
+                date: data.activity.lastMeaningfulUpdate
+                  ? formatDate(data.activity.lastMeaningfulUpdate, locale)
+                  : t("detail.unknown"),
+              })}
             </p>
             <dl className="grid gap-2">
               {activityMetrics.map((metric) => (
@@ -798,15 +897,19 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
 
           <Card>
             <CardContent className="grid gap-1 p-5 text-xs text-muted-foreground">
-              <p>Generated {formatDate(meta.timestamp)}</p>
               <p>
-                Request ID: <code>{meta.requestId}</code>
+                {t("detail.generated", {
+                  date: formatDate(meta.timestamp, locale),
+                })}
               </p>
+              <p>{t("detail.requestId", { requestId: meta.requestId })}</p>
               <p>
-                Rate limit remaining:{" "}
-                {meta.rateLimitRemaining === undefined
-                  ? "Unavailable"
-                  : formatCompactNumber(meta.rateLimitRemaining)}
+                {t("detail.rateRemaining", {
+                  count:
+                    meta.rateLimitRemaining === undefined
+                      ? t("detail.unavailable")
+                      : formatCompactNumber(meta.rateLimitRemaining, locale),
+                })}
               </p>
             </CardContent>
           </Card>

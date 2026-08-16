@@ -13,8 +13,10 @@ import {
 import { WorkspaceDashboard } from "../features/account/components/WorkspaceDashboard";
 import { useAuth } from "../features/auth/auth-context";
 import { appRoutes } from "../shared/config/app-config";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function WorkspacePage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { markSessionExpired, query, session, signIn } = useAuth();
 
@@ -27,11 +29,11 @@ export function WorkspacePage() {
   if (query.isFetching && !query.data) {
     return (
       <div
-        aria-label="Checking secure account session"
+        aria-label={t("workspace.checking")}
         className="mx-auto grid min-h-[68vh] w-full max-w-7xl place-content-center gap-3 px-5 text-center"
         role="status"
       >
-        <p className="font-semibold">Checking your secure session…</p>
+        <p className="font-semibold">{t("workspace.checking")}</p>
       </div>
     );
   }
@@ -40,14 +42,11 @@ export function WorkspacePage() {
     return (
       <div className="mx-auto grid min-h-[68vh] w-full max-w-3xl content-center gap-5 px-5 py-12">
         <Alert variant="warning">
-          <AlertTitle>Account services are temporarily unavailable</AlertTitle>
-          <AlertDescription>
-            Session or database status could not be confirmed. Anonymous profile
-            analysis, issue search, and repository discovery remain available.
-          </AlertDescription>
+          <AlertTitle>{t("workspace.errorTitle")}</AlertTitle>
+          <AlertDescription>{t("workspace.errorDescription")}</AlertDescription>
         </Alert>
         <Button asChild variant="outline">
-          <Link to={appRoutes.search}>Continue with public issue search</Link>
+          <Link to={appRoutes.search}>{t("workspace.continuePublic")}</Link>
         </Button>
       </div>
     );
@@ -59,28 +58,26 @@ export function WorkspacePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">
-              Sign in only for saved features
+              {t("workspace.signInTitle")}
             </CardTitle>
             <CardDescription>
-              Bookmarks, saved searches, preferences, exports, and account
-              deletion require a secure GitHub session. Public journeys never
-              do.
+              {t("workspace.signInDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             {session?.configured === false ? (
               <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                Sign-in is not configured in this environment.
+                {t("workspace.notConfigured")}
               </span>
             ) : (
               <Button
                 onClick={() => signIn(`${appRoutes.workspace}?tab=bookmarks`)}
               >
-                Sign in with GitHub
+                {t("workspace.signInGitHub")}
               </Button>
             )}
             <Button asChild variant="outline">
-              <Link to={appRoutes.search}>Use anonymous search</Link>
+              <Link to={appRoutes.search}>{t("workspace.anonymous")}</Link>
             </Button>
           </CardContent>
         </Card>

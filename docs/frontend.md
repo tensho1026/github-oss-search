@@ -31,6 +31,26 @@ The ownership rules are deliberate:
 
 No global client-state store is needed for the anonymous flow.
 
+## Interface localization
+
+The web client ships a typed English and Japanese message catalog. English is
+the default; the language switcher in both desktop and mobile navigation saves
+the selected locale under `issuescout.locale` in local storage and updates the
+document `lang` attribute. If storage is blocked or contains an unsupported
+value, the client safely falls back to English.
+
+Localization applies only to IssueScout-owned interface copy, accessible
+labels, dates, and compact number formatting. GitHub-owned content—including
+usernames, repository names, issue titles and bodies, labels, topics, and
+technology names—is rendered unchanged. Adding a new English message requires
+the Japanese catalog to provide the same typed key, so TypeScript catches
+catalog drift during CI.
+
+The Japanese catalog is emitted as an on-demand `locale-ja` chunk. CI enforces
+the reviewed core bundle limits and a separate 20 KiB gzip ceiling for all
+optional locale chunks, preventing localization from silently inflating the
+default English download or growing without review.
+
 ## API boundary
 
 `packages/contracts/openapi.yaml` is the contract source. The
@@ -173,7 +193,9 @@ Measured gzip sizes on 2026-07-30:
 | Profile plus ranked issue search journey        |     175.35 KiB | 118.32 KiB |
 | Search plus complete issue recommendation       |     179.49 KiB |  68.80 KiB |
 | Extended profile plus repository discovery      |     192.48 KiB |  69.65 KiB |
-| Enforced maximum                                |     200.00 KiB | 140.00 KiB |
+| English core with localization (2026-08-16)     |     216.70 KiB |  76.11 KiB |
+| Optional Japanese locale chunk                  |      12.73 KiB |  12.73 KiB |
+| Enforced core maximum                           |     217.00 KiB |  80.00 KiB |
 
 Run `pnpm run build:web && pnpm run bundle:check` after frontend dependency or
 route changes. The CI budget reads `config/quality-budgets.json`; changing the

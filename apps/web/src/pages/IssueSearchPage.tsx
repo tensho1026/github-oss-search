@@ -29,9 +29,11 @@ import {
   validateSearchFilters,
   type SearchFilters,
 } from "../features/issue-search/model/search-filters";
+import { useI18n } from "../shared/i18n/i18n-context";
 
 export function IssueSearchPage() {
   const { session } = useAuth();
+  const { t } = useI18n();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const serializedSearch = searchParameters.toString();
   const location = useMemo(() => {
@@ -101,17 +103,17 @@ export function IssueSearchPage() {
       <header className="max-w-3xl">
         <Badge variant="accent">
           <Icon icon={Search} />
-          {session?.authenticated
-            ? "Personalized public search"
-            : "Anonymous public search"}
+          {t(
+            session?.authenticated
+              ? "issueSearch.personalizedBadge"
+              : "issueSearch.badge",
+          )}
         </Badge>
         <h1 className="mt-5 text-4xl font-semibold tracking-[-0.055em] text-balance sm:text-5xl">
-          Find an issue you can realistically finish.
+          {t("issueSearch.title")}
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-          Combine your public profile with bounded GitHub filters. IssueScout
-          explains each server-ranked recommendation without opening a database
-          connection.
+          {t("issueSearch.description")}
         </p>
         {location.shouldSearch && location.valid ? (
           <div className="mt-5">
@@ -132,10 +134,9 @@ export function IssueSearchPage() {
             <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
               <Icon className="size-5" icon={SlidersHorizontal} />
             </span>
-            <CardTitle className="mt-2">Search criteria</CardTitle>
+            <CardTitle className="mt-2">{t("issueSearch.criteria")}</CardTitle>
             <CardDescription>
-              Validated values and page state are shareable in the URL. Result
-              payloads never are.
+              {t("issueSearch.criteriaDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 sm:p-6">

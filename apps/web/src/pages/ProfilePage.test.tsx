@@ -38,6 +38,8 @@ function renderProfile(path = "/profiles/octocat") {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.localStorage.clear();
+  document.documentElement.lang = "en";
 });
 
 describe("ProfilePage", () => {
@@ -82,6 +84,49 @@ describe("ProfilePage", () => {
     for (const [, options] of request.mock.calls) {
       expect(options?.signal).toBeInstanceOf(AbortSignal);
     }
+  });
+
+  it("localizes application copy without translating GitHub-owned names", async () => {
+    window.localStorage.setItem("issuescout.locale", "ja");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<typeof fetch>()
+        .mockImplementation((input) =>
+          Promise.resolve(
+            jsonResponse(
+              requestUrl(input).endsWith("/profile-analysis")
+                ? profileAnalysisFixture
+                : gitHubUserFixture,
+            ),
+          ),
+        ),
+    );
+
+    renderProfile();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "公開コントリビューション活動",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "公開コントリビューションカレンダー",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "OSSクエスト" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "コントリビューション連続記録" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "OSSの歩み" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("The Octocat")).toBeInTheDocument();
+    expect(screen.getByText("typed-service")).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute("lang", "ja");
   });
 
   it.each([

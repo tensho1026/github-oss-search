@@ -2,6 +2,7 @@ import { Check, ChevronDown, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { cn } from "../../shared/lib/cn";
+import { useI18n } from "../../shared/i18n/i18n-context";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Icon } from "./icon";
@@ -38,6 +39,7 @@ export function MultiSelect({
   searchLabel,
   values,
 }: MultiSelectProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const allOptions = useMemo(() => {
     const optionValues = new Set(
@@ -100,7 +102,7 @@ export function MultiSelect({
               ? placeholder
               : values.length === 1
                 ? values[0]
-                : `${values.length} selected`}
+                : t("multi.selectedCount", { count: values.length })}
           </span>
           <Icon className="text-muted-foreground" icon={ChevronDown} />
         </button>
@@ -122,13 +124,13 @@ export function MultiSelect({
             autoComplete="off"
             className="min-h-10 pl-10"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter options"
+            placeholder={t("multi.filter")}
             type="search"
             value={query}
           />
         </div>
         <div
-          aria-label={`${searchLabel} options`}
+          aria-label={t("multi.options", { label: searchLabel })}
           className="mt-3 max-h-64 overflow-y-auto overscroll-contain"
           role="group"
         >
@@ -162,13 +164,16 @@ export function MultiSelect({
             })
           ) : (
             <p className="px-2 py-5 text-center text-sm text-muted-foreground">
-              No matching options.
+              {t("multi.noMatches")}
             </p>
           )}
         </div>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">
-            {values.length}/{maximumSelected} selected
+            {t("multi.selectionLimit", {
+              count: values.length,
+              maximum: maximumSelected,
+            })}
           </span>
           {values.length > 0 ? (
             <Button
@@ -177,7 +182,7 @@ export function MultiSelect({
               variant="ghost"
             >
               <Icon icon={X} />
-              Clear
+              {t("multi.clear")}
             </Button>
           ) : null}
         </div>

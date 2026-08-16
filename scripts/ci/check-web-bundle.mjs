@@ -17,9 +17,14 @@ if (assets.length === 0) {
 }
 
 let totalGzipBytes = 0;
+let optionalLocaleGzipBytes = 0;
 let largestJavaScript = { bytes: 0, file: "" };
 for (const asset of assets) {
   const gzipBytes = gzipSync(await readFile(asset)).byteLength;
+  if (path.basename(asset).startsWith("locale-")) {
+    optionalLocaleGzipBytes += gzipBytes;
+    continue;
+  }
   totalGzipBytes += gzipBytes;
   if (asset.endsWith(".js") && gzipBytes > largestJavaScript.bytes) {
     largestJavaScript = { bytes: gzipBytes, file: asset };
@@ -27,8 +32,14 @@ for (const asset of assets) {
 }
 
 const totalGzipKiB = toKiB(totalGzipBytes);
+const optionalLocaleGzipKiB = toKiB(optionalLocaleGzipBytes);
 const largestJavaScriptKiB = toKiB(largestJavaScript.bytes);
 const failures = [];
+if (optionalLocaleGzipKiB > budgets.webBundle.maximumOptionalLocaleGzipKiB) {
+  failures.push(
+    `optional locale gzip size ${optionalLocaleGzipKiB} KiB exceeds ${budgets.webBundle.maximumOptionalLocaleGzipKiB} KiB`,
+  );
+}
 if (totalGzipKiB > budgets.webBundle.maximumTotalGzipKiB) {
   failures.push(
     `total gzip size ${totalGzipKiB} KiB exceeds ${budgets.webBundle.maximumTotalGzipKiB} KiB`,
@@ -41,7 +52,7 @@ if (largestJavaScriptKiB > budgets.webBundle.maximumSingleJavaScriptGzipKiB) {
 }
 
 console.log(
-  `Web bundle: total=${totalGzipKiB} KiB, largest-js=${largestJavaScriptKiB} KiB (${path.basename(largestJavaScript.file)})`,
+  `Web bundle: core=${totalGzipKiB} KiB, optional-locales=${optionalLocaleGzipKiB} KiB, largest-js=${largestJavaScriptKiB} KiB (${path.basename(largestJavaScript.file)})`,
 );
 if (failures.length > 0) {
   for (const failure of failures) {
