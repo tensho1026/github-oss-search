@@ -276,6 +276,7 @@ func completeRecommendationInput(now time.Time) RecommendationInput {
 			},
 			Issue: Summary{
 				Number:    1,
+				CreatedAt: now.AddDate(0, 0, -7),
 				UpdatedAt: now.Add(-time.Hour),
 			},
 		},

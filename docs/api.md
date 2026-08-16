@@ -152,14 +152,16 @@ content, or internal stack traces.
 
 - a required validated `username`;
 - deduplicated languages, frameworks, and labels;
-- star, recency, difficulty, effort, documentation, English, and archived
-  filters;
+- star, recency, difficulty, effort, stale inclusion, documentation, English,
+  and archived filters;
 - only the fields defined in OpenAPI.
 
 Discovery order is stable: build safe GitHub qualifiers, retrieve one bounded
 candidate window, apply eligibility, enrich at most 20 candidates, analyze,
-filter effort, rank, then paginate. Equivalent condition ordering shares a
-five-minute cache. Page and effort do not change the upstream candidate key.
+rank, filter stale and effort, then paginate. Equivalent condition ordering
+shares a five-minute cache. Page, effort, and stale inclusion do not change
+the upstream candidate key. Stale exclusion removes only explicit `stale`
+assessments; `unknown` evidence stays visible.
 
 ## Contract maintenance
 

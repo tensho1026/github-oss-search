@@ -15,6 +15,7 @@ export type SearchFilters = {
   includeDocumentation: boolean;
   includeEnglish: boolean;
   excludeArchived: boolean;
+  includeStale: boolean;
   page: number;
   perPage: number;
 };
@@ -117,6 +118,7 @@ export function createDefaultSearchFilters(username = ""): SearchFilters {
     frameworks: [],
     includeDocumentation: false,
     includeEnglish: true,
+    includeStale: false,
     labels: [...defaultLabels],
     languages: [],
     maximumDifficulty: 3,
@@ -134,6 +136,7 @@ const parameterNames = Object.freeze({
   frameworks: "framework",
   includeDocumentation: "includeDocumentation",
   includeEnglish: "includeEnglish",
+  includeStale: "includeStale",
   labels: "label",
   languages: "language",
   maximumDifficulty: "maximumDifficulty",
@@ -257,6 +260,12 @@ export function decodeSearchParams(
       defaults.includeEnglish,
       locationErrors,
     ),
+    includeStale: readBoolean(
+      parameters,
+      parameterNames.includeStale,
+      defaults.includeStale,
+      locationErrors,
+    ),
     excludeArchived: readBoolean(
       parameters,
       parameterNames.excludeArchived,
@@ -338,6 +347,10 @@ export function encodeSearchParams(
     normalized.includeEnglish.toString(),
   );
   parameters.set(
+    parameterNames.includeStale,
+    normalized.includeStale.toString(),
+  );
+  parameters.set(
     parameterNames.excludeArchived,
     normalized.excludeArchived.toString(),
   );
@@ -358,6 +371,7 @@ export function toIssueSearchRequest(
     frameworks: normalized.frameworks,
     includeDocumentation: normalized.includeDocumentation,
     includeEnglish: normalized.includeEnglish,
+    includeStale: normalized.includeStale,
     labels: normalized.labels,
     languages: normalized.languages,
     maximumDifficulty: normalized.maximumDifficulty,

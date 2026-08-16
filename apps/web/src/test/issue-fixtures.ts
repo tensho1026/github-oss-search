@@ -144,6 +144,29 @@ export const issueSearchFixture: IssueSearchEnvelope = {
               },
             ],
           },
+          stale: {
+            analyzedAt: "2026-07-30T00:00:00Z",
+            confidence: "high",
+            evidence: [
+              {
+                description: "Recent maintainer activity was observed.",
+                ruleId: "stale.maintainer.recent",
+                source: "derived",
+              },
+            ],
+            freshWithinDays: 30,
+            issueCreatedAt: "2026-07-01T00:00:00Z",
+            issueUpdatedAt: "2026-07-29T00:00:00Z",
+            lastLinkedPullRequestAt: null,
+            lastMaintainerActivityAt: "2026-07-29T00:00:00Z",
+            lastMeaningfulIssueActivityAt: "2026-07-29T00:00:00Z",
+            policyVersion: "stale-v1",
+            repositoryActivityAt: "2026-07-29T12:00:00Z",
+            sampleSize: 4,
+            staleAfterDays: 180,
+            state: "fresh",
+            truncated: false,
+          },
           warnings: [
             {
               code: "maintainer_sample_partial",

@@ -57,6 +57,17 @@ func TestIssueDetailHandlerReturnsCompleteNormalizedResponse(t *testing.T) {
 			Claimed:    false,
 			Confidence: issue.ConfidenceHigh,
 		},
+		Stale: issue.StaleAssessment{
+			State:                         issue.StaleFresh,
+			PolicyVersion:                 issue.StalePolicyVersion,
+			Confidence:                    issue.ConfidenceHigh,
+			AnalyzedAt:                    now,
+			FreshWithinDays:               issue.StaleFreshWithinDays,
+			StaleAfterDays:                issue.StaleAfterDays,
+			IssueCreatedAt:                now.Add(-24 * time.Hour),
+			IssueUpdatedAt:                now,
+			LastMeaningfulIssueActivityAt: now,
+		},
 	}
 	stub := &issueDetailRecommenderStub{
 		output: usecase.RecommendIssueOutput{
@@ -141,6 +152,7 @@ func TestIssueDetailHandlerReturnsCompleteNormalizedResponse(t *testing.T) {
 		`"band":"two_hours"`,
 		`"key":"readme","state":"present"`,
 		`"medianSeconds":7200`,
+		`"policyVersion":"stale-v1"`,
 		`"incomplete":false`,
 		`"rateLimitRemaining":37`,
 	} {

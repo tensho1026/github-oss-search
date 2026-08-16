@@ -145,6 +145,19 @@ func (usecase *recommendIssue) output(
 				detail.Comments,
 				detail.CommentsTruncated,
 			),
+			issue.IssueHistory{
+				Comments: append(
+					[]issue.CommentObservation(nil),
+					detail.Comments...,
+				),
+				CommentsTruncated: detail.CommentsTruncated || detail.Incomplete,
+				LinkedPullRequests: append(
+					[]issue.LinkedPullRequestObservation(nil),
+					detail.LinkedPullRequests...,
+				),
+				LinkedPullRequestsTruncated: detail.LinkedPullRequestsTruncated ||
+					detail.Incomplete,
+			},
 			desiredSkills,
 			usecase.now(),
 		),
@@ -175,6 +188,10 @@ func (usecase *recommendIssue) EvaluateCandidate(
 			CI:                   issue.CIStateUnknown,
 		},
 		issue.DetectClaim(nil, true),
+		issue.IssueHistory{
+			CommentsTruncated:           true,
+			LinkedPullRequestsTruncated: true,
+		},
 		desiredSkills,
 		usecase.now(),
 	)
@@ -186,6 +203,7 @@ func evaluateIssueRecommendation(
 	repositorySignals []issue.RepositorySignal,
 	activity issue.ActivityMetrics,
 	claim issue.ClaimEvidence,
+	history issue.IssueHistory,
 	desiredSkills []string,
 	now time.Time,
 ) issue.RankedIssue {
@@ -209,6 +227,7 @@ func evaluateIssueRecommendation(
 		RepositorySignals: repositorySignals,
 		Activity:          activity,
 		Claim:             claim,
+		History:           history,
 		Now:               now,
 	})
 	return issue.RankedIssue{

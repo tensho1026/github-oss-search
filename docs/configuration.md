@@ -123,12 +123,12 @@ surface.
 
 The four implemented caches are in-memory, capacity-bounded TTL/LRU adapters:
 
-| Cache                | Default TTL | Default capacity | Canonical key                                      |
-| -------------------- | ----------: | ---------------: | -------------------------------------------------- |
-| Profile analysis     |  30 minutes |              500 | Validated lowercase username                       |
-| Repository discovery |   5 minutes |             1000 | Normalized repository filters; excludes pagination |
-| Issue search         |   5 minutes |             1000 | Normalized issue filters; excludes page and effort |
-| Issue detail         |   5 minutes |              500 | Validated owner/repository/issue number            |
+| Cache                | Default TTL | Default capacity | Canonical key                                              |
+| -------------------- | ----------: | ---------------: | ---------------------------------------------------------- |
+| Profile analysis     |  30 minutes |              500 | Validated lowercase username                               |
+| Repository discovery |   5 minutes |             1000 | Normalized repository filters; excludes pagination         |
+| Issue search         |   5 minutes |             1000 | Normalized filters; excludes page, effort, stale inclusion |
+| Issue detail         |   5 minutes |              500 | Validated owner/repository/issue number                    |
 
 Equal misses are coalesced. Values are deep-copied at cache boundaries.
 Restarting the API clears all anonymous data. See

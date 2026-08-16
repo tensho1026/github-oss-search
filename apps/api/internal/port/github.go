@@ -101,14 +101,16 @@ type GitHubRepositoryEnrichmentResult struct {
 // inspection. Incomplete indicates that optional GraphQL fields were omitted
 // by GitHub and are represented as unknown rather than absent.
 type GitHubIssueDetailResult struct {
-	Candidate         issue.Candidate
-	Dependencies      []string
-	RepositorySignals []issue.RepositorySignal
-	Activity          issue.ActivityMetrics
-	Comments          []issue.CommentObservation
-	CommentsTruncated bool
-	RateLimit         RateLimit
-	Incomplete        bool
+	Candidate                   issue.Candidate
+	Dependencies                []string
+	RepositorySignals           []issue.RepositorySignal
+	Activity                    issue.ActivityMetrics
+	Comments                    []issue.CommentObservation
+	CommentsTruncated           bool
+	LinkedPullRequests          []issue.LinkedPullRequestObservation
+	LinkedPullRequestsTruncated bool
+	RateLimit                   RateLimit
+	Incomplete                  bool
 }
 
 // GitHubUserReader is the application-facing port for user profile reads.

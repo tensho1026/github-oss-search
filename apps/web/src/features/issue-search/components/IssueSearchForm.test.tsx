@@ -64,6 +64,9 @@ describe("IssueSearchForm", () => {
         name: /Exclude archived repositories/,
       }),
     );
+    await user.click(
+      screen.getByRole("checkbox", { name: /Include stale issues/ }),
+    );
     const pageSize = screen.getByRole("combobox", {
       name: "Results per page",
     });
@@ -79,6 +82,7 @@ describe("IssueSearchForm", () => {
         frameworks: ["React"],
         includeDocumentation: true,
         includeEnglish: false,
+        includeStale: true,
         labels: ["bug"],
         languages: ["Go"],
         maximumDifficulty: 4,

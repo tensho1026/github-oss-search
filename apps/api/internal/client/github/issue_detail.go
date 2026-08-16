@@ -115,6 +115,17 @@ const (
           author { login __typename }
         }
       }
+      closedByPullRequestsReferences(first: 10) {
+        totalCount
+        pageInfo { hasNextPage }
+        nodes {
+          number
+          state
+          isDraft
+          updatedAt
+          mergedAt
+        }
+      }
       author { login __typename }
       labels(first: 100) { nodes { name } }
       assignees(first: 10) { nodes { login } }
@@ -335,6 +346,10 @@ func normalizeGraphQLIssueDetail(
 		CommentsTruncated: repository.Issue.Comments.PageInfo.HasNextPage ||
 			repository.Issue.Comments.TotalCount >
 				len(repository.Issue.Comments.Nodes),
+		LinkedPullRequests: repository.Issue.linkedPullRequestObservations(),
+		LinkedPullRequestsTruncated: repository.Issue.ClosingPullRequests.PageInfo.HasNextPage ||
+			repository.Issue.ClosingPullRequests.TotalCount >
+				len(repository.Issue.ClosingPullRequests.Nodes),
 		RateLimit:  rateLimit,
 		Incomplete: incomplete,
 	}, nil
@@ -555,18 +570,33 @@ type graphQLMaintainerReview struct {
 }
 
 type graphQLDetailIssue struct {
-	Number    int                        `json:"number"`
-	Title     string                     `json:"title"`
-	Body      *string                    `json:"body"`
-	URL       string                     `json:"url"`
-	State     string                     `json:"state"`
-	Locked    bool                       `json:"locked"`
-	CreatedAt time.Time                  `json:"createdAt"`
-	UpdatedAt time.Time                  `json:"updatedAt"`
-	Comments  graphQLDetailCommentWindow `json:"comments"`
-	Author    *graphQLActor              `json:"author"`
-	Labels    graphQLLabelConnection     `json:"labels"`
-	Assignees graphQLAssigneeConnection  `json:"assignees"`
+	Number              int                             `json:"number"`
+	Title               string                          `json:"title"`
+	Body                *string                         `json:"body"`
+	URL                 string                          `json:"url"`
+	State               string                          `json:"state"`
+	Locked              bool                            `json:"locked"`
+	CreatedAt           time.Time                       `json:"createdAt"`
+	UpdatedAt           time.Time                       `json:"updatedAt"`
+	Comments            graphQLDetailCommentWindow      `json:"comments"`
+	ClosingPullRequests graphQLClosingPullRequestWindow `json:"closedByPullRequestsReferences"`
+	Author              *graphQLActor                   `json:"author"`
+	Labels              graphQLLabelConnection          `json:"labels"`
+	Assignees           graphQLAssigneeConnection       `json:"assignees"`
+}
+
+type graphQLClosingPullRequestWindow struct {
+	TotalCount int                         `json:"totalCount"`
+	PageInfo   graphQLPageInfo             `json:"pageInfo"`
+	Nodes      []graphQLClosingPullRequest `json:"nodes"`
+}
+
+type graphQLClosingPullRequest struct {
+	Number    int        `json:"number"`
+	State     string     `json:"state"`
+	IsDraft   bool       `json:"isDraft"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	MergedAt  *time.Time `json:"mergedAt"`
 }
 
 type graphQLDetailCommentWindow struct {
@@ -590,12 +620,24 @@ func (detail graphQLDetailIssue) toDomain() (issue.Summary, error) {
 		detail.UpdatedAt.IsZero() ||
 		detail.Comments.TotalCount < 0 ||
 		detail.Comments.TotalCount < len(detail.Comments.Nodes) ||
+		detail.ClosingPullRequests.TotalCount < len(detail.ClosingPullRequests.Nodes) ||
+		len(detail.ClosingPullRequests.Nodes) > 10 ||
 		len(detail.Labels.Nodes) > 100 ||
 		len(detail.Assignees.Nodes) > 10 {
 		return issue.Summary{}, errors.New("contains invalid issue fields")
 	}
 	if err := validateAbsoluteHTTPURL(detail.URL); err != nil {
 		return issue.Summary{}, fmt.Errorf("issue URL: %w", err)
+	}
+	for _, pullRequest := range detail.ClosingPullRequests.Nodes {
+		if pullRequest.Number < 1 || strings.TrimSpace(pullRequest.State) == "" ||
+			pullRequest.UpdatedAt.IsZero() ||
+			(pullRequest.MergedAt != nil &&
+				pullRequest.MergedAt.After(pullRequest.UpdatedAt)) {
+			return issue.Summary{}, errors.New(
+				"contains invalid closing pull request reference",
+			)
+		}
 	}
 	labels := make([]string, 0, len(detail.Labels.Nodes))
 	for _, label := range detail.Labels.Nodes {
@@ -635,6 +677,28 @@ func (detail graphQLDetailIssue) toDomain() (issue.Summary, error) {
 		CreatedAt:   detail.CreatedAt.UTC(),
 		UpdatedAt:   detail.UpdatedAt.UTC(),
 	}, nil
+}
+
+func (detail graphQLDetailIssue) linkedPullRequestObservations() []issue.LinkedPullRequestObservation {
+	observations := make(
+		[]issue.LinkedPullRequestObservation,
+		0,
+		len(detail.ClosingPullRequests.Nodes),
+	)
+	for _, pullRequest := range detail.ClosingPullRequests.Nodes {
+		mergedAt := time.Time{}
+		if pullRequest.MergedAt != nil {
+			mergedAt = pullRequest.MergedAt.UTC()
+		}
+		observations = append(observations, issue.LinkedPullRequestObservation{
+			Number:    pullRequest.Number,
+			State:     strings.ToLower(pullRequest.State),
+			IsDraft:   pullRequest.IsDraft,
+			UpdatedAt: pullRequest.UpdatedAt.UTC(),
+			MergedAt:  mergedAt,
+		})
+	}
+	return observations
 }
 
 func (detail graphQLDetailIssue) commentObservations() []issue.CommentObservation {

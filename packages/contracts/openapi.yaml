@@ -1835,6 +1835,28 @@ components:
               matched: 0
               percentage: 0
               skills: []
+            stale:
+              analyzedAt: 2026-07-30T00:00:00Z
+              confidence: high
+              evidence:
+                - description: stale-v1 uses bounded human, maintainer, linked pull request, and repository activity
+                  ruleId: stale.policy.version
+                  source: derived
+                - description: recent maintainer activity was observed on the issue
+                  ruleId: stale.maintainer.recent
+                  source: derived
+              freshWithinDays: 30
+              issueCreatedAt: 2026-07-01T00:00:00Z
+              issueUpdatedAt: 2026-07-29T00:00:00Z
+              lastLinkedPullRequestAt: null
+              lastMaintainerActivityAt: 2026-07-29T00:00:00Z
+              lastMeaningfulIssueActivityAt: 2026-07-29T00:00:00Z
+              policyVersion: stale-v1
+              repositoryActivityAt: 2026-07-29T10:00:00Z
+              sampleSize: 4
+              staleAfterDays: 180
+              state: fresh
+              truncated: false
             warnings: []
           repository:
             defaultBranch: main
@@ -3906,6 +3928,12 @@ components:
           type: boolean
           default: true
           description: Excludes issues from archived repositories.
+        includeStale:
+          type: boolean
+          default: false
+          description: |
+            Includes issues classified as stale by the versioned stale policy.
+            Fresh, aging, and unknown assessments are always retained.
     SearchFilterValue:
       type: string
       minLength: 1
@@ -4175,6 +4203,7 @@ components:
             - label_mismatch
             - language_mismatch
             - not_open
+            - outside_update_window
             - pull_request
             - stale
             - suspected_sensitive_content
@@ -4207,6 +4236,7 @@ components:
         - reasons
         - score
         - skillMatch
+        - stale
         - warnings
       properties:
         score:
@@ -4236,6 +4266,8 @@ components:
             $ref: "#/components/schemas/RecommendationWarning"
         claim:
           $ref: "#/components/schemas/ClaimEvidence"
+        stale:
+          $ref: "#/components/schemas/StaleAssessment"
     MaintainerResponseAssessment:
       type: object
       additionalProperties: false
@@ -4278,6 +4310,84 @@ components:
           $ref: "#/components/schemas/DurationAggregate"
         pullRequestMerge:
           $ref: "#/components/schemas/DurationAggregate"
+    StaleAssessment:
+      type: object
+      additionalProperties: false
+      required:
+        - analyzedAt
+        - confidence
+        - evidence
+        - freshWithinDays
+        - issueCreatedAt
+        - issueUpdatedAt
+        - lastLinkedPullRequestAt
+        - lastMaintainerActivityAt
+        - lastMeaningfulIssueActivityAt
+        - policyVersion
+        - repositoryActivityAt
+        - sampleSize
+        - staleAfterDays
+        - state
+        - truncated
+      properties:
+        state:
+          type: string
+          enum:
+            - fresh
+            - aging
+            - stale
+            - unknown
+        policyVersion:
+          type: string
+          const: stale-v1
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        analyzedAt:
+          type: string
+          format: date-time
+        freshWithinDays:
+          type: integer
+          const: 30
+        staleAfterDays:
+          type: integer
+          const: 180
+        issueCreatedAt:
+          type: string
+          format: date-time
+        issueUpdatedAt:
+          type: string
+          format: date-time
+        repositoryActivityAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastMeaningfulIssueActivityAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastMaintainerActivityAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastLinkedPullRequestAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        sampleSize:
+          type: integer
+          minimum: 0
+          maximum: 200
+        truncated:
+          type: boolean
+        evidence:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/Evidence"
     ScoreComponent:
       type: object
       additionalProperties: false

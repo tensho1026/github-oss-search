@@ -22,7 +22,8 @@ func TestNewSearchCriteriaAppliesMVPDefaults(t *testing.T) {
 		criteria.IncludesDocumentation() ||
 		maximumEffortConfigured ||
 		!criteria.IncludesEnglish() ||
-		!criteria.ExcludesArchived() {
+		!criteria.ExcludesArchived() ||
+		criteria.IncludesStale() {
 		t.Fatalf("criteria defaults = %+v", criteria)
 	}
 	labels := criteria.Labels()
@@ -41,6 +42,7 @@ func TestNewSearchCriteriaNormalizesCollectionsAndCanonicalKey(t *testing.T) {
 	includeEnglish := false
 	excludeArchived := false
 	maximumEffort := string(EffortHalfDay)
+	includeStale := true
 
 	first, err := NewSearchCriteria(SearchCriteriaOptions{
 		Username:             "OctoCat",
@@ -54,6 +56,7 @@ func TestNewSearchCriteriaNormalizesCollectionsAndCanonicalKey(t *testing.T) {
 		IncludeDocumentation: &includeDocumentation,
 		IncludeEnglish:       &includeEnglish,
 		ExcludeArchived:      &excludeArchived,
+		IncludeStale:         &includeStale,
 	})
 	if err != nil {
 		t.Fatalf("NewSearchCriteria(first) error = %v", err)
@@ -89,6 +92,9 @@ func TestNewSearchCriteriaNormalizesCollectionsAndCanonicalKey(t *testing.T) {
 	if effort, configured := first.MaximumEffort(); !configured ||
 		effort != EffortHalfDay {
 		t.Fatalf("maximum effort = %q, %t", effort, configured)
+	}
+	if !first.IncludesStale() {
+		t.Fatal("include stale was not preserved")
 	}
 	if !strings.HasPrefix(first.CacheKey(), "github:issue-search:") ||
 		len(strings.TrimPrefix(first.CacheKey(), "github:issue-search:")) != 64 {

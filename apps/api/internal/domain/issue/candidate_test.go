@@ -61,7 +61,7 @@ func TestExclusionReasonsReportsEveryApplicableReasonInStableOrder(
 		ExclusionNotOpen,
 		ExclusionArchivedRepository,
 		ExclusionAlreadyAssigned,
-		ExclusionStale,
+		ExclusionOutsideUpdateWindow,
 		ExclusionBotGenerated,
 		ExclusionSensitiveContent,
 		ExclusionInsufficientDescription,

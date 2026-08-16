@@ -211,6 +211,7 @@ export type {
   SignalState,
   SkillMatch,
   SkillMatchItem,
+  StaleAssessment,
   StartGitHubOAuthData,
   StartGitHubOAuthError,
   StartGitHubOAuthErrors,

@@ -402,7 +402,7 @@ export function IssueSearchForm({
 
       <fieldset className="grid gap-3">
         <legend className="mb-2 text-sm font-semibold">Eligibility</legend>
-        <div className="grid gap-3 xl:grid-cols-3">
+        <div className="grid gap-3 xl:grid-cols-4">
           <Controller
             control={control}
             name="includeDocumentation"
@@ -412,6 +412,19 @@ export function IssueSearchForm({
                 description="Add documentation-labelled issues."
                 id="search-documentation"
                 label="Include documentation"
+                onChange={field.onChange}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="includeStale"
+            render={({ field }) => (
+              <Toggle
+                checked={field.value}
+                description="Show issues classified as stale-v1; unknown evidence stays visible."
+                id="search-stale"
+                label="Include stale issues"
                 onChange={field.onChange}
               />
             )}

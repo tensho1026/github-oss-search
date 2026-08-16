@@ -107,6 +107,7 @@ type SearchCriteriaOptions struct {
 	IncludeDocumentation *bool
 	IncludeEnglish       *bool
 	ExcludeArchived      *bool
+	IncludeStale         *bool
 }
 
 // SearchCriteria is an immutable, canonical issue discovery condition.
@@ -124,6 +125,7 @@ type SearchCriteria struct {
 	includeDocumentation bool
 	includeEnglish       bool
 	excludeArchived      bool
+	includeStale         bool
 }
 
 // NewSearchCriteria validates, defaults, deduplicates, and canonicalizes issue
@@ -213,6 +215,7 @@ func NewSearchCriteria(options SearchCriteriaOptions) (SearchCriteria, error) {
 		includeDocumentation: includeDocumentation,
 		includeEnglish:       valueOrDefault(options.IncludeEnglish, true),
 		excludeArchived:      valueOrDefault(options.ExcludeArchived, true),
+		includeStale:         valueOrDefault(options.IncludeStale, false),
 	}, nil
 }
 
@@ -274,9 +277,15 @@ func (criteria SearchCriteria) ExcludesArchived() bool {
 	return criteria.excludeArchived
 }
 
+// IncludesStale reports whether stale-v1 issues remain in ranked results.
+// Unknown assessments are always retained.
+func (criteria SearchCriteria) IncludesStale() bool {
+	return criteria.includeStale
+}
+
 // CacheKey returns a stable hash for the validated discovery criteria.
-// Pagination and maximum effort are intentionally excluded because both are
-// applied after the reusable GitHub candidate window is loaded.
+// Pagination, maximum effort, and stale inclusion are intentionally excluded
+// because they are applied after the reusable GitHub candidate window loads.
 func (criteria SearchCriteria) CacheKey() string {
 	var canonical strings.Builder
 	appendCanonical(&canonical, "username", strings.ToLower(criteria.username.String()))
