@@ -67,6 +67,10 @@ partial-data warnings. A missing owner, exhausted GitHub rate limit, timeout,
 and upstream failure are different recoverable states. See
 [Public profile and OSS analysis](profile-analysis.md).
 
+Repository detail also includes four independently explainable OSS health
+indicators. Security remains a labeled third-party heuristic and never implies
+safety. See [OSS health dashboard methodology](repository-health.md).
+
 ### Discovery journey
 
 The user selects bounded filters. The API performs one candidate search, applies

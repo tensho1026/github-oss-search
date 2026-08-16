@@ -16,18 +16,20 @@ import (
 // RecommendIssueInput identifies one public issue and the contributor skills
 // used for the explicit match denominator.
 type RecommendIssueInput struct {
-	Reference     issue.Reference
-	DesiredSkills []string
+	Reference               issue.Reference
+	DesiredSkills           []string
+	IncludeRepositoryHealth bool
 }
 
 // RecommendIssueOutput contains the shared list/detail analysis plus
 // operational metadata that remains outside the domain model.
 type RecommendIssueOutput struct {
-	Item         issue.RankedIssue
-	Dependencies []string
-	RateLimit    port.RateLimit
-	Incomplete   bool
-	CacheHit     bool
+	Item             issue.RankedIssue
+	RepositoryHealth issue.RepositoryHealthDashboard
+	Dependencies     []string
+	RateLimit        port.RateLimit
+	Incomplete       bool
+	CacheHit         bool
 }
 
 // IssueRecommender provides cached detail reads and a no-I/O fallback for
@@ -48,10 +50,11 @@ type IssueRecommender interface {
 }
 
 type recommendIssue struct {
-	reader   port.GitHubIssueDetailReader
-	cache    port.IssueDetailCache
-	requests coalesce.Group[string, issueDetailLoad]
-	now      func() time.Time
+	reader       port.GitHubIssueDetailReader
+	healthReader port.RepositoryHealthReader
+	cache        port.IssueDetailCache
+	requests     coalesce.Group[string, issueDetailLoad]
+	now          func() time.Time
 }
 
 // NewRecommendIssue composes detailed GitHub inspection with a concurrency-safe
@@ -59,6 +62,7 @@ type recommendIssue struct {
 func NewRecommendIssue(
 	reader port.GitHubIssueDetailReader,
 	cache port.IssueDetailCache,
+	healthReaders ...port.RepositoryHealthReader,
 ) (IssueRecommender, error) {
 	if reader == nil {
 		return nil, fmt.Errorf(
@@ -70,10 +74,15 @@ func NewRecommendIssue(
 			"compose issue recommendation: detail cache is required",
 		)
 	}
+	if len(healthReaders) > 1 {
+		return nil, fmt.Errorf("compose issue recommendation: at most one health reader is supported")
+	}
+	var healthReader port.RepositoryHealthReader
+	if len(healthReaders) == 1 {
+		healthReader = healthReaders[0]
+	}
 	return &recommendIssue{
-		reader: reader,
-		cache:  cache,
-		now:    time.Now,
+		reader: reader, healthReader: healthReader, cache: cache, now: time.Now,
 	}, nil
 }
 
@@ -86,7 +95,7 @@ func (usecase *recommendIssue) Execute(
 	}
 	key := input.Reference.CacheKey()
 	if cached, found, err := usecase.cache.Get(ctx, key); err == nil && found {
-		return usecase.output(cached, input.DesiredSkills, true), nil
+		return usecase.output(cached, input.DesiredSkills, true, usecase.healthSnapshot(ctx, input)), nil
 	} else if err != nil && ctx.Err() != nil {
 		return RecommendIssueOutput{}, mapIssueDetailError(err)
 	}
@@ -122,7 +131,18 @@ func (usecase *recommendIssue) Execute(
 		load.detail,
 		input.DesiredSkills,
 		load.cacheHit,
+		usecase.healthSnapshot(ctx, input),
 	), nil
+}
+
+func (usecase *recommendIssue) healthSnapshot(
+	ctx context.Context,
+	input RecommendIssueInput,
+) issue.OpenSSFSnapshot {
+	if !input.IncludeRepositoryHealth {
+		return issue.OpenSSFSnapshot{Warning: "OpenSSF Scorecard was not requested for this view."}
+	}
+	return usecase.loadHealth(ctx, input.Reference)
 }
 
 type issueDetailLoad struct {
@@ -134,31 +154,33 @@ func (usecase *recommendIssue) output(
 	detail port.GitHubIssueDetailResult,
 	desiredSkills []string,
 	cacheHit bool,
+	openSSF issue.OpenSSFSnapshot,
 ) RecommendIssueOutput {
+	history := issue.IssueHistory{
+		Comments: append(
+			[]issue.CommentObservation(nil),
+			detail.Comments...,
+		),
+		CommentsTruncated: detail.CommentsTruncated || detail.Incomplete,
+		LinkedPullRequests: append(
+			[]issue.LinkedPullRequestObservation(nil),
+			detail.LinkedPullRequests...,
+		),
+		LinkedPullRequestsTruncated: detail.LinkedPullRequestsTruncated ||
+			detail.Incomplete,
+	}
+	item := evaluateIssueRecommendation(
+		detail.Candidate, detail.Dependencies, detail.RepositorySignals,
+		detail.Activity,
+		issue.DetectClaim(detail.Comments, detail.CommentsTruncated),
+		history, desiredSkills, usecase.now(),
+	)
 	return RecommendIssueOutput{
-		Item: evaluateIssueRecommendation(
-			detail.Candidate,
-			detail.Dependencies,
-			detail.RepositorySignals,
-			detail.Activity,
-			issue.DetectClaim(
-				detail.Comments,
-				detail.CommentsTruncated,
-			),
-			issue.IssueHistory{
-				Comments: append(
-					[]issue.CommentObservation(nil),
-					detail.Comments...,
-				),
-				CommentsTruncated: detail.CommentsTruncated || detail.Incomplete,
-				LinkedPullRequests: append(
-					[]issue.LinkedPullRequestObservation(nil),
-					detail.LinkedPullRequests...,
-				),
-				LinkedPullRequestsTruncated: detail.LinkedPullRequestsTruncated ||
-					detail.Incomplete,
-			},
-			desiredSkills,
+		Item: item,
+		RepositoryHealth: issue.AnalyzeRepositoryHealth(
+			item.Recommendation.RepositorySignals,
+			item.Recommendation.Activity,
+			openSSF,
 			usecase.now(),
 		),
 		Dependencies: append(
@@ -169,6 +191,22 @@ func (usecase *recommendIssue) output(
 		Incomplete: detail.Incomplete,
 		CacheHit:   cacheHit,
 	}
+}
+
+func (usecase *recommendIssue) loadHealth(
+	ctx context.Context,
+	reference issue.Reference,
+) issue.OpenSSFSnapshot {
+	if usecase.healthReader == nil {
+		return issue.OpenSSFSnapshot{Warning: "OpenSSF Scorecard integration is not configured."}
+	}
+	snapshot, err := usecase.healthReader.GetOpenSSFScorecard(
+		ctx, reference.Owner(), reference.RepositoryName(),
+	)
+	if err != nil {
+		return issue.OpenSSFSnapshot{Warning: "OpenSSF Scorecard could not be retrieved; GitHub analysis remains available."}
+	}
+	return snapshot
 }
 
 func (usecase *recommendIssue) EvaluateCandidate(
@@ -234,6 +272,11 @@ func evaluateIssueRecommendation(
 		Candidate:      candidate,
 		Analysis:       analysis,
 		Recommendation: recommendation,
+		RepositoryHealth: issue.AnalyzeRepositoryHealth(
+			repositorySignals, activity,
+			issue.OpenSSFSnapshot{Warning: "OpenSSF Scorecard is loaded only on repository detail."},
+			now,
+		),
 	}
 }
 

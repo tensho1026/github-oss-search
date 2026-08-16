@@ -591,6 +591,18 @@ test("opens a safe issue detail and restores the exact ranked search", async ({
     page.getByRole("heading", { name: "Maintainer activity" }),
   ).toBeVisible();
   await expect(
+    page.getByRole("heading", { name: "OSS health dashboard" }),
+  ).toBeVisible();
+  const securityHealthSummary = page.getByText(/^Security 82/);
+  await securityHealthSummary.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/upstream v5\.2\.1/)).toBeVisible();
+  await expect(
+    page.getByText(
+      "A high Security indicator does not guarantee that a repository is safe.",
+    ),
+  ).toBeVisible();
+  await expect(
     page.getByText(/<script>globalThis\.compromised=true<\/script>/),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "unsafe" })).toHaveCount(0);

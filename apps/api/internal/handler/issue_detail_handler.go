@@ -65,8 +65,9 @@ func (handler IssueDetailHandler) Get(ctx *gin.Context) {
 	output, err := handler.recommend.Execute(
 		ctx.Request.Context(),
 		usecase.RecommendIssueInput{
-			Reference:     reference,
-			DesiredSkills: skills,
+			Reference:               reference,
+			DesiredSkills:           skills,
+			IncludeRepositoryHealth: true,
 		},
 	)
 	if err != nil {
@@ -139,13 +140,14 @@ func parseIssueDetailSkills(ctx *gin.Context) ([]string, error) {
 }
 
 type issueDetailResponse struct {
-	Repository       repositoryDetailResponse   `json:"repository"`
-	Issue            issueDetailIssueResponse   `json:"issue"`
-	Analysis         issueAnalysisResponse      `json:"analysis"`
-	Recommendation   recommendationResponse     `json:"recommendation"`
-	RepositoryHealth []repositorySignalResponse `json:"repositoryHealth"`
-	Activity         activityMetricsResponse    `json:"activity"`
-	Inspection       inspectionResponse         `json:"inspection"`
+	Repository       repositoryDetailResponse          `json:"repository"`
+	Issue            issueDetailIssueResponse          `json:"issue"`
+	Analysis         issueAnalysisResponse             `json:"analysis"`
+	Recommendation   recommendationResponse            `json:"recommendation"`
+	RepositoryHealth []repositorySignalResponse        `json:"repositoryHealth"`
+	HealthDashboard  repositoryHealthDashboardResponse `json:"healthDashboard"`
+	Activity         activityMetricsResponse           `json:"activity"`
+	Inspection       inspectionResponse                `json:"inspection"`
 }
 
 type repositoryDetailResponse struct {
@@ -190,6 +192,32 @@ type inspectionResponse struct {
 	Incomplete bool `json:"incomplete"`
 }
 
+type repositoryHealthDashboardResponse struct {
+	ScoreVersion string                             `json:"scoreVersion"`
+	AnalyzedAt   string                             `json:"analyzedAt"`
+	Categories   []repositoryHealthCategoryResponse `json:"categories"`
+}
+
+type repositoryHealthCategoryResponse struct {
+	Name          string                              `json:"name"`
+	Score         *int                                `json:"score"`
+	Status        string                              `json:"status"`
+	Confidence    string                              `json:"confidence"`
+	AnalyzedAt    string                              `json:"analyzedAt"`
+	SourceVersion string                              `json:"sourceVersion,omitempty"`
+	Components    []repositoryHealthComponentResponse `json:"components"`
+	Warnings      []string                            `json:"warnings"`
+}
+
+type repositoryHealthComponentResponse struct {
+	Key         string `json:"key"`
+	Weight      int    `json:"weight"`
+	Score       *int   `json:"score"`
+	Status      string `json:"status"`
+	Source      string `json:"source"`
+	Description string `json:"description"`
+}
+
 func newIssueDetailResponse(
 	output usecase.RecommendIssueOutput,
 ) issueDetailResponse {
@@ -219,10 +247,39 @@ func newIssueDetailResponse(
 		RepositoryHealth: newRepositorySignalResponses(
 			ranked.Recommendation.RepositorySignals,
 		),
+		HealthDashboard: newRepositoryHealthDashboardResponse(output.RepositoryHealth),
 		Activity: newActivityMetricsResponse(
 			ranked.Recommendation.Activity,
 		),
 		Inspection: inspectionResponse{Incomplete: output.Incomplete},
+	}
+}
+
+func newRepositoryHealthDashboardResponse(
+	dashboard issue.RepositoryHealthDashboard,
+) repositoryHealthDashboardResponse {
+	categories := make([]repositoryHealthCategoryResponse, 0, len(dashboard.Categories))
+	for _, category := range dashboard.Categories {
+		components := make([]repositoryHealthComponentResponse, 0, len(category.Components))
+		for _, component := range category.Components {
+			components = append(components, repositoryHealthComponentResponse{
+				Key: component.Key, Weight: component.Weight, Score: component.Score,
+				Status: component.Status, Source: component.Source,
+				Description: component.Description,
+			})
+		}
+		categories = append(categories, repositoryHealthCategoryResponse{
+			Name: category.Name, Score: category.Score, Status: category.Status,
+			Confidence:    string(category.Confidence),
+			AnalyzedAt:    category.AnalyzedAt.Format(time.RFC3339),
+			SourceVersion: category.SourceVersion, Components: components,
+			Warnings: append([]string{}, category.Warnings...),
+		})
+	}
+	return repositoryHealthDashboardResponse{
+		ScoreVersion: dashboard.ScoreVersion,
+		AnalyzedAt:   dashboard.AnalyzedAt.Format(time.RFC3339),
+		Categories:   categories,
 	}
 }
 

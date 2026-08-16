@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -100,6 +100,14 @@ describe("IssueDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Stale Issue Detector")).toBeInTheDocument();
     expect(screen.getByText(/Policy stale-v1/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "OSS health dashboard" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Security 82/));
+    expect(screen.getByText(/upstream v5.2.1/)).toBeVisible();
+    expect(
+      screen.getByText(/does not guarantee that a repository is safe/i),
+    ).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Back to search results" }),
     ).toHaveAttribute("href", route.from);

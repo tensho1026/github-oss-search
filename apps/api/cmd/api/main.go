@@ -5,16 +5,20 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/swaggest/swgui/v5emb"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/bootstrap"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/cache/memory"
+	openssfclient "github.com/tensho1026/github-issue-search/apps/api/internal/client/openssf"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/config"
 	apidocs "github.com/tensho1026/github-issue-search/apps/api/internal/documentation"
+	"github.com/tensho1026/github-issue-search/apps/api/internal/port"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/router"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/server"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/transport/response"
@@ -91,9 +95,24 @@ func main() {
 		logger.Error("compose issue detail cache", "error", err)
 		os.Exit(1)
 	}
+	healthReaders := []port.RepositoryHealthReader{}
+	if !cfg.UseGitHubAPIMock {
+		baseURL, parseErr := url.Parse("https://api.securityscorecards.dev")
+		if parseErr != nil {
+			logger.Error("parse OpenSSF base URL", "error", parseErr)
+			os.Exit(1)
+		}
+		healthReader, composeErr := openssfclient.NewClient(
+			baseURL, 3*time.Second, 6*time.Hour, 500,
+		)
+		if composeErr != nil {
+			logger.Error("compose OpenSSF client", "error", composeErr)
+			os.Exit(1)
+		}
+		healthReaders = append(healthReaders, healthReader)
+	}
 	recommendIssue, err := usecase.NewRecommendIssue(
-		gitHubClient,
-		issueDetailCache,
+		gitHubClient, issueDetailCache, healthReaders...,
 	)
 	if err != nil {
 		logger.Error("compose issue recommendation usecase", "error", err)

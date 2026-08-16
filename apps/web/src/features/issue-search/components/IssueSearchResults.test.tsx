@@ -51,6 +51,12 @@ describe("IssueSearchResults", () => {
     expect(
       screen.getByRole("link", { name: "View recommendation details" }),
     ).toHaveAttribute("href", "/issues/octocat/typed-service/42");
+    expect(
+      screen.getByLabelText("Repository health summary"),
+    ).toHaveTextContent("Activity 92");
+    expect(
+      screen.getByLabelText("Repository health summary"),
+    ).toHaveTextContent("Security ?");
     const externalLink = screen.getByRole("link", {
       name: /Open GitHub issue/,
     });
