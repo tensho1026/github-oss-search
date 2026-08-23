@@ -168,6 +168,8 @@ technology output. Dedicated interaction tests verify:
   evidence, and server-order preservation;
 - profile evidence states that distinguish exact, sampled, and unavailable
   observations.
+- private monthly snapshot deltas for the authenticated profile owner and
+  client-side Markdown/PNG public-profile exports.
 
 Reduced-motion preferences disable nonessential animation.
 

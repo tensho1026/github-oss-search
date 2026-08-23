@@ -713,6 +713,78 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+  /api/account/profile-snapshots:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+    get:
+      operationId: listAccountProfileSnapshots
+      summary: List private monthly profile snapshots
+      description: |
+        Returns at most 24 account-owned UTC calendar-month aggregates in
+        chronological order. It never returns credentials or GitHub payloads.
+      tags: [Account workspace]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The ownership-isolated monthly trend history.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileSnapshotListEnvelope"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrigin"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+    put:
+      operationId: upsertAccountProfileSnapshot
+      summary: Store the current monthly profile aggregate
+      description: |
+        Replaces the authenticated account's current UTC month and retains at
+        most 24 months. Input is a bounded aggregate derived from public profile
+        analysis and is private account data, not employment verification.
+      tags: [Account workspace]
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        description: The bounded public-profile aggregate to retain for the current UTC month.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSnapshotWriteRequest"
+      responses:
+        "200":
+          description: The inserted or replaced current-month aggregate.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileSnapshotEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
   /api/account/issue-claims:
     parameters:
       - $ref: "#/components/parameters/RequestID"
@@ -1527,12 +1599,13 @@ components:
       summary: Bounded privacy export
       value:
         data:
-          schemaVersion: 2
+          schemaVersion: 3
           generatedAt: 2026-08-01T02:03:04Z
           bookmarks: []
           issueClaims: []
           savedSearches: []
           preferences: null
+          profileSnapshots: []
         meta:
           requestId: req_account_export
           timestamp: 2026-08-01T02:03:04Z
@@ -1548,6 +1621,7 @@ components:
             preferences: 1
             savedSearches: 3
             sessions: 1
+            profileSnapshots: 6
         meta:
           requestId: req_account_delete
           timestamp: 2026-08-01T02:03:04Z
@@ -3484,6 +3558,117 @@ components:
         updatedAt:
           type: string
           format: date-time
+    ProfileSnapshotProficiency:
+      type: object
+      additionalProperties: false
+      required: [level, name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        level:
+          type: integer
+          minimum: 1
+          maximum: 5
+    ProfileSnapshotWriteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - completedQuests
+        - currentStreak
+        - frameworks
+        - languages
+        - longestStreak
+        - mergedPullRequests
+        - ossActivity
+        - proficiency
+      properties:
+        languages:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 64 }
+        frameworks:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 64 }
+        ossActivity: { type: integer, minimum: 0, maximum: 1000000 }
+        mergedPullRequests: { type: integer, minimum: 0, maximum: 1000000 }
+        proficiency:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ProfileSnapshotProficiency"
+        completedQuests: { type: integer, minimum: 0, maximum: 1000000 }
+        currentStreak: { type: integer, minimum: 0, maximum: 1000000 }
+        longestStreak: { type: integer, minimum: 0, maximum: 1000000 }
+    ProfileSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - completedQuests
+        - createdAt
+        - currentStreak
+        - frameworks
+        - languages
+        - longestStreak
+        - mergedPullRequests
+        - month
+        - ossActivity
+        - proficiency
+        - updatedAt
+      properties:
+        month: { type: string, format: date-time }
+        languages:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 64 }
+        frameworks:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 64 }
+        ossActivity: { type: integer, minimum: 0, maximum: 1000000 }
+        mergedPullRequests: { type: integer, minimum: 0, maximum: 1000000 }
+        proficiency:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ProfileSnapshotProficiency"
+        completedQuests: { type: integer, minimum: 0, maximum: 1000000 }
+        currentStreak: { type: integer, minimum: 0, maximum: 1000000 }
+        longestStreak: { type: integer, minimum: 0, maximum: 1000000 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProfileSnapshotEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ProfileSnapshot"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ProfileSnapshotListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [items]
+          properties:
+            items:
+              type: array
+              maxItems: 24
+              items:
+                $ref: "#/components/schemas/ProfileSnapshot"
+        meta:
+          $ref: "#/components/schemas/Meta"
     PreferencesEnvelope:
       type: object
       additionalProperties: false
@@ -3528,12 +3713,13 @@ components:
             - generatedAt
             - issueClaims
             - preferences
+            - profileSnapshots
             - savedSearches
             - schemaVersion
           properties:
             schemaVersion:
               type: integer
-              const: 2
+              const: 3
             generatedAt:
               type: string
               format: date-time
@@ -3556,6 +3742,11 @@ components:
               oneOf:
                 - $ref: "#/components/schemas/Preferences"
                 - type: "null"
+            profileSnapshots:
+              type: array
+              maxItems: 24
+              items:
+                $ref: "#/components/schemas/ProfileSnapshot"
         meta:
           $ref: "#/components/schemas/Meta"
     AccountDeleteRequest:
@@ -3598,6 +3789,7 @@ components:
         - preferences
         - savedSearches
         - sessions
+        - profileSnapshots
       properties:
         bookmarks:
           type: integer
@@ -3620,6 +3812,10 @@ components:
           format: int64
           minimum: 0
         sessions:
+          type: integer
+          format: int64
+          minimum: 0
+        profileSnapshots:
           type: integer
           format: int64
           minimum: 0

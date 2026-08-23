@@ -58,6 +58,8 @@ import {
 } from "../model/profile-view";
 import { ProfileSearchForm } from "./ProfileSearchForm";
 import { ProfileExtendedAnalytics } from "./ProfileExtendedAnalytics";
+import { ProfileShareActions } from "./ProfileShareActions";
+import { ProfileSnapshotHistory } from "./ProfileSnapshotHistory";
 import { useAuth } from "../../auth/auth-context";
 
 type ProfileDashboardProps = {
@@ -80,6 +82,9 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
   const { session } = useAuth();
   const { locale, t } = useI18n();
   const { analysis, analysisMeta, user, userMeta } = snapshot;
+  const isOwnProfile =
+    session?.authenticated === true &&
+    session.user?.login.toLowerCase() === user.login.toLowerCase();
   const [languageOrder, setLanguageOrder] = useState<LanguageOrder>("usage");
   const languages = useMemo(
     () => sortLanguages(analysis.languages, languageOrder),
@@ -414,11 +419,17 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
 
       <ProfileExtendedAnalytics
         analysis={analysis}
-        showPortfolio={
-          session?.authenticated === true &&
-          session.user?.login.toLowerCase() === user.login.toLowerCase()
-        }
+        showPortfolio={isOwnProfile}
       />
+
+      <ProfileShareActions analysis={analysis} user={user} />
+
+      {isOwnProfile && session.csrfToken ? (
+        <ProfileSnapshotHistory
+          analysis={analysis}
+          csrfToken={session.csrfToken}
+        />
+      ) : null}
 
       <section aria-labelledby="repositories-heading" className="mt-5">
         <Card>

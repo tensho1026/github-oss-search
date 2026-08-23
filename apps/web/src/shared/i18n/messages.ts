@@ -398,6 +398,27 @@ export const enMessages = {
   "profile.mostUsed": "Most used",
   "profile.alphabetical": "A–Z",
   "profile.growTechnology": "Find issues to grow this skill",
+  "profile.snapshotTitle": "Monthly OSS growth",
+  "profile.snapshotDescription":
+    "A private 24-month history saved only for your signed-in profile.",
+  "profile.snapshotSaving": "Saving this month…",
+  "profile.snapshotUnavailable": "Snapshot unavailable",
+  "profile.snapshotPrivate": "Private monthly snapshot",
+  "profile.snapshotLoading": "Loading monthly profile changes…",
+  "profile.snapshotActivity": "Public OSS activity",
+  "profile.snapshotMerged": "Merged pull requests",
+  "profile.snapshotQuest": "Completed quests",
+  "profile.snapshotStreak": "Current streak",
+  "profile.snapshotWeeks": "weeks",
+  "profile.snapshotNewTechnology": "Newly observed technologies",
+  "profile.snapshotNoNewTechnology": "No new technology this month.",
+  "profile.snapshotProficiencyChange": "Proficiency changes",
+  "profile.snapshotNoProficiencyChange": "No level change this month.",
+  "profile.snapshotFirstMonth":
+    "This is the first saved month. Changes appear after the next monthly snapshot.",
+  "profile.exportTitle": "Share this OSS profile",
+  "profile.exportMarkdown": "Download Markdown",
+  "profile.exportPng": "Download PNG card",
   "profile.noLanguages":
     "No primary language percentages were available in the analyzed repository window.",
   "profile.frameworkEvidence": "Framework evidence",
@@ -682,6 +703,15 @@ export const enMessages = {
   "claims.description":
     "Private progress only—this never claims or comments on GitHub.",
   "claims.show": "Show tasks",
+  "claims.view": "Task board view",
+  "claims.kanban": "Kanban",
+  "claims.list": "List",
+  "claims.kanbanInstructions":
+    "Drag a task between columns, or use its workflow selector for keyboard operation.",
+  "claims.draggableLabel": "Draggable contribution task {label}",
+  "claims.emptyColumn": "Drop a task here",
+  "claims.movePrRequired":
+    "Link and save a pull request before moving a task to PR submitted or merged.",
   "claims.active": "Active",
   "claims.archived": "Archived",
   "claims.all": "All",

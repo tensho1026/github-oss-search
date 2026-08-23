@@ -338,6 +338,7 @@ func TestAccountWorkspaceRejectsMissingRepositoryAndStorageListFailure(
 }
 
 type accountRepositoryStub struct {
+	profileSnapshots       []account.ProfileSnapshot
 	issueClaim             account.IssueClaim
 	upsertIssueClaimCalls  int
 	updateIssueClaimCalls  int
@@ -351,6 +352,15 @@ type accountRepositoryStub struct {
 	preferences            account.Preferences
 	summary                account.OwnedDataSummary
 	deleteCalls            int
+}
+
+func (repository *accountRepositoryStub) ListProfileSnapshots(context.Context, account.ID) ([]account.ProfileSnapshot, error) {
+	return repository.profileSnapshots, nil
+}
+
+func (repository *accountRepositoryStub) UpsertProfileSnapshot(_ context.Context, snapshot account.ProfileSnapshot) (account.ProfileSnapshot, error) {
+	repository.profileSnapshots = []account.ProfileSnapshot{snapshot}
+	return snapshot, nil
 }
 
 func (repository *accountRepositoryStub) ListIssueClaims(

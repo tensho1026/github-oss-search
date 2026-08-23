@@ -429,7 +429,7 @@ func TestAccountHandlerPreferencesExportAndDeletion(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/export", nil),
 	)
 	if exportRecorder.Code != http.StatusOK ||
-		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":2`) ||
+		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":3`) ||
 		!strings.Contains(exportRecorder.Body.String(), `"preferences":null`) {
 		t.Fatalf(
 			"export response = %d %s",
@@ -558,6 +558,7 @@ func accountTestEngine(accountID account.ID) *gin.Engine {
 }
 
 type accountWorkspaceStub struct {
+	profileSnapshots     []account.ProfileSnapshot
 	lastAccountID        account.ID
 	lastResourceID       account.ResourceID
 	lastVersion          int64
@@ -575,6 +576,19 @@ type accountWorkspaceStub struct {
 	export               account.Export
 	summary              account.OwnedDataSummary
 	err                  error
+}
+
+func (workspace *accountWorkspaceStub) ListProfileSnapshots(_ context.Context, accountID account.ID) ([]account.ProfileSnapshot, error) {
+	workspace.lastAccountID = accountID
+	return workspace.profileSnapshots, workspace.err
+}
+
+func (workspace *accountWorkspaceStub) UpsertProfileSnapshot(_ context.Context, accountID account.ID, _ usecase.ProfileSnapshotInput) (account.ProfileSnapshot, error) {
+	workspace.lastAccountID = accountID
+	if len(workspace.profileSnapshots) > 0 {
+		return workspace.profileSnapshots[0], workspace.err
+	}
+	return account.ProfileSnapshot{}, workspace.err
 }
 
 func (workspace *accountWorkspaceStub) ListIssueClaims(

@@ -3,6 +3,7 @@ export const queryKeys = Object.freeze({
     bookmarks: ["account", "bookmarks"] as const,
     issueClaims: ["account", "issue-claims"] as const,
     preferences: ["account", "preferences"] as const,
+    profileSnapshots: ["account", "profile-snapshots"] as const,
     root: ["account"] as const,
     savedSearches: ["account", "saved-searches"] as const,
   }),

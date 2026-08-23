@@ -396,6 +396,27 @@ export const jaMessages = {
   "profile.mostUsed": "使用量順",
   "profile.alphabetical": "A〜Z",
   "profile.growTechnology": "この技術を伸ばせるIssue",
+  "profile.snapshotTitle": "月ごとのOSS成長",
+  "profile.snapshotDescription":
+    "ログイン中の自分のプロフィールだけに保存される、非公開の最大24か月履歴です。",
+  "profile.snapshotSaving": "今月分を保存中…",
+  "profile.snapshotUnavailable": "スナップショットを保存できません",
+  "profile.snapshotPrivate": "非公開の月次スナップショット",
+  "profile.snapshotLoading": "月ごとのプロフィール変化を読み込み中…",
+  "profile.snapshotActivity": "公開OSS活動量",
+  "profile.snapshotMerged": "MergeされたPR",
+  "profile.snapshotQuest": "完了Quest",
+  "profile.snapshotStreak": "現在の継続期間",
+  "profile.snapshotWeeks": "週",
+  "profile.snapshotNewTechnology": "新しく観測した技術",
+  "profile.snapshotNoNewTechnology": "今月の新しい技術はありません。",
+  "profile.snapshotProficiencyChange": "習熟度の変化",
+  "profile.snapshotNoProficiencyChange": "今月のレベル変化はありません。",
+  "profile.snapshotFirstMonth":
+    "最初の月を保存しました。次の月次スナップショットから変化を表示します。",
+  "profile.exportTitle": "OSSプロフィールを共有",
+  "profile.exportMarkdown": "Markdownを保存",
+  "profile.exportPng": "PNGカードを保存",
   "profile.noLanguages":
     "分析したリポジトリ範囲に主要言語の割合がありませんでした。",
   "profile.frameworkEvidence": "フレームワークの根拠",
@@ -681,6 +702,15 @@ export const jaMessages = {
   "claims.description":
     "非公開の進捗だけを管理します。GitHubでの着手宣言やコメントは行いません。",
   "claims.show": "表示するタスク",
+  "claims.view": "タスクボードの表示",
+  "claims.kanban": "Kanban",
+  "claims.list": "一覧",
+  "claims.kanbanInstructions":
+    "タスクを列へドラッグできます。キーボード操作では各カードの作業状態を使ってください。",
+  "claims.draggableLabel": "ドラッグ可能なコントリビューションタスク {label}",
+  "claims.emptyColumn": "ここへタスクを移動",
+  "claims.movePrRequired":
+    "PR提出済み・マージ済みへ移す前に、Pull Requestを関連付けて保存してください。",
   "claims.active": "進行中",
   "claims.archived": "アーカイブ済み",
   "claims.all": "すべて",

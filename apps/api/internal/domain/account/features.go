@@ -520,11 +520,12 @@ type PageResult[T any] struct {
 // Export contains the complete bounded account-owned data set. It deliberately
 // excludes sessions, credential hashes, audit identifiers, and GitHub payloads.
 type Export struct {
-	GeneratedAt   time.Time
-	Bookmarks     []Bookmark
-	IssueClaims   []IssueClaim
-	SavedSearches []SavedSearch
-	Preferences   *Preferences
+	GeneratedAt      time.Time
+	Bookmarks        []Bookmark
+	IssueClaims      []IssueClaim
+	SavedSearches    []SavedSearch
+	Preferences      *Preferences
+	ProfileSnapshots []ProfileSnapshot
 }
 
 type issueFilterDocument struct {

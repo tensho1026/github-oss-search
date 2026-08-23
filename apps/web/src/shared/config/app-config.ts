@@ -149,6 +149,7 @@ export const accountEndpoints = Object.freeze({
     return `/api/account/issue-claims?page=${page}&perPage=${perPage}`;
   },
   preferences: "/api/account/preferences" as const,
+  profileSnapshots: "/api/account/profile-snapshots" as const,
   savedSearch(id: string): `/${string}` {
     return `/api/account/saved-searches/${encodeURIComponent(id)}`;
   },

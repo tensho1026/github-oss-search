@@ -67,12 +67,13 @@ func (id ID) String() string {
 // OwnedDataSummary contains counts of data deleted with an account. It
 // intentionally excludes content and identifiers.
 type OwnedDataSummary struct {
-	Bookmarks     int64
-	Identities    int64
-	IssueClaims   int64
-	Preferences   int64
-	SavedSearches int64
-	Sessions      int64
+	Bookmarks        int64
+	Identities       int64
+	IssueClaims      int64
+	Preferences      int64
+	SavedSearches    int64
+	Sessions         int64
+	ProfileSnapshots int64
 }
 
 func newID(random io.Reader) (ID, error) {

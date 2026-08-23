@@ -27,6 +27,50 @@ type AccountHandler struct {
 	responder response.Responder
 }
 
+// ListProfileSnapshots returns the authenticated account's bounded monthly history.
+func (handler AccountHandler) ListProfileSnapshots(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	snapshots, err := handler.workspace.ListProfileSnapshots(ctx.Request.Context(), accountID)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, struct {
+		Items []profileSnapshotResponse `json:"items"`
+	}{Items: profileSnapshotResponses(snapshots)})
+}
+
+// UpsertProfileSnapshot stores or replaces the current UTC calendar month.
+func (handler AccountHandler) UpsertProfileSnapshot(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	request, err := decodeAccountBody[profileSnapshotWriteRequest](ctx)
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	proficiency := make([]account.SnapshotProficiency, len(request.Proficiency))
+	for index, value := range request.Proficiency {
+		proficiency[index] = account.SnapshotProficiency{Name: value.Name, Level: value.Level}
+	}
+	snapshot, err := handler.workspace.UpsertProfileSnapshot(ctx.Request.Context(), accountID, usecase.ProfileSnapshotInput{
+		Languages: request.Languages, Frameworks: request.Frameworks,
+		OSSActivity: request.OSSActivity, MergedPullRequests: request.MergedPullRequests,
+		Proficiency: proficiency, CompletedQuests: request.CompletedQuests,
+		CurrentStreak: request.CurrentStreak, LongestStreak: request.LongestStreak,
+	})
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, newProfileSnapshotResponse(snapshot))
+}
+
 // ListIssueClaims returns an owned contribution task page and status summary.
 func (handler AccountHandler) ListIssueClaims(ctx *gin.Context) {
 	accountID, ok := handler.accountID(ctx)
@@ -428,12 +472,13 @@ func (handler AccountHandler) DeleteAccount(ctx *gin.Context) {
 	handler.responder.Data(ctx, http.StatusOK, accountDeleteResponse{
 		Deleted: true,
 		Removed: ownedDataSummaryResponse{
-			Bookmarks:     summary.Bookmarks,
-			Identities:    summary.Identities,
-			IssueClaims:   summary.IssueClaims,
-			Preferences:   summary.Preferences,
-			SavedSearches: summary.SavedSearches,
-			Sessions:      summary.Sessions,
+			Bookmarks:        summary.Bookmarks,
+			Identities:       summary.Identities,
+			IssueClaims:      summary.IssueClaims,
+			Preferences:      summary.Preferences,
+			SavedSearches:    summary.SavedSearches,
+			Sessions:         summary.Sessions,
+			ProfileSnapshots: summary.ProfileSnapshots,
 		},
 	})
 }
@@ -772,12 +817,59 @@ type deletionResponse struct {
 }
 
 type accountExportResponse struct {
-	SchemaVersion int                   `json:"schemaVersion"`
-	GeneratedAt   time.Time             `json:"generatedAt"`
-	Bookmarks     []bookmarkResponse    `json:"bookmarks"`
-	IssueClaims   []issueClaimResponse  `json:"issueClaims"`
-	SavedSearches []savedSearchResponse `json:"savedSearches"`
-	Preferences   *preferencesResponse  `json:"preferences"`
+	SchemaVersion    int                       `json:"schemaVersion"`
+	GeneratedAt      time.Time                 `json:"generatedAt"`
+	Bookmarks        []bookmarkResponse        `json:"bookmarks"`
+	IssueClaims      []issueClaimResponse      `json:"issueClaims"`
+	SavedSearches    []savedSearchResponse     `json:"savedSearches"`
+	Preferences      *preferencesResponse      `json:"preferences"`
+	ProfileSnapshots []profileSnapshotResponse `json:"profileSnapshots"`
+}
+
+type profileSnapshotProficiencyResponse struct {
+	Name  string `json:"name"`
+	Level int    `json:"level"`
+}
+
+type profileSnapshotResponse struct {
+	Month              time.Time                            `json:"month"`
+	Languages          []string                             `json:"languages"`
+	Frameworks         []string                             `json:"frameworks"`
+	OSSActivity        int                                  `json:"ossActivity"`
+	MergedPullRequests int                                  `json:"mergedPullRequests"`
+	Proficiency        []profileSnapshotProficiencyResponse `json:"proficiency"`
+	CompletedQuests    int                                  `json:"completedQuests"`
+	CurrentStreak      int                                  `json:"currentStreak"`
+	LongestStreak      int                                  `json:"longestStreak"`
+	CreatedAt          time.Time                            `json:"createdAt"`
+	UpdatedAt          time.Time                            `json:"updatedAt"`
+}
+
+type profileSnapshotWriteRequest struct {
+	Languages          []string                             `json:"languages"`
+	Frameworks         []string                             `json:"frameworks"`
+	OSSActivity        int                                  `json:"ossActivity"`
+	MergedPullRequests int                                  `json:"mergedPullRequests"`
+	Proficiency        []profileSnapshotProficiencyResponse `json:"proficiency"`
+	CompletedQuests    int                                  `json:"completedQuests"`
+	CurrentStreak      int                                  `json:"currentStreak"`
+	LongestStreak      int                                  `json:"longestStreak"`
+}
+
+func newProfileSnapshotResponse(snapshot account.ProfileSnapshot) profileSnapshotResponse {
+	proficiency := make([]profileSnapshotProficiencyResponse, len(snapshot.Proficiency))
+	for index, value := range snapshot.Proficiency {
+		proficiency[index] = profileSnapshotProficiencyResponse{Name: value.Name, Level: value.Level}
+	}
+	return profileSnapshotResponse{Month: snapshot.Month, Languages: append([]string(nil), snapshot.Languages...), Frameworks: append([]string(nil), snapshot.Frameworks...), OSSActivity: snapshot.OSSActivity, MergedPullRequests: snapshot.MergedPullRequests, Proficiency: proficiency, CompletedQuests: snapshot.CompletedQuests, CurrentStreak: snapshot.CurrentStreak, LongestStreak: snapshot.LongestStreak, CreatedAt: snapshot.CreatedAt, UpdatedAt: snapshot.UpdatedAt}
+}
+
+func profileSnapshotResponses(snapshots []account.ProfileSnapshot) []profileSnapshotResponse {
+	result := make([]profileSnapshotResponse, len(snapshots))
+	for index, snapshot := range snapshots {
+		result[index] = newProfileSnapshotResponse(snapshot)
+	}
+	return result
 }
 
 func newAccountExportResponse(export account.Export) accountExportResponse {
@@ -799,22 +891,24 @@ func newAccountExportResponse(export account.Export) accountExportResponse {
 		preferences = &value
 	}
 	return accountExportResponse{
-		SchemaVersion: 2,
-		GeneratedAt:   export.GeneratedAt.UTC(),
-		Bookmarks:     bookmarks,
-		IssueClaims:   issueClaims,
-		SavedSearches: savedSearches,
-		Preferences:   preferences,
+		SchemaVersion:    3,
+		GeneratedAt:      export.GeneratedAt.UTC(),
+		Bookmarks:        bookmarks,
+		IssueClaims:      issueClaims,
+		SavedSearches:    savedSearches,
+		Preferences:      preferences,
+		ProfileSnapshots: profileSnapshotResponses(export.ProfileSnapshots),
 	}
 }
 
 type ownedDataSummaryResponse struct {
-	Bookmarks     int64 `json:"bookmarks"`
-	Identities    int64 `json:"identities"`
-	IssueClaims   int64 `json:"issueClaims"`
-	Preferences   int64 `json:"preferences"`
-	SavedSearches int64 `json:"savedSearches"`
-	Sessions      int64 `json:"sessions"`
+	Bookmarks        int64 `json:"bookmarks"`
+	Identities       int64 `json:"identities"`
+	IssueClaims      int64 `json:"issueClaims"`
+	Preferences      int64 `json:"preferences"`
+	SavedSearches    int64 `json:"savedSearches"`
+	Sessions         int64 `json:"sessions"`
+	ProfileSnapshots int64 `json:"profileSnapshots"`
 }
 
 type accountDeleteResponse struct {

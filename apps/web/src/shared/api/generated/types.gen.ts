@@ -259,6 +259,48 @@ export type Preferences = {
   updatedAt?: string;
 };
 
+export type ProfileSnapshotProficiency = {
+  name: string;
+  level: number;
+};
+
+export type ProfileSnapshotWriteRequest = {
+  languages: Array<string>;
+  frameworks: Array<string>;
+  ossActivity: number;
+  mergedPullRequests: number;
+  proficiency: Array<ProfileSnapshotProficiency>;
+  completedQuests: number;
+  currentStreak: number;
+  longestStreak: number;
+};
+
+export type ProfileSnapshot = {
+  month: string;
+  languages: Array<string>;
+  frameworks: Array<string>;
+  ossActivity: number;
+  mergedPullRequests: number;
+  proficiency: Array<ProfileSnapshotProficiency>;
+  completedQuests: number;
+  currentStreak: number;
+  longestStreak: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProfileSnapshotEnvelope = {
+  data: ProfileSnapshot;
+  meta: Meta;
+};
+
+export type ProfileSnapshotListEnvelope = {
+  data: {
+    items: Array<ProfileSnapshot>;
+  };
+  meta: Meta;
+};
+
 export type PreferencesEnvelope = {
   data: Preferences;
   meta: Meta;
@@ -273,12 +315,13 @@ export type DeletionEnvelope = {
 
 export type AccountExportEnvelope = {
   data: {
-    schemaVersion: 2;
+    schemaVersion: 3;
     generatedAt: string;
     bookmarks: Array<Bookmark>;
     issueClaims: Array<IssueClaim>;
     savedSearches: Array<SavedSearch>;
     preferences: Preferences | null;
+    profileSnapshots: Array<ProfileSnapshot>;
   };
   meta: Meta;
 };
@@ -302,6 +345,7 @@ export type OwnedDataSummary = {
   preferences: number;
   savedSearches: number;
   sessions: number;
+  profileSnapshots: number;
 };
 
 export type GitHubUserEnvelope = {
@@ -2369,6 +2413,127 @@ export type LogoutAuthSessionResponses = {
 
 export type LogoutAuthSessionResponse =
   LogoutAuthSessionResponses[keyof LogoutAuthSessionResponses];
+
+export type ListAccountProfileSnapshotsData = {
+  body?: never;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/account/profile-snapshots";
+};
+
+export type ListAccountProfileSnapshotsErrors = {
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not in the configured allowlist.
+   */
+  403: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type ListAccountProfileSnapshotsError =
+  ListAccountProfileSnapshotsErrors[keyof ListAccountProfileSnapshotsErrors];
+
+export type ListAccountProfileSnapshotsResponses = {
+  /**
+   * The ownership-isolated monthly trend history.
+   */
+  200: ProfileSnapshotListEnvelope;
+};
+
+export type ListAccountProfileSnapshotsResponse =
+  ListAccountProfileSnapshotsResponses[keyof ListAccountProfileSnapshotsResponses];
+
+export type UpsertAccountProfileSnapshotData = {
+  /**
+   * The bounded public-profile aggregate to retain for the current UTC month.
+   */
+  body: ProfileSnapshotWriteRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/account/profile-snapshots";
+};
+
+export type UpsertAccountProfileSnapshotErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpsertAccountProfileSnapshotError =
+  UpsertAccountProfileSnapshotErrors[keyof UpsertAccountProfileSnapshotErrors];
+
+export type UpsertAccountProfileSnapshotResponses = {
+  /**
+   * The inserted or replaced current-month aggregate.
+   */
+  200: ProfileSnapshotEnvelope;
+};
+
+export type UpsertAccountProfileSnapshotResponse =
+  UpsertAccountProfileSnapshotResponses[keyof UpsertAccountProfileSnapshotResponses];
 
 export type ListAccountIssueClaimsData = {
   body?: never;

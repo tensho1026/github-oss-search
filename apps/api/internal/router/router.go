@@ -245,6 +245,18 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		authCookies,
 		dependencies.Responder,
 	)
+	api.GET(
+		"/account/profile-snapshots",
+		middleware.Timeout(dependencies.Config.NormalRequestTimeout, dependencies.Responder),
+		authenticatedRead,
+		accountHandler.ListProfileSnapshots,
+	)
+	api.PUT(
+		"/account/profile-snapshots",
+		middleware.Timeout(dependencies.Config.NormalRequestTimeout, dependencies.Responder),
+		authenticatedMutation,
+		accountHandler.UpsertProfileSnapshot,
+	)
 	api.POST(
 		"/auth/session/refresh",
 		middleware.Timeout(
