@@ -134,6 +134,23 @@ Origin: {{frontendOrigin}}
 X-CSRF-Token: {{csrfToken}}
 X-Request-ID: httpyac-account-bookmarks-delete
 
+### Update private bookmark organization fields
+# @name updateAccountBookmarkMetadata
+PATCH {{apiBaseUrl}}/api/account/bookmarks/{{bookmarkID}}
+Accept: application/json
+Content-Type: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-bookmarks-metadata
+
+{
+  "note": "Read the contribution guide first.",
+  "collection": "This week",
+  "tags": ["Go", "beginner"],
+  "version": {{bookmarkVersion}}
+}
+
 ### List the authenticated account's normalized saved searches
 # @name listAccountSavedSearches
 GET {{apiBaseUrl}}/api/account/saved-searches?page=1&perPage=20
@@ -211,6 +228,21 @@ Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
 Origin: {{frontendOrigin}}
 X-CSRF-Token: {{csrfToken}}
 X-Request-ID: httpyac-account-searches-delete
+
+### Store a bounded explicit-check result baseline
+# @name updateAccountSavedSearchSnapshot
+PATCH {{apiBaseUrl}}/api/account/saved-searches/{{savedSearchID}}/snapshot
+Accept: application/json
+Content-Type: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-searches-snapshot
+
+{
+  "resultKeys": ["openai/openai-go#42"],
+  "version": {{savedSearchVersion}}
+}
 
 ### Read persisted preferences or version-zero defaults
 # @name getAccountPreferences

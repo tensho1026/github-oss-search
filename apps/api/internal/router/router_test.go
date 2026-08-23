@@ -438,6 +438,7 @@ func newTestRouterWithDatabase(
 		SearchIssues:         routerSearchIssuesStub{},
 		SearchRepositories:   routerSearchRepositoriesStub{},
 		RecommendIssue:       routerRecommendIssueStub{},
+		ObserveReference:     routerObserveReferenceStub{},
 		DatabaseHealth:       databaseHealth,
 		DatabaseConfigured:   databaseConfigured,
 	})
@@ -458,6 +459,7 @@ func newTestRouterFromDependencies(
 	dependencies.SearchIssues = routerSearchIssuesStub{}
 	dependencies.SearchRepositories = routerSearchRepositoriesStub{}
 	dependencies.RecommendIssue = routerRecommendIssueStub{}
+	dependencies.ObserveReference = routerObserveReferenceStub{}
 
 	return New(dependencies)
 }
@@ -569,6 +571,18 @@ func (routerRecommendIssueStub) EvaluateCandidate(
 	_ []string,
 ) issue.RankedIssue {
 	return issue.RankedIssue{Candidate: candidate}
+}
+
+type routerObserveReferenceStub struct{}
+
+func (routerObserveReferenceStub) Execute(
+	context.Context,
+	usecase.ObserveGitHubReferenceInput,
+) (port.GitHubReferenceObservation, error) {
+	return port.GitHubReferenceObservation{
+		State:     port.GitHubReferenceOpen,
+		RateLimit: port.RateLimit{Known: true, Remaining: 37},
+	}, nil
 }
 
 func testConfig(t *testing.T) config.Config {

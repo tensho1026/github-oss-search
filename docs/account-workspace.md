@@ -2,7 +2,8 @@
 
 IssueScout keeps its public discovery product anonymous and stateless.
 GitHub sign-in unlocks only optional, account-owned contribution tasks,
-monthly profile snapshots, bookmarks, named saved searches, display preferences, export, and deletion. Nothing in this feature
+monthly profile snapshots, organized bookmarks, named saved searches with
+explicit result-difference checks, display preferences, export, and deletion. Nothing in this feature
 changes the anonymous profile, repository, issue-search, or issue-detail
 journeys.
 
@@ -35,6 +36,11 @@ redirect automatically. Choosing sign-in preserves only a validated
 same-origin product path and its current query state. Callback markers are
 rendered as accessible success, denial, or failure alerts and then removed from
 the URL with history replacement.
+
+Issue-search results can select at most three candidates. Two or three selected
+references open a URL-shareable comparison backed by existing bounded detail
+evidence. The same selection can be added to Contribution tasks through
+idempotent writes.
 
 `/workspace` is a separately loaded route with Contribution tasks, Bookmarks,
 Saved searches, Preferences, and Privacy tabs. Queries run only for the active tab. A `401`
@@ -99,14 +105,19 @@ changes automatically from GitHub state: `observedIssueState` and
 `unverified`. Revalidation uses public issue/PR links; the account API performs
 no GitHub write.
 
-Bookmarks store only:
+Bookmarks store the normalized reference plus optional private organization:
 
 - target type (`issue` or `repository`);
 - lower-case GitHub repository owner and name;
 - a positive issue number when the target is an issue;
 - opaque UUID, ownership, timestamps, and optimistic version.
+- a note of at most 500 characters;
+- one collection label of at most 80 characters;
+- at most ten deduplicated tags of 32 characters each.
 
-The API returns `upstreamState: unverified`. GitHub objects can be renamed,
+The stored record returns `upstreamState: unverified`. The workspace can perform
+one stateless, on-demand public state observation for a repository, issue, or
+pull request. GitHub objects can be renamed,
 deleted, made private, or made inaccessible after they are bookmarked.
 IssueScout does not run a background copy or persist a GitHub payload. The
 frontend can use the anonymous repository or issue endpoint to revalidate a
@@ -118,6 +129,11 @@ constructor as anonymous issue discovery. Repository filters pass through the
 same `repository.NewDiscoveryCriteria` constructor as anonymous repository
 discovery. Defaults, trimmed values, supported SPDX identifiers, and bounds
 are therefore canonical before storage.
+
+An explicit change check reruns the bounded first 50 results, compares
+normalized reference keys with the previous baseline, and displays new and
+no-longer-present candidates. Only keys and the check time are stored; there is
+no scheduler, notification, or copied GitHub payload.
 
 Preferences store only:
 
@@ -138,14 +154,14 @@ and PNG downloads are generated from the currently displayed public analysis.
 
 ## Bounds and concurrency
 
-| Resource          | Per-account quota | Payload/name bound           | Stable order                          |
-| ----------------- | ----------------: | ---------------------------- | ------------------------------------- |
-| Contribution task |               200 | Issue plus optional PR refs  | `archived, updated_at DESC, id DESC`  |
-| Bookmark          |               200 | Normalized GitHub reference  | `created_at DESC, id DESC`            |
-| Saved search      |                50 | 80-rune name, 8192-byte JSON | `updated_at DESC, id DESC`            |
-| Preferences       |                 1 | Fixed enums and page sizes   | One row per account                   |
-| Profile snapshot  |                24 | Bounded monthly aggregate    | `month ASC`                           |
-| List page size    |                50 | Page 1–100                   | UUID is the deterministic tie-breaker |
+| Resource          | Per-account quota | Payload/name bound                   | Stable order                          |
+| ----------------- | ----------------: | ------------------------------------ | ------------------------------------- |
+| Contribution task |               200 | Issue plus optional PR refs          | `archived, updated_at DESC, id DESC`  |
+| Bookmark          |               200 | Reference, note, collection, 10 tags | `created_at DESC, id DESC`            |
+| Saved search      |                50 | 80-rune name, 8192-byte JSON         | `updated_at DESC, id DESC`            |
+| Preferences       |                 1 | Fixed enums and page sizes           | One row per account                   |
+| Profile snapshot  |                24 | Bounded monthly aggregate            | `month ASC`                           |
+| List page size    |                50 | Page 1–100                           | UUID is the deterministic tie-breaker |
 
 Contribution-task, bookmark, and saved-search quota checks take a transaction-scoped PostgreSQL
 advisory lock keyed by account ID in the same statement as the insert. A
@@ -184,25 +200,27 @@ audit retention, and jurisdiction-specific policy.
 
 ## API inventory
 
-| Method | Path                                          | CSRF | Purpose                       |
-| ------ | --------------------------------------------- | ---- | ----------------------------- |
-| GET    | `/api/account/issue-claims`                   | No   | List owned contribution tasks |
-| PUT    | `/api/account/issue-claims`                   | Yes  | Idempotent task upsert        |
-| PATCH  | `/api/account/issue-claims/{issueClaimID}`    | Yes  | Versioned progress update     |
-| DELETE | `/api/account/issue-claims/{issueClaimID}`    | Yes  | Versioned task deletion       |
-| GET    | `/api/account/bookmarks`                      | No   | List owned bookmarks          |
-| PUT    | `/api/account/bookmarks`                      | Yes  | Idempotent bookmark upsert    |
-| DELETE | `/api/account/bookmarks/{bookmarkID}`         | Yes  | Versioned bookmark deletion   |
-| GET    | `/api/account/saved-searches`                 | No   | List named filters            |
-| POST   | `/api/account/saved-searches`                 | Yes  | Create a named filter         |
-| PUT    | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter replacement  |
-| DELETE | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter deletion     |
-| GET    | `/api/account/preferences`                    | No   | Read stored/default settings  |
-| PUT    | `/api/account/preferences`                    | Yes  | Versioned preference upsert   |
-| GET    | `/api/account/profile-snapshots`              | No   | List monthly growth history   |
-| PUT    | `/api/account/profile-snapshots`              | Yes  | Upsert current UTC month      |
-| GET    | `/api/account/export`                         | No   | Export bounded feature data   |
-| DELETE | `/api/account`                                | Yes  | Permanently delete account    |
+| Method | Path                                                   | CSRF | Purpose                       |
+| ------ | ------------------------------------------------------ | ---- | ----------------------------- |
+| GET    | `/api/account/issue-claims`                            | No   | List owned contribution tasks |
+| PUT    | `/api/account/issue-claims`                            | Yes  | Idempotent task upsert        |
+| PATCH  | `/api/account/issue-claims/{issueClaimID}`             | Yes  | Versioned progress update     |
+| DELETE | `/api/account/issue-claims/{issueClaimID}`             | Yes  | Versioned task deletion       |
+| GET    | `/api/account/bookmarks`                               | No   | List owned bookmarks          |
+| PUT    | `/api/account/bookmarks`                               | Yes  | Idempotent bookmark upsert    |
+| PATCH  | `/api/account/bookmarks/{bookmarkID}`                  | Yes  | Versioned organization update |
+| DELETE | `/api/account/bookmarks/{bookmarkID}`                  | Yes  | Versioned bookmark deletion   |
+| GET    | `/api/account/saved-searches`                          | No   | List named filters            |
+| POST   | `/api/account/saved-searches`                          | Yes  | Create a named filter         |
+| PUT    | `/api/account/saved-searches/{savedSearchID}`          | Yes  | Versioned filter replacement  |
+| PATCH  | `/api/account/saved-searches/{savedSearchID}/snapshot` | Yes  | Store explicit-check baseline |
+| DELETE | `/api/account/saved-searches/{savedSearchID}`          | Yes  | Versioned filter deletion     |
+| GET    | `/api/account/preferences`                             | No   | Read stored/default settings  |
+| PUT    | `/api/account/preferences`                             | Yes  | Versioned preference upsert   |
+| GET    | `/api/account/profile-snapshots`                       | No   | List monthly growth history   |
+| PUT    | `/api/account/profile-snapshots`                       | Yes  | Upsert current UTC month      |
+| GET    | `/api/account/export`                                  | No   | Export bounded feature data   |
+| DELETE | `/api/account`                                         | Yes  | Permanently delete account    |
 
 Use [`http/account-workspace.http`](../http/account-workspace.http) for every
 success and rejection capability. Keep actual cookies and CSRF values in a

@@ -17,6 +17,8 @@
           "includeEnglish": true,
           "excludeArchived": true
         },
+        "resultKeys": ["openai/openai-go#42"],
+        "lastCheckedAt": "2026-08-01T01:02:03Z",
         "version": 1,
         "createdAt": "2026-08-01T01:02:03Z",
         "updatedAt": "2026-08-01T01:02:03Z"

@@ -87,6 +87,76 @@ describe("IssueSearchResults", () => {
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
 
+  it("selects candidates and builds a bounded comparison link", async () => {
+    const user = userEvent.setup();
+    const first = issueSearchFixture.data.items[0]!;
+    const second = {
+      ...first,
+      issue: { ...first.issue, number: 43, title: "Second candidate" },
+    };
+    const onSelectionChange = vi.fn();
+    const onClearSelection = vi.fn();
+    render(
+      <AppProviders>
+        <MemoryRouter>
+          <IssueSearchResults
+            envelope={{
+              ...issueSearchFixture,
+              data: { ...issueSearchFixture.data, items: [first, second] },
+            }}
+            isFetching={false}
+            onClearSelection={onClearSelection}
+            onPageChange={vi.fn()}
+            onSelectionChange={onSelectionChange}
+            returnTo="/search?search=1"
+            selectedItems={[first, second]}
+            skills={["TypeScript"]}
+          />
+        </MemoryRouter>
+      </AppProviders>,
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox", {
+      name: "Select for comparison",
+    });
+    expect(checkboxes).toHaveLength(2);
+    await user.click(checkboxes[0]!);
+    expect(onSelectionChange).toHaveBeenCalledWith(first, false);
+    const compare = screen.getByRole("link", { name: "Compare" });
+    expect(compare).toHaveAttribute(
+      "href",
+      expect.stringContaining("/compare?issue="),
+    );
+    expect(compare).toHaveAttribute(
+      "href",
+      expect.stringContaining("skills=TypeScript"),
+    );
+    await user.click(screen.getByRole("button", { name: "Clear selection" }));
+    expect(onClearSelection).toHaveBeenCalled();
+  });
+
+  it("requires two candidates before comparison", () => {
+    const first = issueSearchFixture.data.items[0]!;
+    render(
+      <AppProviders>
+        <MemoryRouter>
+          <IssueSearchResults
+            envelope={issueSearchFixture}
+            isFetching={false}
+            onClearSelection={vi.fn()}
+            onPageChange={vi.fn()}
+            onSelectionChange={vi.fn()}
+            selectedItems={[first]}
+          />
+        </MemoryRouter>
+      </AppProviders>,
+    );
+    expect(
+      screen.getByText("Select at least two issues to compare."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Compare").closest("button")).toBeDisabled();
+  });
+
   it("renders an actionable no-results state", () => {
     render(
       <MemoryRouter>

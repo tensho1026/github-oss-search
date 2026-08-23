@@ -40,6 +40,33 @@ func New(now func() time.Time) *Client {
 	return &Client{now: now}
 }
 
+// ObserveReference returns deterministic public state without persistence.
+func (client *Client) ObserveReference(
+	ctx context.Context,
+	kind port.GitHubReferenceKind,
+	owner string,
+	repositoryName string,
+	number int,
+) (port.GitHubReferenceObservation, error) {
+	if err := ctx.Err(); err != nil {
+		return port.GitHubReferenceObservation{}, err
+	}
+	if !strings.EqualFold(owner, fixtureOwner) ||
+		!strings.EqualFold(repositoryName, fixtureRepository) {
+		return port.GitHubReferenceObservation{
+			State: port.GitHubReferenceInaccessible, RateLimit: client.rateLimit(),
+		}, nil
+	}
+	state := port.GitHubReferenceAvailable
+	if kind != port.GitHubReferenceRepository {
+		state = port.GitHubReferenceOpen
+	}
+	if kind == port.GitHubReferencePullRequest && number == fixtureIssue {
+		state = port.GitHubReferenceMerged
+	}
+	return port.GitHubReferenceObservation{State: state, RateLimit: client.rateLimit()}, nil
+}
+
 // GetUser returns a public test profile or one explicit error scenario.
 func (client *Client) GetUser(
 	ctx context.Context,

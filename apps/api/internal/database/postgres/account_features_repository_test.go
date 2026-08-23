@@ -25,6 +25,9 @@ func TestAccountRepositoryListsBookmarksWithOwnedStableQuery(t *testing.T) {
 				"openai",
 				"openai-go",
 				42,
+				"check setup",
+				"this week",
+				[]string{"go"},
 				int64(2),
 				now,
 				now,
@@ -84,6 +87,9 @@ func TestAccountRepositoryUpsertsBookmarkAndEnforcesQuota(t *testing.T) {
 			"openai",
 			"openai-go",
 			42,
+			"",
+			"",
+			[]string{},
 			int64(1),
 			now,
 			now,
@@ -111,6 +117,28 @@ func TestAccountRepositoryUpsertsBookmarkAndEnforcesQuota(t *testing.T) {
 	_, err = quotaRepository.UpsertBookmark(context.Background(), input)
 	if !errors.Is(err, account.ErrQuotaExceeded) {
 		t.Fatalf("quota error = %v", err)
+	}
+}
+
+func TestAccountRepositoryUpdatesBookmarkMetadata(t *testing.T) {
+	accountID := mustAccountID(t)
+	resourceID := mustResourceID(t)
+	now := time.Date(2026, 8, 1, 1, 2, 3, 0, time.UTC)
+	executor := &scriptedAccountExecutor{rowQueue: []pgx.Row{valueRow{values: []any{
+		featureResourceID, "issue", "openai", "openai-go", 42,
+		"Read docs", "This week", []string{"Go"}, int64(2), now, now,
+	}}}}
+	repository := AccountRepository{
+		executor:     executor,
+		queryTimeout: time.Second,
+	}
+	result, err := repository.UpdateBookmark(context.Background(), account.Bookmark{
+		ID: resourceID, AccountID: accountID, Note: "Read docs",
+		Collection: "This week", Tags: []string{"Go"}, Version: 1,
+	})
+	if err != nil || result.Version != 2 || result.Note != "Read docs" ||
+		!strings.Contains(executor.calls[0].query, "version = version + 1") {
+		t.Fatalf("UpdateBookmark() = %+v, %v", result, err)
 	}
 }
 
@@ -177,6 +205,8 @@ func TestAccountRepositoryCreatesAndClassifiesSavedSearchFailures(
 				"issue",
 				"Go issues",
 				[]byte(`{"username":"octocat"}`),
+				[]byte(`[]`),
+				nil,
 				int64(1),
 				now,
 				now,
@@ -231,6 +261,8 @@ func TestAccountRepositoryListsSavedSearchesWithOwnedStableQuery(
 				"issue",
 				"Go issues",
 				[]byte(`{"username":"octocat"}`),
+				[]byte(`["openai/openai-go#42"]`),
+				nil,
 				int64(2),
 				now,
 				now,
@@ -262,6 +294,27 @@ func TestAccountRepositoryListsSavedSearchesWithOwnedStableQuery(
 		!strings.Contains(call.query, "ORDER BY updated_at DESC, id DESC") ||
 		call.arguments[0] != accountID.String() {
 		t.Fatalf("query call = %+v", call)
+	}
+}
+
+func TestAccountRepositoryUpdatesSavedSearchSnapshot(t *testing.T) {
+	accountID := mustAccountID(t)
+	resourceID := mustResourceID(t)
+	now := time.Date(2026, 8, 1, 1, 2, 3, 0, time.UTC)
+	repository := AccountRepository{
+		executor: &scriptedAccountExecutor{rowQueue: []pgx.Row{valueRow{values: []any{
+			featureResourceID, "issue", "Go issues", []byte(`{"username":"octocat"}`),
+			[]byte(`["openai/openai-go#42"]`), now, int64(2), now, now,
+		}}}},
+		queryTimeout: time.Second,
+	}
+	result, err := repository.UpdateSavedSearchSnapshot(context.Background(), account.SavedSearch{
+		ID: resourceID, AccountID: accountID, ResultKeys: []string{"openai/openai-go#42"},
+		LastCheckedAt: &now, Version: 1,
+	})
+	if err != nil || result.Version != 2 || len(result.ResultKeys) != 1 ||
+		result.LastCheckedAt == nil {
+		t.Fatalf("UpdateSavedSearchSnapshot() = %+v, %v", result, err)
 	}
 }
 
@@ -585,12 +638,28 @@ func (row valueRow) Scan(destinations ...any) error {
 				return errors.New("unexpected timestamp value")
 			}
 			*destination = typed
+		case **time.Time:
+			if value == nil {
+				*destination = nil
+				continue
+			}
+			typed, ok := value.(time.Time)
+			if !ok {
+				return errors.New("unexpected nullable timestamp value")
+			}
+			*destination = &typed
 		case *[]byte:
 			typed, ok := value.([]byte)
 			if !ok {
 				return errors.New("unexpected byte slice value")
 			}
 			*destination = append([]byte(nil), typed...)
+		case *[]string:
+			typed, ok := value.([]string)
+			if !ok {
+				return errors.New("unexpected string slice value")
+			}
+			*destination = append([]string(nil), typed...)
 		case *bool:
 			typed, ok := value.(bool)
 			if !ok {

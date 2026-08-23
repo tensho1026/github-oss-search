@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -18,6 +19,14 @@ import (
 const (
 	// MaximumBookmarks bounds storage and list work for one account.
 	MaximumBookmarks = 200
+	// MaximumBookmarkNoteRunes bounds private annotation content.
+	MaximumBookmarkNoteRunes = 500
+	// MaximumBookmarkCollectionRunes bounds one private collection label.
+	MaximumBookmarkCollectionRunes = 80
+	// MaximumBookmarkTags bounds normalized tags on one bookmark.
+	MaximumBookmarkTags = 10
+	// MaximumBookmarkTagRunes bounds each normalized tag.
+	MaximumBookmarkTagRunes = 32
 	// MaximumSavedSearches bounds stored filter documents for one account.
 	MaximumSavedSearches = 50
 	// MaximumIssueClaims bounds personal contribution tasks for one account.
@@ -26,6 +35,10 @@ const (
 	MaximumSavedSearchNameRunes = 80
 	// MaximumSavedSearchFilterBytes matches the PostgreSQL JSON document limit.
 	MaximumSavedSearchFilterBytes = 8192
+	// MaximumSavedSearchResultKeys bounds one explicit difference baseline.
+	MaximumSavedSearchResultKeys = 50
+	// MaximumSavedSearchResultKeyRunes bounds one canonical public reference.
+	MaximumSavedSearchResultKeyRunes = 180
 	// DefaultPageSize is used when an account collection omits pagination.
 	DefaultPageSize = 20
 	// MaximumPageSize bounds account collection reads.
@@ -152,12 +165,65 @@ func NewBookmarkReference(
 
 // Bookmark is one account-owned normalized GitHub reference.
 type Bookmark struct {
-	ID        ResourceID
-	AccountID ID
-	Reference BookmarkReference
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         ResourceID
+	AccountID  ID
+	Reference  BookmarkReference
+	Note       string
+	Collection string
+	Tags       []string
+	Version    int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// NormalizeBookmarkMetadata trims and validates private organization fields.
+// Tags preserve first-seen display spelling while deduplicating case-insensitively.
+func NormalizeBookmarkMetadata(
+	note string,
+	collection string,
+	tags []string,
+) (string, string, []string, error) {
+	normalizedNote, err := normalizeOptionalDisplayText(note, MaximumBookmarkNoteRunes, "note")
+	if err != nil {
+		return "", "", nil, err
+	}
+	normalizedCollection, err := normalizeOptionalDisplayText(
+		collection, MaximumBookmarkCollectionRunes, "collection",
+	)
+	if err != nil {
+		return "", "", nil, err
+	}
+	if len(tags) > MaximumBookmarkTags {
+		return "", "", nil, fmt.Errorf("%w: at most %d tags are allowed", ErrInvalidFeatureInput, MaximumBookmarkTags)
+	}
+	normalizedTags := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, raw := range tags {
+		tag, tagErr := normalizeOptionalDisplayText(raw, MaximumBookmarkTagRunes, "tag")
+		if tagErr != nil || tag == "" {
+			return "", "", nil, fmt.Errorf("%w: tags must contain 1-%d characters", ErrInvalidFeatureInput, MaximumBookmarkTagRunes)
+		}
+		key := strings.ToLower(tag)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		normalizedTags = append(normalizedTags, tag)
+	}
+	return normalizedNote, normalizedCollection, normalizedTags, nil
+}
+
+func normalizeOptionalDisplayText(raw string, maximum int, field string) (string, error) {
+	value := strings.TrimSpace(raw)
+	if utf8.RuneCountInString(value) > maximum || len(value) > maximum*4 {
+		return "", fmt.Errorf("%w: %s must contain at most %d characters", ErrInvalidFeatureInput, field, maximum)
+	}
+	for _, character := range value {
+		if unicode.IsControl(character) {
+			return "", fmt.Errorf("%w: %s cannot contain control characters", ErrInvalidFeatureInput, field)
+		}
+	}
+	return value, nil
 }
 
 // IssueClaimStatus is the user-owned contribution workflow state. It never
@@ -337,14 +403,40 @@ const (
 
 // SavedSearch is a named, normalized filter document owned by one account.
 type SavedSearch struct {
-	ID         ResourceID
-	AccountID  ID
-	SearchType SearchType
-	Name       string
-	Filters    json.RawMessage
-	Version    int64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            ResourceID
+	AccountID     ID
+	SearchType    SearchType
+	Name          string
+	Filters       json.RawMessage
+	ResultKeys    []string
+	LastCheckedAt *time.Time
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// NormalizeSavedSearchResultKeys validates, deduplicates, and sorts the
+// bounded canonical references used only for explicit difference checks.
+func NormalizeSavedSearchResultKeys(values []string) ([]string, error) {
+	if len(values) > MaximumSavedSearchResultKeys {
+		return nil, fmt.Errorf("%w: at most %d result keys are allowed", ErrInvalidFeatureInput, MaximumSavedSearchResultKeys)
+	}
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, raw := range values {
+		value, err := normalizeOptionalDisplayText(raw, MaximumSavedSearchResultKeyRunes, "result key")
+		if err != nil || value == "" {
+			return nil, fmt.Errorf("%w: result keys must be bounded canonical references", ErrInvalidFeatureInput)
+		}
+		key := strings.ToLower(value)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, key)
+	}
+	slices.Sort(result)
+	return result, nil
 }
 
 // NormalizeSavedSearchName trims a bounded display name and rejects controls.

@@ -13,8 +13,8 @@ func TestEmbeddedMigrationsAreOrderedAndForwardOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadMigrations() error = %v", err)
 	}
-	if len(migrations) != 4 {
-		t.Fatalf("migration count = %d, want 4", len(migrations))
+	if len(migrations) != 6 {
+		t.Fatalf("migration count = %d, want 6", len(migrations))
 	}
 	for index, migration := range migrations {
 		if migration.Version != int64(index+1) {

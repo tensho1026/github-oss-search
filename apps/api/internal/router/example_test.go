@@ -59,6 +59,7 @@ func ExampleNew() {
 		SearchIssues:       issueSearch,
 		SearchRepositories: repositorySearch,
 		RecommendIssue:     recommender,
+		ObserveReference:   usecase.NewObserveGitHubReference(reader),
 	})
 	if err != nil {
 		panic(err)

@@ -22,8 +22,10 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import type { IssueSearchEnvelope } from "../../../shared/api/generated";
+import type { IssueSearchItem } from "../../../shared/api/generated";
 import { formatCompactNumber } from "../../../shared/lib/format";
 import { RecommendationCard } from "./RecommendationCard";
+import { IssueSelectionToolbar } from "./IssueSelectionToolbar";
 import { searchFilterOptions, type IssueSort } from "../model/search-filters";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 
@@ -34,6 +36,11 @@ type IssueSearchResultsProps = {
   onPageChange: (page: number) => void;
   onSortChange?: (sort: IssueSort) => void;
   sortBy?: IssueSort;
+  selectedItems?: readonly IssueSearchItem[];
+  onSelectionChange?: (item: IssueSearchItem, selected: boolean) => void;
+  onClearSelection?: () => void;
+  returnTo?: string;
+  skills?: readonly string[];
 };
 
 export function IssueSearchResults({
@@ -43,6 +50,11 @@ export function IssueSearchResults({
   onPageChange,
   onSortChange,
   sortBy = "recommendation",
+  selectedItems = [],
+  onSelectionChange,
+  onClearSelection,
+  returnTo = "/search",
+  skills = [],
 }: IssueSearchResultsProps) {
   const { contributionProfile, items, pagination, searchSummary, warnings } =
     envelope.data;
@@ -188,13 +200,36 @@ export function IssueSearchResults({
       <ol className="grid gap-5">
         {items.map((item, index) => {
           const rank = firstRank + index;
+          const key = issueKey(item);
+          const selected = selectedItems.some(
+            (candidate) => issueKey(candidate) === key,
+          );
           return (
             <li key={`${item.repository.fullName}#${item.issue.number}`}>
-              <RecommendationCard item={item} rank={rank} />
+              <RecommendationCard
+                item={item}
+                onSelectionChange={
+                  onSelectionChange
+                    ? (next) => onSelectionChange(item, next)
+                    : undefined
+                }
+                rank={rank}
+                selected={selected}
+                selectionDisabled={!selected && selectedItems.length >= 3}
+              />
             </li>
           );
         })}
       </ol>
+
+      {onClearSelection ? (
+        <IssueSelectionToolbar
+          items={selectedItems}
+          onClear={onClearSelection}
+          returnTo={returnTo}
+          skills={skills}
+        />
+      ) : null}
 
       <Card>
         <CardContent className="p-5 sm:p-6">
@@ -209,4 +244,8 @@ export function IssueSearchResults({
       </Card>
     </section>
   );
+}
+
+function issueKey(item: IssueSearchItem) {
+  return `${item.repository.owner.toLowerCase()}/${item.repository.name.toLowerCase()}#${item.issue.number}`;
 }

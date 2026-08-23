@@ -30,6 +30,7 @@ type Dependencies struct {
 	SearchIssues         usecase.SearchIssues
 	SearchRepositories   usecase.SearchRepositories
 	RecommendIssue       usecase.IssueRecommender
+	ObserveReference     usecase.ObserveGitHubReference
 	DatabaseHealth       port.DatabaseHealth
 	DatabaseConfigured   bool
 	Authentication       usecase.Authentication
@@ -69,6 +70,9 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		return nil, fmt.Errorf(
 			"compose router: recommend issue usecase is required",
 		)
+	}
+	if dependencies.ObserveReference == nil {
+		return nil, fmt.Errorf("compose router: observe reference usecase is required")
 	}
 	if dependencies.DatabaseConfigured && dependencies.DatabaseHealth == nil {
 		return nil, fmt.Errorf(
@@ -135,6 +139,10 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		dependencies.SearchRepositories,
 		dependencies.Responder,
 	)
+	githubReferenceHandler := handler.NewGitHubReferenceHandler(
+		dependencies.ObserveReference,
+		dependencies.Responder,
+	)
 	authCookies := authhttp.NewPolicy(
 		dependencies.Config.AuthCookieSecure,
 	)
@@ -186,6 +194,14 @@ func New(dependencies Dependencies) (http.Handler, error) {
 			dependencies.Responder,
 		),
 		gitHubProfileAnalysisHandler.Get,
+	)
+	api.POST(
+		"/github/references/observe",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		githubReferenceHandler.Observe,
 	)
 	api.POST(
 		"/issues/search",
@@ -329,6 +345,15 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		authenticatedMutation,
 		accountHandler.UpsertBookmark,
 	)
+	api.PATCH(
+		"/account/bookmarks/:bookmarkID",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedMutation,
+		accountHandler.UpdateBookmarkMetadata,
+	)
 	api.DELETE(
 		"/account/bookmarks/:bookmarkID",
 		middleware.Timeout(
@@ -364,6 +389,15 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		),
 		authenticatedMutation,
 		accountHandler.UpdateSavedSearch,
+	)
+	api.PATCH(
+		"/account/saved-searches/:savedSearchID/snapshot",
+		middleware.Timeout(
+			dependencies.Config.NormalRequestTimeout,
+			dependencies.Responder,
+		),
+		authenticatedMutation,
+		accountHandler.UpdateSavedSearchSnapshot,
 	)
 	api.DELETE(
 		"/account/saved-searches/:savedSearchID",

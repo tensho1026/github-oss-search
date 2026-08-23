@@ -10,6 +10,8 @@ import { queryKeys } from "../../../shared/query/query-keys";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 import { deleteBookmark, listBookmarks } from "../api/account";
 import { AccountRequestAlert } from "./AccountRequestAlert";
+import { ReferenceObservationButton } from "./ReferenceObservationButton";
+import { BookmarkMetadataEditor } from "./BookmarkMetadataEditor";
 
 type Props = {
   csrfToken: string;
@@ -108,10 +110,18 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <ReferenceObservationButton
+                        request={{
+                          kind: bookmark.issueNumber ? "issue" : "repository",
+                          number: bookmark.issueNumber ?? 0,
+                          owner: bookmark.repositoryOwner,
+                          repositoryName: bookmark.repositoryName,
+                        }}
+                      />
                       {publicPath ? (
                         <Button asChild size="small" variant="outline">
                           <Link to={publicPath}>
-                            {t("bookmarks.revalidate")}
+                            {t("recommendation.details")}
                           </Link>
                         </Button>
                       ) : (
@@ -140,6 +150,12 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
                         {t("bookmarks.delete")}
                       </Button>
                     </div>
+                    <BookmarkMetadataEditor
+                      bookmark={bookmark}
+                      csrfToken={csrfToken}
+                      key={`${bookmark.id}-${bookmark.version}`}
+                      onSessionExpired={onSessionExpired}
+                    />
                   </CardContent>
                 </Card>
               </li>

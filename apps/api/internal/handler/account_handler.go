@@ -253,6 +253,36 @@ func (handler AccountHandler) UpsertBookmark(ctx *gin.Context) {
 	)
 }
 
+// UpdateBookmarkMetadata replaces private notes, collection, and tags at the
+// current optimistic version without changing the GitHub reference.
+func (handler AccountHandler) UpdateBookmarkMetadata(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	resourceID, err := account.ParseResourceID(ctx.Param("bookmarkID"))
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	request, err := decodeAccountBody[bookmarkMetadataUpdateRequest](ctx)
+	if err != nil || request.Version < 1 {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	bookmark, err := handler.workspace.UpdateBookmarkMetadata(
+		ctx.Request.Context(), accountID, resourceID, request.Version,
+		usecase.UpdateBookmarkMetadataInput{
+			Note: request.Note, Collection: request.Collection, Tags: request.Tags,
+		},
+	)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, newBookmarkResponse(bookmark))
+}
+
 // DeleteBookmark deletes an owned bookmark at the supplied current version.
 func (handler AccountHandler) DeleteBookmark(ctx *gin.Context) {
 	accountID, resourceID, version, ok := handler.ownedMutationTarget(ctx)
@@ -360,6 +390,33 @@ func (handler AccountHandler) UpdateSavedSearch(ctx *gin.Context) {
 		http.StatusOK,
 		newSavedSearchResponse(savedSearch),
 	)
+}
+
+// UpdateSavedSearchSnapshot stores one bounded result-reference baseline for
+// an explicit user-triggered difference check.
+func (handler AccountHandler) UpdateSavedSearchSnapshot(ctx *gin.Context) {
+	accountID, ok := handler.accountID(ctx)
+	if !ok {
+		return
+	}
+	resourceID, err := account.ParseResourceID(ctx.Param("savedSearchID"))
+	if err != nil {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	request, err := decodeAccountBody[savedSearchSnapshotRequest](ctx)
+	if err != nil || request.Version < 1 {
+		handler.invalidRequest(ctx, err)
+		return
+	}
+	savedSearch, err := handler.workspace.UpdateSavedSearchSnapshot(
+		ctx.Request.Context(), accountID, resourceID, request.Version, request.ResultKeys,
+	)
+	if err != nil {
+		handler.responder.Error(ctx, err)
+		return
+	}
+	handler.responder.Data(ctx, http.StatusOK, newSavedSearchResponse(savedSearch))
 }
 
 // DeleteSavedSearch deletes an owned named filter at the supplied version.
@@ -555,6 +612,13 @@ type bookmarkWriteRequest struct {
 	IssueNumber     *int   `json:"issueNumber"`
 }
 
+type bookmarkMetadataUpdateRequest struct {
+	Note       string   `json:"note"`
+	Collection string   `json:"collection"`
+	Tags       []string `json:"tags"`
+	Version    int64    `json:"version"`
+}
+
 type issueClaimWriteRequest struct {
 	RepositoryOwner string `json:"repositoryOwner"`
 	RepositoryName  string `json:"repositoryName"`
@@ -608,6 +672,11 @@ type savedSearchUpdateRequest struct {
 	Name       string          `json:"name"`
 	Filters    json.RawMessage `json:"filters"`
 	Version    int64           `json:"version"`
+}
+
+type savedSearchSnapshotRequest struct {
+	ResultKeys []string `json:"resultKeys"`
+	Version    int64    `json:"version"`
 }
 
 func (request savedSearchUpdateRequest) input() usecase.WriteSavedSearchInput {
@@ -716,6 +785,9 @@ type bookmarkResponse struct {
 	RepositoryName  string                 `json:"repositoryName"`
 	IssueNumber     *int                   `json:"issueNumber,omitempty"`
 	UpstreamState   string                 `json:"upstreamState"`
+	Note            string                 `json:"note"`
+	Collection      string                 `json:"collection"`
+	Tags            []string               `json:"tags"`
 	Version         int64                  `json:"version"`
 	CreatedAt       time.Time              `json:"createdAt"`
 	UpdatedAt       time.Time              `json:"updatedAt"`
@@ -729,6 +801,9 @@ func newBookmarkResponse(bookmark account.Bookmark) bookmarkResponse {
 		RepositoryName:  bookmark.Reference.RepositoryName,
 		IssueNumber:     bookmark.Reference.IssueNumber,
 		UpstreamState:   "unverified",
+		Note:            bookmark.Note,
+		Collection:      bookmark.Collection,
+		Tags:            append([]string{}, bookmark.Tags...),
 		Version:         bookmark.Version,
 		CreatedAt:       bookmark.CreatedAt.UTC(),
 		UpdatedAt:       bookmark.UpdatedAt.UTC(),
@@ -741,24 +816,28 @@ type savedSearchListResponse struct {
 }
 
 type savedSearchResponse struct {
-	ID         string             `json:"id"`
-	SearchType account.SearchType `json:"searchType"`
-	Name       string             `json:"name"`
-	Filters    json.RawMessage    `json:"filters"`
-	Version    int64              `json:"version"`
-	CreatedAt  time.Time          `json:"createdAt"`
-	UpdatedAt  time.Time          `json:"updatedAt"`
+	ID            string             `json:"id"`
+	SearchType    account.SearchType `json:"searchType"`
+	Name          string             `json:"name"`
+	Filters       json.RawMessage    `json:"filters"`
+	ResultKeys    []string           `json:"resultKeys"`
+	LastCheckedAt *time.Time         `json:"lastCheckedAt"`
+	Version       int64              `json:"version"`
+	CreatedAt     time.Time          `json:"createdAt"`
+	UpdatedAt     time.Time          `json:"updatedAt"`
 }
 
 func newSavedSearchResponse(savedSearch account.SavedSearch) savedSearchResponse {
 	return savedSearchResponse{
-		ID:         savedSearch.ID.String(),
-		SearchType: savedSearch.SearchType,
-		Name:       savedSearch.Name,
-		Filters:    savedSearch.Filters,
-		Version:    savedSearch.Version,
-		CreatedAt:  savedSearch.CreatedAt.UTC(),
-		UpdatedAt:  savedSearch.UpdatedAt.UTC(),
+		ID:            savedSearch.ID.String(),
+		SearchType:    savedSearch.SearchType,
+		Name:          savedSearch.Name,
+		Filters:       savedSearch.Filters,
+		ResultKeys:    append([]string{}, savedSearch.ResultKeys...),
+		LastCheckedAt: savedSearch.LastCheckedAt,
+		Version:       savedSearch.Version,
+		CreatedAt:     savedSearch.CreatedAt.UTC(),
+		UpdatedAt:     savedSearch.UpdatedAt.UTC(),
 	}
 }
 
@@ -891,7 +970,7 @@ func newAccountExportResponse(export account.Export) accountExportResponse {
 		preferences = &value
 	}
 	return accountExportResponse{
-		SchemaVersion:    3,
+		SchemaVersion:    4,
 		GeneratedAt:      export.GeneratedAt.UTC(),
 		Bookmarks:        bookmarks,
 		IssueClaims:      issueClaims,

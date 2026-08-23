@@ -4,6 +4,20 @@ GET {{apiBaseUrl}}/api/issues/{{owner}}/{{repository}}/{{issueNumber}}?skills=Go
 Accept: application/json
 X-Request-ID: httpyac-issue-detail
 
+### Observe one public issue state without copying its content
+# @name observeGitHubReference
+POST {{apiBaseUrl}}/api/github/references/observe
+Accept: application/json
+Content-Type: application/json
+X-Request-ID: httpyac-reference-observe
+
+{
+  "kind": "issue",
+  "owner": "{{owner}}",
+  "repositoryName": "{{repository}}",
+  "number": {{issueNumber}}
+}
+
 ### Repeat issue detail to observe X-IssueScout-Cache
 # @name getIssueRecommendationCached
 GET {{apiBaseUrl}}/api/issues/{{owner}}/{{repository}}/{{issueNumber}}?skills=Go&skills=React

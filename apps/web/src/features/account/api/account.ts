@@ -4,6 +4,7 @@ import type {
   AccountExportEnvelope,
   BookmarkEnvelope,
   BookmarkListEnvelope,
+  BookmarkMetadataUpdateRequest,
   BookmarkWriteRequest,
   DeletionEnvelope,
   IssueClaimEnvelope,
@@ -17,6 +18,7 @@ import type {
   ProfileSnapshotWriteRequest,
   SavedSearchEnvelope,
   SavedSearchListEnvelope,
+  SavedSearchSnapshotRequest,
   SavedSearchUpdateRequest,
   SavedSearchWriteRequest,
 } from "../../../shared/api/generated";
@@ -111,6 +113,18 @@ export function deleteBookmark(id: string, version: number, csrfToken: string) {
   );
 }
 
+export function updateBookmarkMetadata(
+  id: string,
+  request: BookmarkMetadataUpdateRequest,
+  csrfToken: string,
+) {
+  return apiClient.patch<BookmarkEnvelope, BookmarkMetadataUpdateRequest>(
+    accountEndpoints.bookmarkMetadata(id),
+    request,
+    csrfOptions(csrfToken),
+  );
+}
+
 export function listSavedSearches(signal?: AbortSignal) {
   return apiClient.get<SavedSearchListEnvelope>(
     accountEndpoints.savedSearches(),
@@ -149,6 +163,18 @@ export function deleteSavedSearch(
   return apiClient.delete<DeletionEnvelope>(
     accountEndpoints.savedSearchForDelete(id, version),
     undefined,
+    csrfOptions(csrfToken),
+  );
+}
+
+export function updateSavedSearchSnapshot(
+  id: string,
+  request: SavedSearchSnapshotRequest,
+  csrfToken: string,
+) {
+  return apiClient.patch<SavedSearchEnvelope, SavedSearchSnapshotRequest>(
+    accountEndpoints.savedSearchSnapshot(id),
+    request,
     csrfOptions(csrfToken),
   );
 }
