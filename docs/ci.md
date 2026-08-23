@@ -89,12 +89,13 @@ request ID, and graceful shutdown smoke test.
 - bounded analysis: at most 5 ms, 256 KiB, and 200 allocations per operation;
 - recommendation scoring: at most 1 ms, 128 KiB, and 1,000 allocations per operation;
 - largest JavaScript asset: no more than 80 KiB gzip;
-- English-core JavaScript and CSS assets: no more than 217 KiB gzip;
+- English-core JavaScript and CSS assets: no more than 224 KiB gzip;
 - optional locale chunks: no more than 20 KiB gzip.
 
-The 217 KiB core allowance includes the independently loaded account workspace,
-contribution task board, contribution calendar, portfolio, OSS Journey, streak,
-Quest, and typed localization runtime. The Japanese catalog remains outside the
+The 224 KiB core allowance includes the independently loaded account workspace,
+Kanban task board, monthly profile history, client-side sharing exports,
+contribution calendar, portfolio, OSS Journey, streak, Quest, and typed
+localization runtime. The Japanese catalog remains outside the
 core and under its separate 20 KiB ceiling, while the 80 KiB per-asset ceiling
 keeps shared and anonymous route chunks tightly bounded. Raise coverage
 expectations as features gain tests.
