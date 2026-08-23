@@ -90,6 +90,19 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
     [analysis],
   );
   const repositories = useMemo(() => featuredRepositories(user), [user]);
+  const technologyIssueTarget = (technology: string, framework: boolean) => {
+    const filters = createDefaultSearchFilters(user.login);
+    filters.maximumDifficulty = 4;
+    if (framework) {
+      filters.frameworks = [technology];
+    } else {
+      filters.languages = [technology];
+    }
+    return {
+      pathname: appRoutes.search,
+      search: encodeSearchParams(filters, false).toString(),
+    };
+  };
   const issueSearchTarget = useMemo(() => {
     const filters = createDefaultSearchFilters(user.login);
     filters.languages = analysis.languages
@@ -322,10 +335,18 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               <ul className="grid gap-5">
                 {languages.map((language) => (
                   <li className="grid gap-2" key={language.name}>
-                    <div className="flex items-center justify-between gap-4 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                       <span className="font-medium">{language.name}</span>
-                      <span className="font-mono text-muted-foreground">
-                        {formatPercentage(language.percentage)}
+                      <span className="flex items-center gap-3">
+                        <span className="font-mono text-muted-foreground">
+                          {formatPercentage(language.percentage)}
+                        </span>
+                        <Link
+                          className="rounded-md text-xs font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                          to={technologyIssueTarget(language.name, false)}
+                        >
+                          {t("profile.growTechnology")}
+                        </Link>
                       </span>
                     </div>
                     <div
@@ -372,7 +393,13 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
                     <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
                       <Icon icon={Box} />
                     </span>
-                    {framework}
+                    <span className="min-w-0 flex-1">{framework}</span>
+                    <Link
+                      className="rounded-md text-xs font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                      to={technologyIssueTarget(framework, true)}
+                    >
+                      {t("profile.growTechnology")}
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -77,6 +77,31 @@ func (value FilterValue) String() string {
 // Difficulty is the bounded, five-level effort scale used by IssueScout.
 type Difficulty uint8
 
+// SearchSort identifies the deterministic post-analysis ordering applied
+// before pagination. It is intentionally excluded from the discovery cache.
+type SearchSort string
+
+const (
+	SearchSortRecommendation     SearchSort = "recommendation"
+	SearchSortSkillMatch         SearchSort = "skill_match"
+	SearchSortEffort             SearchSort = "effort"
+	SearchSortDifficulty         SearchSort = "difficulty"
+	SearchSortMaintainerResponse SearchSort = "maintainer_response"
+	SearchSortUpdated            SearchSort = "updated"
+)
+
+// ParseSearchSort validates the public issue-search sort vocabulary.
+func ParseSearchSort(value string) (SearchSort, error) {
+	sort := SearchSort(strings.TrimSpace(value))
+	switch sort {
+	case SearchSortRecommendation, SearchSortSkillMatch, SearchSortEffort,
+		SearchSortDifficulty, SearchSortMaintainerResponse, SearchSortUpdated:
+		return sort, nil
+	default:
+		return "", fmt.Errorf("%w: sortBy is unsupported", ErrInvalidSearchCriteria)
+	}
+}
+
 // ParseDifficulty validates a difficulty level in the inclusive range 1-5.
 func ParseDifficulty(value int) (Difficulty, error) {
 	if value < 1 || value > 5 {
@@ -108,6 +133,7 @@ type SearchCriteriaOptions struct {
 	IncludeEnglish       *bool
 	ExcludeArchived      *bool
 	IncludeStale         *bool
+	SortBy               *string
 }
 
 // SearchCriteria is an immutable, canonical issue discovery condition.
@@ -126,6 +152,7 @@ type SearchCriteria struct {
 	includeEnglish       bool
 	excludeArchived      bool
 	includeStale         bool
+	sortBy               SearchSort
 }
 
 // NewSearchCriteria validates, defaults, deduplicates, and canonicalizes issue
@@ -203,6 +230,14 @@ func NewSearchCriteria(options SearchCriteriaOptions) (SearchCriteria, error) {
 		)
 	}
 
+	sortBy := SearchSortRecommendation
+	if options.SortBy != nil {
+		sortBy, err = ParseSearchSort(*options.SortBy)
+		if err != nil {
+			return SearchCriteria{}, err
+		}
+	}
+
 	return SearchCriteria{
 		username:             username,
 		languages:            languages,
@@ -216,6 +251,7 @@ func NewSearchCriteria(options SearchCriteriaOptions) (SearchCriteria, error) {
 		includeEnglish:       valueOrDefault(options.IncludeEnglish, true),
 		excludeArchived:      valueOrDefault(options.ExcludeArchived, true),
 		includeStale:         valueOrDefault(options.IncludeStale, false),
+		sortBy:               sortBy,
 	}, nil
 }
 
@@ -281,6 +317,11 @@ func (criteria SearchCriteria) ExcludesArchived() bool {
 // Unknown assessments are always retained.
 func (criteria SearchCriteria) IncludesStale() bool {
 	return criteria.includeStale
+}
+
+// SortBy returns the requested deterministic post-analysis ordering.
+func (criteria SearchCriteria) SortBy() SearchSort {
+	return criteria.sortBy
 }
 
 // CacheKey returns a stable hash for the validated discovery criteria.

@@ -265,6 +265,7 @@ func (usecase *searchIssues) issueSearchOutput(
 	}
 	ranked, staleExcluded := filterRankedIssuesByStale(ranked, input.Criteria)
 	ranked = filterRankedIssuesByEffort(ranked, input.Criteria)
+	ranked = issue.SortRankedIssues(ranked, input.Criteria.SortBy())
 	total := len(ranked)
 	totalPages := 0
 	if total > 0 {

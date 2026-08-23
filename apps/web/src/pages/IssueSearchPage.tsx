@@ -28,6 +28,7 @@ import {
   toIssueSearchRequest,
   validateSearchFilters,
   type SearchFilters,
+  type IssueSort,
 } from "../features/issue-search/model/search-filters";
 import { useI18n } from "../shared/i18n/i18n-context";
 
@@ -69,6 +70,12 @@ export function IssueSearchPage() {
     );
   }
 
+  function changeSort(sortBy: IssueSort) {
+    setSearchParameters(
+      encodeSearchParams({ ...location.filters, page: 1, sortBy }),
+    );
+  }
+
   let resultContent;
   if (location.shouldSearch && !location.valid) {
     resultContent = <IssueSearchInvalidState />;
@@ -93,6 +100,8 @@ export function IssueSearchPage() {
         isFetching={query.isFetching}
         relaxed={query.data[1]}
         onPageChange={changePage}
+        onSortChange={changeSort}
+        sortBy={location.filters.sortBy}
       />
     );
   } else {

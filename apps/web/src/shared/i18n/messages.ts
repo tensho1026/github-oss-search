@@ -124,6 +124,13 @@ export const enMessages = {
   "issueSearch.rankedEyebrow": "Server-ranked recommendations",
   "issueSearch.eligibleCount": "{count} eligible issues",
   "issueSearch.checkedSummary": "{checked} checked · {enriched} enriched",
+  "issueSearch.sortLabel": "Sort recommendations",
+  "issueSearch.sort.recommendation": "Overall recommendation",
+  "issueSearch.sort.skill_match": "Skill match",
+  "issueSearch.sort.effort": "Shortest effort",
+  "issueSearch.sort.difficulty": "Lowest difficulty",
+  "issueSearch.sort.maintainer_response": "Fastest maintainer response",
+  "issueSearch.sort.updated": "Recently updated",
   "issueSearch.rateRemaining": "GitHub API requests remaining: {count}",
   "issueSearch.partialTitle": "Some recommendation evidence is partial",
   "issueSearch.partialDescription":
@@ -371,6 +378,7 @@ export const enMessages = {
   "profile.sortLanguages": "Sort languages",
   "profile.mostUsed": "Most used",
   "profile.alphabetical": "A–Z",
+  "profile.growTechnology": "Find issues to grow this skill",
   "profile.noLanguages":
     "No primary language percentages were available in the analyzed repository window.",
   "profile.frameworkEvidence": "Framework evidence",

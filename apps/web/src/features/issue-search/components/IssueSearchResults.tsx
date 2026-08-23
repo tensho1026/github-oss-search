@@ -14,9 +14,17 @@ import {
 } from "../../../components/ui/card";
 import { Icon } from "../../../components/ui/icon";
 import { Pagination } from "../../../components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import type { IssueSearchEnvelope } from "../../../shared/api/generated";
 import { formatCompactNumber } from "../../../shared/lib/format";
 import { RecommendationCard } from "./RecommendationCard";
+import { searchFilterOptions, type IssueSort } from "../model/search-filters";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type IssueSearchResultsProps = {
@@ -24,6 +32,8 @@ type IssueSearchResultsProps = {
   isFetching: boolean;
   relaxed?: boolean;
   onPageChange: (page: number) => void;
+  onSortChange?: (sort: IssueSort) => void;
+  sortBy?: IssueSort;
 };
 
 export function IssueSearchResults({
@@ -31,6 +41,8 @@ export function IssueSearchResults({
   isFetching,
   relaxed,
   onPageChange,
+  onSortChange,
+  sortBy = "recommendation",
 }: IssueSearchResultsProps) {
   const { contributionProfile, items, pagination, searchSummary, warnings } =
     envelope.data;
@@ -125,6 +137,27 @@ export function IssueSearchResults({
           </CardContent>
         ) : null}
       </Card>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+        <label className="text-sm font-semibold" htmlFor="issue-result-sort">
+          {t("issueSearch.sortLabel")}
+        </label>
+        <Select
+          onValueChange={(value) => onSortChange?.(value as IssueSort)}
+          value={sortBy}
+        >
+          <SelectTrigger id="issue-result-sort">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {searchFilterOptions.sorts.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {t(`issueSearch.sort.${option.value}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {relaxed ? (
         <Alert variant="warning">

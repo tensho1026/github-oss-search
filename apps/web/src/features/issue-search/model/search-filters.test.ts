@@ -24,6 +24,7 @@ describe("issue search filter model", () => {
       minimumStars: 25,
       page: 2,
       perPage: 10,
+      sortBy: "skill_match" as const,
       updatedWithinDays: 90,
     };
 
@@ -98,6 +99,7 @@ describe("issue search filter model", () => {
       maximumDifficulty: 3,
       maximumEffort: "half_day",
       minimumStars: 10,
+      sortBy: "recommendation",
       updatedWithinDays: 180,
       username: "OctoCat",
     });

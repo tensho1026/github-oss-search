@@ -940,6 +940,18 @@ export type IssueSearchRequest = {
   maximumEffort?:
     "thirty_minutes" | "two_hours" | "half_day" | "one_day" | "three_days";
   /**
+   * Deterministic ordering applied to the fully analyzed eligible
+   * window before pagination. Unknown maintainer evidence sorts last.
+   *
+   */
+  sortBy?:
+    | "recommendation"
+    | "skill_match"
+    | "effort"
+    | "difficulty"
+    | "maintainer_response"
+    | "updated";
+  /**
    * Maximum age for both the issue update and repository update.
    *
    */

@@ -123,6 +123,13 @@ export const jaMessages = {
   "issueSearch.rankedEyebrow": "サーバー順位による推薦",
   "issueSearch.eligibleCount": "対象Issue {count}件",
   "issueSearch.checkedSummary": "{checked}件確認 · {enriched}件を詳細分析",
+  "issueSearch.sortLabel": "推薦の並び順",
+  "issueSearch.sort.recommendation": "総合推薦順",
+  "issueSearch.sort.skill_match": "スキル一致率順",
+  "issueSearch.sort.effort": "短時間順",
+  "issueSearch.sort.difficulty": "難易度が低い順",
+  "issueSearch.sort.maintainer_response": "メンテナー応答が速い順",
+  "issueSearch.sort.updated": "更新が新しい順",
   "issueSearch.rateRemaining": "GitHub API残りリクエスト数: {count}",
   "issueSearch.partialTitle": "推薦根拠の一部が不足しています",
   "issueSearch.partialDescription":
@@ -369,6 +376,7 @@ export const jaMessages = {
   "profile.sortLanguages": "言語を並べ替え",
   "profile.mostUsed": "使用量順",
   "profile.alphabetical": "A〜Z",
+  "profile.growTechnology": "この技術を伸ばせるIssue",
   "profile.noLanguages":
     "分析したリポジトリ範囲に主要言語の割合がありませんでした。",
   "profile.frameworkEvidence": "フレームワークの根拠",
