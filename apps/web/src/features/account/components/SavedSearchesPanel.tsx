@@ -23,6 +23,7 @@ import {
 } from "../api/account";
 import { savedSearchRoute } from "../model/saved-search-route";
 import { AccountRequestAlert } from "./AccountRequestAlert";
+import { SavedSearchDifferenceChecker } from "./SavedSearchDifferenceChecker";
 
 type Props = {
   csrfToken: string;
@@ -49,12 +50,16 @@ function updateRequest(
 }
 
 function SavedSearchRow({
+  csrfToken,
   disabled,
+  onSessionExpired,
   onDelete,
   onRename,
   search,
 }: {
+  csrfToken: string;
   disabled: boolean;
+  onSessionExpired: () => Promise<void>;
   onDelete: (search: SavedSearch) => void;
   onRename: (search: SavedSearch, name: string) => void;
   search: SavedSearch;
@@ -106,6 +111,11 @@ function SavedSearchRow({
               {t("saved.delete")}
             </Button>
           </div>
+          <SavedSearchDifferenceChecker
+            csrfToken={csrfToken}
+            onSessionExpired={onSessionExpired}
+            search={search}
+          />
         </CardContent>
       </Card>
     </li>
@@ -184,6 +194,7 @@ export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
         <ul className="grid gap-3">
           {query.data?.data.items.map((search) => (
             <SavedSearchRow
+              csrfToken={csrfToken}
               disabled={disabled}
               key={`${search.id}-${search.version}`}
               onDelete={(item) => remove.mutate(item)}
@@ -193,6 +204,7 @@ export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
                   request: updateRequest(item, nextName),
                 })
               }
+              onSessionExpired={onSessionExpired}
               search={search}
             />
           ))}

@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router";
 import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
+import { Checkbox } from "../../../components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -33,10 +34,19 @@ import {
 
 type RecommendationCardProps = {
   item: IssueSearchItem;
+  onSelectionChange?: (selected: boolean) => void;
   rank: number;
+  selected?: boolean;
+  selectionDisabled?: boolean;
 };
 
-export function RecommendationCard({ item, rank }: RecommendationCardProps) {
+export function RecommendationCard({
+  item,
+  onSelectionChange,
+  rank,
+  selected = false,
+  selectionDisabled = false,
+}: RecommendationCardProps) {
   const { locale, t } = useI18n();
   const location = useLocation();
   const score = scorePresentation(item.recommendation.score);
@@ -69,6 +79,16 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
   return (
     <Card aria-labelledby={`issue-result-${rank}`} className="overflow-hidden">
       <CardHeader className="border-b border-border bg-muted/35">
+        {onSelectionChange ? (
+          <label className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
+            <Checkbox
+              checked={selected}
+              disabled={selectionDisabled}
+              onChange={(event) => onSelectionChange(event.target.checked)}
+            />
+            {t("selection.select")}
+          </label>
+        ) : null}
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

@@ -94,6 +94,41 @@ func TestAccountHandlerIssueClaimWorkflowIsOwnedAndVersioned(t *testing.T) {
 	}
 }
 
+func TestAccountHandlerUpdatesBookmarkMetadataAndSavedSearchSnapshot(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	accountID := handlerAccountID(t)
+	resourceID := handlerResourceID(t)
+	workspace := &accountWorkspaceStub{
+		bookmark:    account.Bookmark{ID: resourceID, AccountID: accountID, Version: 2, Tags: []string{}},
+		savedSearch: account.SavedSearch{ID: resourceID, AccountID: accountID, SearchType: account.SearchTypeIssue, Name: "Go", Filters: []byte(`{}`), ResultKeys: []string{}, Version: 2},
+	}
+	engine := accountTestEngine(accountID)
+	handler := NewAccountHandler(workspace, authhttp.Policy{}, response.NewResponder())
+	engine.PATCH("/bookmarks/:bookmarkID", handler.UpdateBookmarkMetadata)
+	engine.PATCH("/searches/:savedSearchID/snapshot", handler.UpdateSavedSearchSnapshot)
+
+	bookmarkRequest := httptest.NewRequest(http.MethodPatch, "/bookmarks/"+resourceID.String(), strings.NewReader(
+		`{"note":"Read docs","collection":"This week","tags":["Go"],"version":1}`,
+	))
+	bookmarkRequest.Header.Set("Content-Type", "application/json")
+	bookmarkRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(bookmarkRecorder, bookmarkRequest)
+	if bookmarkRecorder.Code != http.StatusOK || workspace.lastBookmarkUpdate.Note != "Read docs" || workspace.lastVersion != 1 {
+		t.Fatalf("bookmark = %d %s; input = %+v", bookmarkRecorder.Code, bookmarkRecorder.Body.String(), workspace.lastBookmarkUpdate)
+	}
+
+	snapshotRequest := httptest.NewRequest(http.MethodPatch, "/searches/"+resourceID.String()+"/snapshot", strings.NewReader(
+		`{"resultKeys":["acme/rocket#42"],"version":2}`,
+	))
+	snapshotRequest.Header.Set("Content-Type", "application/json")
+	snapshotRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(snapshotRecorder, snapshotRequest)
+	if snapshotRecorder.Code != http.StatusOK || workspace.lastVersion != 2 ||
+		!strings.Contains(snapshotRecorder.Body.String(), `"resultKeys":[]`) {
+		t.Fatalf("snapshot = %d %s", snapshotRecorder.Code, snapshotRecorder.Body.String())
+	}
+}
+
 func TestAccountHandlerProfileSnapshotsUseAuthenticatedOwnership(t *testing.T) {
 	t.Parallel()
 	accountID := handlerAccountID(t)
@@ -464,7 +499,7 @@ func TestAccountHandlerPreferencesExportAndDeletion(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/export", nil),
 	)
 	if exportRecorder.Code != http.StatusOK ||
-		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":3`) ||
+		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":4`) ||
 		!strings.Contains(exportRecorder.Body.String(), `"preferences":null`) {
 		t.Fatalf(
 			"export response = %d %s",
@@ -598,6 +633,7 @@ type accountWorkspaceStub struct {
 	lastResourceID       account.ResourceID
 	lastVersion          int64
 	lastBookmarkInput    usecase.UpsertBookmarkInput
+	lastBookmarkUpdate   usecase.UpdateBookmarkMetadataInput
 	lastIssueClaimInput  usecase.UpsertIssueClaimInput
 	lastIssueClaimUpdate usecase.UpdateIssueClaimInput
 	lastSavedInput       usecase.WriteSavedSearchInput
@@ -690,6 +726,18 @@ func (workspace *accountWorkspaceStub) UpsertBookmark(
 	return workspace.bookmark, nil
 }
 
+func (workspace *accountWorkspaceStub) UpdateBookmarkMetadata(
+	_ context.Context,
+	accountID account.ID,
+	resourceID account.ResourceID,
+	version int64,
+	input usecase.UpdateBookmarkMetadataInput,
+) (account.Bookmark, error) {
+	workspace.recordTarget(accountID, resourceID, version)
+	workspace.lastBookmarkUpdate = input
+	return workspace.bookmark, workspace.err
+}
+
 func (workspace *accountWorkspaceStub) DeleteBookmark(
 	_ context.Context,
 	accountID account.ID,
@@ -731,6 +779,17 @@ func (workspace *accountWorkspaceStub) UpdateSavedSearch(
 	workspace.recordTarget(accountID, resourceID, version)
 	workspace.lastSavedInput = input
 	return workspace.savedSearch, nil
+}
+
+func (workspace *accountWorkspaceStub) UpdateSavedSearchSnapshot(
+	_ context.Context,
+	accountID account.ID,
+	resourceID account.ResourceID,
+	version int64,
+	_ []string,
+) (account.SavedSearch, error) {
+	workspace.recordTarget(accountID, resourceID, version)
+	return workspace.savedSearch, workspace.err
 }
 
 func (workspace *accountWorkspaceStub) DeleteSavedSearch(

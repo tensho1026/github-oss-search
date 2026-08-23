@@ -468,6 +468,14 @@ func (repository *accountRepositoryStub) UpsertBookmark(
 	return bookmark, nil
 }
 
+func (repository *accountRepositoryStub) UpdateBookmark(
+	_ context.Context,
+	bookmark account.Bookmark,
+) (account.Bookmark, error) {
+	bookmark.Version++
+	return bookmark, nil
+}
+
 func (repository *accountRepositoryStub) DeleteBookmark(
 	context.Context,
 	account.ID,
@@ -497,6 +505,14 @@ func (repository *accountRepositoryStub) CreateSavedSearch(
 }
 
 func (repository *accountRepositoryStub) UpdateSavedSearch(
+	_ context.Context,
+	savedSearch account.SavedSearch,
+) (account.SavedSearch, error) {
+	savedSearch.Version++
+	return savedSearch, nil
+}
+
+func (repository *accountRepositoryStub) UpdateSavedSearchSnapshot(
 	_ context.Context,
 	savedSearch account.SavedSearch,
 ) (account.SavedSearch, error) {

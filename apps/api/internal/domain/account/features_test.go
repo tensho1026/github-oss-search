@@ -3,6 +3,7 @@ package account
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -264,5 +265,31 @@ func TestResourceIDRoundTripAndRejectsAccountBoundaryMistakes(t *testing.T) {
 	page, err := NewPage(3, 20)
 	if err != nil || page.Offset() != 40 {
 		t.Fatalf("Page.Offset() = %d, %v", page.Offset(), err)
+	}
+}
+
+func TestBookmarkMetadataAndSavedSearchKeysAreBounded(t *testing.T) {
+	note, collection, tags, err := NormalizeBookmarkMetadata(
+		"  Read CONTRIBUTING  ", " This week ", []string{"Go", "go", " beginner "},
+	)
+	if err != nil || note != "Read CONTRIBUTING" || collection != "This week" ||
+		!slices.Equal(tags, []string{"Go", "beginner"}) {
+		t.Fatalf("NormalizeBookmarkMetadata() = %q, %q, %v, %v", note, collection, tags, err)
+	}
+	for _, invalidTags := range [][]string{
+		make([]string, MaximumBookmarkTags+1),
+		{""},
+		{strings.Repeat("x", MaximumBookmarkTagRunes+1)},
+	} {
+		if _, _, _, invalidErr := NormalizeBookmarkMetadata("", "", invalidTags); !errors.Is(invalidErr, ErrInvalidFeatureInput) {
+			t.Fatalf("NormalizeBookmarkMetadata(%v) error = %v", invalidTags, invalidErr)
+		}
+	}
+	keys, err := NormalizeSavedSearchResultKeys([]string{"Acme/Rocket#2", "acme/rocket#2", "acme/rocket#1"})
+	if err != nil || !slices.Equal(keys, []string{"acme/rocket#1", "acme/rocket#2"}) {
+		t.Fatalf("NormalizeSavedSearchResultKeys() = %v, %v", keys, err)
+	}
+	if _, err := NormalizeSavedSearchResultKeys(make([]string, MaximumSavedSearchResultKeys+1)); !errors.Is(err, ErrInvalidFeatureInput) {
+		t.Fatalf("NormalizeSavedSearchResultKeys() error = %v", err)
 	}
 }

@@ -113,6 +113,41 @@ type GitHubIssueDetailResult struct {
 	Incomplete                  bool
 }
 
+// GitHubReferenceKind identifies the public object observed without copying
+// its upstream payload.
+type GitHubReferenceKind string
+
+const (
+	// GitHubReferenceRepository observes repository availability.
+	GitHubReferenceRepository GitHubReferenceKind = "repository"
+	// GitHubReferenceIssue observes issue open or closed state.
+	GitHubReferenceIssue GitHubReferenceKind = "issue"
+	// GitHubReferencePullRequest observes pull-request lifecycle state.
+	GitHubReferencePullRequest GitHubReferenceKind = "pull_request"
+)
+
+// GitHubReferenceState is a conservative point-in-time public observation.
+type GitHubReferenceState string
+
+const (
+	// GitHubReferenceAvailable means a public repository was reachable.
+	GitHubReferenceAvailable GitHubReferenceState = "available"
+	// GitHubReferenceOpen means the issue or pull request was open.
+	GitHubReferenceOpen GitHubReferenceState = "open"
+	// GitHubReferenceClosed means the issue or pull request was closed.
+	GitHubReferenceClosed GitHubReferenceState = "closed"
+	// GitHubReferenceMerged means the pull request was merged.
+	GitHubReferenceMerged GitHubReferenceState = "merged"
+	// GitHubReferenceInaccessible means public existence cannot be confirmed.
+	GitHubReferenceInaccessible GitHubReferenceState = "inaccessible"
+)
+
+// GitHubReferenceObservation contains no issue, PR, or repository content.
+type GitHubReferenceObservation struct {
+	State     GitHubReferenceState
+	RateLimit RateLimit
+}
+
 // RepositoryHealthReader retrieves optional normalized third-party repository
 // health evidence. Failures must never make GitHub issue detail unusable.
 type RepositoryHealthReader interface {
@@ -213,6 +248,18 @@ type GitHubIssueDetailReader interface {
 	) (GitHubIssueDetailResult, error)
 }
 
+// GitHubReferenceReader performs one bounded public existence/state check.
+type GitHubReferenceReader interface {
+	// ObserveReference returns state only and never copies public object content.
+	ObserveReference(
+		ctx context.Context,
+		kind GitHubReferenceKind,
+		owner string,
+		repositoryName string,
+		number int,
+	) (GitHubReferenceObservation, error)
+}
+
 // GitHubReader is the complete public-data boundary required by the current
 // application. Production and deterministic test adapters implement the same
 // port so usecases never branch on runtime infrastructure.
@@ -223,6 +270,7 @@ type GitHubReader interface {
 	GitHubIssueDetailReader
 	GitHubRepositoryDiscoverySearcher
 	GitHubRepositoryDiscoveryEnricher
+	GitHubReferenceReader
 }
 
 // ProfileAnalysisCacheEntry owns a normalized profile result and the quota

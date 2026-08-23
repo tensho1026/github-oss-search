@@ -62,6 +62,8 @@ func (repository *AccountRepository) UpsertBookmark(
 	var owner string
 	var repositoryName string
 	var issueNumber *int
+	var note, collection string
+	var tags []string
 	var version int64
 	var createdAt, updatedAt time.Time
 	err := repository.executor.QueryRow(
@@ -80,6 +82,9 @@ func (repository *AccountRepository) UpsertBookmark(
 		&owner,
 		&repositoryName,
 		&issueNumber,
+		&note,
+		&collection,
+		&tags,
 		&version,
 		&createdAt,
 		&updatedAt,
@@ -96,10 +101,51 @@ func (repository *AccountRepository) UpsertBookmark(
 		owner,
 		repositoryName,
 		issueNumber,
+		note,
+		collection,
+		tags,
 		version,
 		createdAt,
 		updatedAt,
 		bookmark.AccountID,
+	)
+}
+
+// UpdateBookmark replaces bounded metadata on one owned optimistic version.
+func (repository *AccountRepository) UpdateBookmark(
+	ctx context.Context,
+	bookmark account.Bookmark,
+) (account.Bookmark, error) {
+	queryContext, cancel := context.WithTimeout(ctx, repository.queryTimeout)
+	defer cancel()
+	var rawID, rawTarget, owner, repositoryName string
+	var issueNumber *int
+	var note, collection string
+	var tags []string
+	var version int64
+	var createdAt, updatedAt time.Time
+	err := repository.executor.QueryRow(
+		queryContext,
+		updateBookmarkSQL,
+		bookmark.AccountID.String(),
+		bookmark.ID.String(),
+		bookmark.Note,
+		bookmark.Collection,
+		bookmark.Tags,
+		bookmark.Version,
+	).Scan(
+		&rawID, &rawTarget, &owner, &repositoryName, &issueNumber,
+		&note, &collection, &tags, &version, &createdAt, &updatedAt,
+	)
+	if err == nil {
+		return mapBookmark(rawID, rawTarget, owner, repositoryName, issueNumber,
+			note, collection, tags, version, createdAt, updatedAt, bookmark.AccountID)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return account.Bookmark{}, ErrQueryFailed
+	}
+	return account.Bookmark{}, repository.ownedVersionFailure(
+		queryContext, "bookmarks", bookmark.AccountID, bookmark.ID,
 	)
 }
 
@@ -252,6 +298,39 @@ func (repository *AccountRepository) UpdateSavedSearch(
 	return account.SavedSearch{}, account.ErrVersionConflict
 }
 
+// UpdateSavedSearchSnapshot replaces one explicit-check baseline without
+// changing the saved filter or display name.
+func (repository *AccountRepository) UpdateSavedSearchSnapshot(
+	ctx context.Context,
+	savedSearch account.SavedSearch,
+) (account.SavedSearch, error) {
+	queryContext, cancel := context.WithTimeout(ctx, repository.queryTimeout)
+	defer cancel()
+	resultKeys, err := json.Marshal(savedSearch.ResultKeys)
+	if err != nil {
+		return account.SavedSearch{}, ErrQueryFailed
+	}
+	row := repository.executor.QueryRow(
+		queryContext,
+		updateSavedSearchSnapshotSQL,
+		savedSearch.AccountID.String(),
+		savedSearch.ID.String(),
+		resultKeys,
+		savedSearch.LastCheckedAt,
+		savedSearch.Version,
+	)
+	result, scanErr := scanSavedSearchRow(row, savedSearch.AccountID)
+	if scanErr == nil {
+		return result, nil
+	}
+	if !errors.Is(scanErr, pgx.ErrNoRows) {
+		return account.SavedSearch{}, ErrQueryFailed
+	}
+	return account.SavedSearch{}, repository.ownedVersionFailure(
+		queryContext, "saved_searches", savedSearch.AccountID, savedSearch.ID,
+	)
+}
+
 // DeleteSavedSearch removes an owned row only when its version matches.
 func (repository *AccountRepository) DeleteSavedSearch(
 	ctx context.Context,
@@ -377,6 +456,8 @@ func (repository *AccountRepository) writeSavedSearch(
 	var rawType string
 	var name string
 	var filters []byte
+	var resultKeys []byte
+	var lastCheckedAt *time.Time
 	var version int64
 	var createdAt, updatedAt time.Time
 	err := repository.executor.QueryRow(
@@ -393,6 +474,8 @@ func (repository *AccountRepository) writeSavedSearch(
 		&rawType,
 		&name,
 		&filters,
+		&resultKeys,
+		&lastCheckedAt,
 		&version,
 		&createdAt,
 		&updatedAt,
@@ -403,20 +486,8 @@ func (repository *AccountRepository) writeSavedSearch(
 	if err != nil {
 		return account.SavedSearch{}, ErrQueryFailed
 	}
-	id, err := account.ParseResourceID(rawID)
-	if err != nil || !json.Valid(filters) {
-		return account.SavedSearch{}, ErrQueryFailed
-	}
-	return account.SavedSearch{
-		ID:         id,
-		AccountID:  savedSearch.AccountID,
-		SearchType: account.SearchType(rawType),
-		Name:       name,
-		Filters:    json.RawMessage(filters),
-		Version:    version,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-	}, nil
+	return mapSavedSearch(rawID, rawType, name, filters, resultKeys,
+		lastCheckedAt, version, createdAt, updatedAt, savedSearch.AccountID)
 }
 
 func (repository *AccountRepository) ownedVersionFailure(
@@ -465,6 +536,8 @@ func scanBookmark(
 	var owner string
 	var repositoryName string
 	var issueNumber *int
+	var note, collection string
+	var tags []string
 	var version int64
 	var createdAt, updatedAt time.Time
 	var total int
@@ -474,6 +547,9 @@ func scanBookmark(
 		&owner,
 		&repositoryName,
 		&issueNumber,
+		&note,
+		&collection,
+		&tags,
 		&version,
 		&createdAt,
 		&updatedAt,
@@ -487,6 +563,9 @@ func scanBookmark(
 		owner,
 		repositoryName,
 		issueNumber,
+		note,
+		collection,
+		tags,
 		version,
 		createdAt,
 		updatedAt,
@@ -501,6 +580,9 @@ func mapBookmark(
 	owner string,
 	repositoryName string,
 	issueNumber *int,
+	note string,
+	collection string,
+	tags []string,
 	version int64,
 	createdAt time.Time,
 	updatedAt time.Time,
@@ -520,12 +602,15 @@ func mapBookmark(
 		return account.Bookmark{}, err
 	}
 	return account.Bookmark{
-		ID:        id,
-		AccountID: accountID,
-		Reference: reference,
-		Version:   version,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		ID:         id,
+		AccountID:  accountID,
+		Reference:  reference,
+		Note:       note,
+		Collection: collection,
+		Tags:       append([]string{}, tags...),
+		Version:    version,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}, nil
 }
 
@@ -537,6 +622,8 @@ func scanSavedSearch(
 	var rawType string
 	var name string
 	var filters []byte
+	var resultKeys []byte
+	var lastCheckedAt *time.Time
 	var version int64
 	var createdAt, updatedAt time.Time
 	var total int
@@ -545,6 +632,8 @@ func scanSavedSearch(
 		&rawType,
 		&name,
 		&filters,
+		&resultKeys,
+		&lastCheckedAt,
 		&version,
 		&createdAt,
 		&updatedAt,
@@ -552,20 +641,47 @@ func scanSavedSearch(
 	); err != nil {
 		return account.SavedSearch{}, 0, err
 	}
+	savedSearch, err := mapSavedSearch(rawID, rawType, name, filters, resultKeys,
+		lastCheckedAt, version, createdAt, updatedAt, accountID)
+	return savedSearch, total, err
+}
+
+func scanSavedSearchRow(row rowScanner, accountID account.ID) (account.SavedSearch, error) {
+	var rawID, rawType, name string
+	var filters, resultKeys []byte
+	var lastCheckedAt *time.Time
+	var version int64
+	var createdAt, updatedAt time.Time
+	if err := row.Scan(&rawID, &rawType, &name, &filters, &resultKeys,
+		&lastCheckedAt, &version, &createdAt, &updatedAt); err != nil {
+		return account.SavedSearch{}, err
+	}
+	return mapSavedSearch(rawID, rawType, name, filters, resultKeys,
+		lastCheckedAt, version, createdAt, updatedAt, accountID)
+}
+
+func mapSavedSearch(
+	rawID, rawType, name string,
+	filters, rawResultKeys []byte,
+	lastCheckedAt *time.Time,
+	version int64,
+	createdAt, updatedAt time.Time,
+	accountID account.ID,
+) (account.SavedSearch, error) {
 	id, err := account.ParseResourceID(rawID)
-	if err != nil || !json.Valid(filters) {
-		return account.SavedSearch{}, 0, ErrQueryFailed
+	if err != nil || !json.Valid(filters) || !json.Valid(rawResultKeys) {
+		return account.SavedSearch{}, ErrQueryFailed
+	}
+	var resultKeys []string
+	if err := json.Unmarshal(rawResultKeys, &resultKeys); err != nil {
+		return account.SavedSearch{}, ErrQueryFailed
 	}
 	return account.SavedSearch{
-		ID:         id,
-		AccountID:  accountID,
-		SearchType: account.SearchType(rawType),
-		Name:       name,
-		Filters:    json.RawMessage(filters),
-		Version:    version,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-	}, total, nil
+		ID: id, AccountID: accountID, SearchType: account.SearchType(rawType),
+		Name: name, Filters: json.RawMessage(filters), ResultKeys: resultKeys,
+		LastCheckedAt: lastCheckedAt, Version: version,
+		CreatedAt: createdAt, UpdatedAt: updatedAt,
+	}, nil
 }
 
 const listBookmarksSQL = `SELECT
@@ -574,6 +690,9 @@ const listBookmarksSQL = `SELECT
     repository_owner,
     repository_name,
     issue_number,
+    note,
+    collection_name,
+    tags,
     version,
     created_at,
     updated_at,
@@ -615,11 +734,11 @@ inserted AS (
     FROM allowed
     ON CONFLICT DO NOTHING
     RETURNING id, target_type, repository_owner, repository_name,
-              issue_number, version, created_at, updated_at
+              issue_number, note, collection_name, tags, version, created_at, updated_at
 ),
 existing AS (
     SELECT id, target_type, repository_owner, repository_name,
-           issue_number, version, created_at, updated_at
+           issue_number, note, collection_name, tags, version, created_at, updated_at
     FROM bookmarks
     WHERE account_id = $1::uuid
       AND target_type = $3
@@ -632,11 +751,23 @@ UNION ALL
 SELECT * FROM existing
 LIMIT 1`
 
+const updateBookmarkSQL = `UPDATE bookmarks SET
+    note = $3,
+    collection_name = $4,
+    tags = $5,
+    version = version + 1,
+    updated_at = now()
+WHERE account_id = $1 AND id = $2 AND version = $6
+RETURNING id, target_type, repository_owner, repository_name,
+          issue_number, note, collection_name, tags, version, created_at, updated_at`
+
 const listSavedSearchesSQL = `SELECT
     id,
     search_type,
     name,
     filters,
+    result_keys,
+    last_checked_at,
     version,
     created_at,
     updated_at,
@@ -666,7 +797,8 @@ INSERT INTO saved_searches (
 SELECT $2::uuid, $1::uuid, $3, $4, $5
 FROM allowed
 ON CONFLICT DO NOTHING
-RETURNING id, search_type, name, filters, version, created_at, updated_at`
+RETURNING id, search_type, name, filters, result_keys, last_checked_at,
+          version, created_at, updated_at`
 
 const updateSavedSearchSQL = `UPDATE saved_searches
 SET search_type = $3,
@@ -684,7 +816,17 @@ WHERE account_id = $1
         AND lower(duplicate.name) = lower($4)
         AND duplicate.id <> $2
   )
-RETURNING id, search_type, name, filters, version, created_at, updated_at`
+RETURNING id, search_type, name, filters, result_keys, last_checked_at,
+          version, created_at, updated_at`
+
+const updateSavedSearchSnapshotSQL = `UPDATE saved_searches SET
+    result_keys = $3,
+    last_checked_at = $4,
+    version = version + 1,
+    updated_at = now()
+WHERE account_id = $1 AND id = $2 AND version = $5
+RETURNING id, search_type, name, filters, result_keys, last_checked_at,
+          version, created_at, updated_at`
 
 const upsertPreferencesSQL = `INSERT INTO user_preferences (
     account_id,

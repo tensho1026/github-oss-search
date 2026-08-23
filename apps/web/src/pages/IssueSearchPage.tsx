@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal } from "lucide-react";
-import { useMemo } from "react";
-import { useSearchParams } from "react-router";
+import { useMemo, useState } from "react";
+import { useLocation, useSearchParams } from "react-router";
 
 import { Badge } from "../components/ui/badge";
 import {
@@ -31,11 +31,14 @@ import {
   type IssueSort,
 } from "../features/issue-search/model/search-filters";
 import { useI18n } from "../shared/i18n/i18n-context";
+import type { IssueSearchItem } from "../shared/api/generated";
 
 export function IssueSearchPage() {
   const { session } = useAuth();
   const { t } = useI18n();
+  const routeLocation = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
+  const [selectedItems, setSelectedItems] = useState<IssueSearchItem[]>([]);
   const serializedSearch = searchParameters.toString();
   const location = useMemo(() => {
     const decoded = decodeSearchParams(new URLSearchParams(serializedSearch));
@@ -58,6 +61,7 @@ export function IssueSearchPage() {
   const query = useIssueSearch(location);
 
   function submit(filters: SearchFilters) {
+    setSelectedItems([]);
     setSearchParameters(encodeSearchParams(filters));
   }
 
@@ -102,6 +106,31 @@ export function IssueSearchPage() {
         onPageChange={changePage}
         onSortChange={changeSort}
         sortBy={location.filters.sortBy}
+        selectedItems={selectedItems}
+        onClearSelection={() => setSelectedItems([])}
+        onSelectionChange={(item, selected) => {
+          const key = `${item.repository.owner.toLowerCase()}/${item.repository.name.toLowerCase()}#${item.issue.number}`;
+          setSelectedItems((current) =>
+            selected
+              ? current.length < 3
+                ? [
+                    ...current.filter(
+                      (candidate) =>
+                        `${candidate.repository.owner.toLowerCase()}/${candidate.repository.name.toLowerCase()}#${candidate.issue.number}` !==
+                        key,
+                    ),
+                    item,
+                  ]
+                : current
+              : current.filter(
+                  (candidate) =>
+                    `${candidate.repository.owner.toLowerCase()}/${candidate.repository.name.toLowerCase()}#${candidate.issue.number}` !==
+                    key,
+                ),
+          );
+        }}
+        returnTo={`${routeLocation.pathname}${routeLocation.search}`}
+        skills={[...location.filters.languages, ...location.filters.frameworks]}
       />
     );
   } else {

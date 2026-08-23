@@ -53,6 +53,8 @@ type AccountRepository interface {
 		ctx context.Context,
 		bookmark account.Bookmark,
 	) (account.Bookmark, error)
+	// UpdateBookmark replaces bounded metadata for one owned optimistic version.
+	UpdateBookmark(context.Context, account.Bookmark) (account.Bookmark, error)
 	// DeleteBookmark removes only the matching account, resource, and optimistic
 	// version tuple.
 	DeleteBookmark(
@@ -78,6 +80,8 @@ type AccountRepository interface {
 		ctx context.Context,
 		savedSearch account.SavedSearch,
 	) (account.SavedSearch, error)
+	// UpdateSavedSearchSnapshot replaces one bounded explicit-check baseline.
+	UpdateSavedSearchSnapshot(context.Context, account.SavedSearch) (account.SavedSearch, error)
 	// DeleteSavedSearch removes only the matching account, resource, and
 	// optimistic version tuple.
 	DeleteSavedSearch(

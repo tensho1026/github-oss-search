@@ -139,7 +139,7 @@ use.
 | Rerenders             | Derived profile tags use memoized transformations; server state stays in query cache                              |
 | Route loading         | Home, profile, repository, search, detail, not-found, and account routes are lazy chunks                          |
 | Initial shared bundle | Single-asset gzip ceiling is 80 KiB                                                                               |
-| Aggregate assets      | English-core JavaScript plus CSS gzip ceiling is 217 KiB; optional locales are capped at 20 KiB                   |
+| Aggregate assets      | English-core JavaScript plus CSS gzip ceiling is 232 KiB; optional locales are capped at 20 KiB                   |
 | Mobile/zoom           | Playwright checks 390 px mobile and 320 CSS px equivalent without horizontal overflow                             |
 
 The latest build must pass `pnpm run bundle:check`; asset names and exact sizes

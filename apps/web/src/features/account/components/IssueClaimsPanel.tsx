@@ -22,6 +22,7 @@ import {
 } from "../api/account";
 import { claimMoveRequest } from "../model/claim-board";
 import { AccountRequestAlert } from "./AccountRequestAlert";
+import { ReferenceObservationButton } from "./ReferenceObservationButton";
 
 type Props = {
   csrfToken: string;
@@ -354,7 +355,25 @@ function IssueClaimCard({
               ) : null}
             </div>
           </div>
-          <Button asChild size="small" variant="outline">
+          <ReferenceObservationButton
+            request={{
+              kind: "issue",
+              number: claim.issueNumber,
+              owner: claim.repositoryOwner,
+              repositoryName: claim.repositoryName,
+            }}
+          />
+          {claim.pullRequest ? (
+            <ReferenceObservationButton
+              request={{
+                kind: "pull_request",
+                number: claim.pullRequest.number,
+                owner: claim.pullRequest.repositoryOwner,
+                repositoryName: claim.pullRequest.repositoryName,
+              }}
+            />
+          ) : null}
+          <Button asChild size="small" variant="ghost">
             <Link
               to={appRoutes.issue(
                 claim.repositoryOwner,
@@ -362,7 +381,7 @@ function IssueClaimCard({
                 claim.issueNumber,
               )}
             >
-              {t("claims.revalidate")}
+              {t("recommendation.details")}
             </Link>
           </Button>
         </div>

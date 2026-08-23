@@ -35,6 +35,7 @@ export const appConfig = Object.freeze({
 });
 
 export const appRoutes = Object.freeze({
+  compare: "/compare",
   home: "/",
   issuePattern: "/issues/:owner/:repository/:issueNumber",
   issue(owner: string, repository: string, issueNumber: number): string {
@@ -133,6 +134,9 @@ export const accountEndpoints = Object.freeze({
       id,
     )}?version=${version}`;
   },
+  bookmarkMetadata(id: string): `/${string}` {
+    return `/api/account/bookmarks/${encodeURIComponent(id)}`;
+  },
   bookmarks(page = 1, perPage = 50): `/${string}` {
     return `/api/account/bookmarks?page=${page}&perPage=${perPage}`;
   },
@@ -157,6 +161,9 @@ export const accountEndpoints = Object.freeze({
     return `/api/account/saved-searches/${encodeURIComponent(
       id,
     )}?version=${version}`;
+  },
+  savedSearchSnapshot(id: string): `/${string}` {
+    return `/api/account/saved-searches/${encodeURIComponent(id)}/snapshot`;
   },
   savedSearches(page = 1, perPage = 50): `/${string}` {
     return `/api/account/saved-searches?page=${page}&perPage=${perPage}`;

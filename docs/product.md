@@ -56,6 +56,8 @@ flowchart LR
     Profile --> Snapshot["Review languages and frameworks"]
     Snapshot --> Filters["Choose skills, labels, difficulty, and time"]
     Filters --> Results["Review ranked candidate issues"]
+    Results --> Compare["Compare two or three candidates"]
+    Compare --> Detail["Inspect evidence, risks, activity, and maintainers"]
     Results --> Detail["Inspect evidence, risks, activity, and maintainers"]
     Detail --> GitHub["Open the canonical GitHub issue"]
     Detail --> Adjust["Adjust filters or skills"]

@@ -61,6 +61,7 @@ func main() {
 		os.Exit(1)
 	}
 	gitHubClient := bootstrap.NewGitHubReader(cfg, logger)
+	observeReference := usecase.NewObserveGitHubReference(gitHubClient)
 	getGitHubUser := usecase.NewGetGitHubUser(
 		gitHubClient,
 		cfg.ProfileRepositoryLimit,
@@ -177,6 +178,7 @@ func main() {
 		SearchIssues:         searchIssues,
 		SearchRepositories:   searchRepositories,
 		RecommendIssue:       recommendIssue,
+		ObserveReference:     observeReference,
 		DatabaseHealth:       databasePool,
 		DatabaseConfigured:   databaseConfigured,
 		Authentication:       authentication.Service,

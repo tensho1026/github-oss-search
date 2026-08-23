@@ -25,6 +25,26 @@ export type DatabaseHealthEnvelope = {
   meta: Meta;
 };
 
+export type GitHubReferenceObservationRequest = {
+  kind: "repository" | "issue" | "pull_request";
+  owner: GitHubOwnerValue;
+  repositoryName: GitHubRepositoryValue;
+  /**
+   * Zero for repositories; positive for issues and pull requests.
+   */
+  number: number;
+};
+
+export type GitHubReferenceObservationState =
+  "available" | "open" | "closed" | "merged" | "inaccessible";
+
+export type GitHubReferenceObservationEnvelope = {
+  data: {
+    state: GitHubReferenceObservationState;
+  };
+  meta: Meta;
+};
+
 /**
  * Unpadded base64url encoding of exactly 256 random bits.
  */
@@ -152,6 +172,13 @@ export type GitHubOwnerValue = string;
 
 export type GitHubRepositoryValue = string;
 
+export type BookmarkMetadataUpdateRequest = {
+  note: string;
+  collection: string;
+  tags: Array<string>;
+  version: number;
+};
+
 export type Bookmark = {
   id: string;
   targetType: "issue" | "repository";
@@ -163,6 +190,9 @@ export type Bookmark = {
    *
    */
   upstreamState: "unverified";
+  note: string;
+  collection: string;
+  tags: Array<string>;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -216,11 +246,18 @@ export type SavedSearchUpdateRequest =
 
 export type SavedSearchName = string;
 
+export type SavedSearchSnapshotRequest = {
+  resultKeys: Array<string>;
+  version: number;
+};
+
 export type SavedSearch = {
   id: string;
   searchType: "issue" | "repository";
   name: SavedSearchName;
   filters: IssueSearchRequest | RepositoryDiscoveryRequest;
+  resultKeys: Array<string>;
+  lastCheckedAt?: string;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -315,7 +352,7 @@ export type DeletionEnvelope = {
 
 export type AccountExportEnvelope = {
   data: {
-    schemaVersion: 3;
+    schemaVersion: 4;
     generatedAt: string;
     bookmarks: Array<Bookmark>;
     issueClaims: Array<IssueClaim>;
@@ -1972,6 +2009,65 @@ export type SearchGitHubIssuesResponses = {
 export type SearchGitHubIssuesResponse =
   SearchGitHubIssuesResponses[keyof SearchGitHubIssuesResponses];
 
+export type ObserveGitHubReferenceData = {
+  /**
+   * One bounded public reference with no copied GitHub content.
+   */
+  body: GitHubReferenceObservationRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/github/references/observe";
+};
+
+export type ObserveGitHubReferenceErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * The browser Origin is not in the configured allowlist.
+   */
+  403: ErrorEnvelope;
+  /**
+   * GitHub refused the request because its rate limit was exhausted.
+   */
+  429: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Required public data could not be retrieved from GitHub.
+   */
+  502: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type ObserveGitHubReferenceError =
+  ObserveGitHubReferenceErrors[keyof ObserveGitHubReferenceErrors];
+
+export type ObserveGitHubReferenceResponses = {
+  /**
+   * Current bounded public observation.
+   */
+  200: GitHubReferenceObservationEnvelope;
+};
+
+export type ObserveGitHubReferenceResponse =
+  ObserveGitHubReferenceResponses[keyof ObserveGitHubReferenceResponses];
+
 export type SearchGitHubRepositoriesData = {
   /**
    * Validated public repository filters. Unknown fields and unsupported
@@ -3067,6 +3163,88 @@ export type DeleteAccountBookmarkResponses = {
 export type DeleteAccountBookmarkResponse =
   DeleteAccountBookmarkResponses[keyof DeleteAccountBookmarkResponses];
 
+export type UpdateAccountBookmarkMetadataData = {
+  /**
+   * Complete bounded organization replacement at the current version.
+   */
+  body: BookmarkMetadataUpdateRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path: {
+    /**
+     * Opaque account-owned bookmark identifier.
+     */
+    bookmarkID: string;
+  };
+  query?: never;
+  url: "/api/account/bookmarks/{bookmarkID}";
+};
+
+export type UpdateAccountBookmarkMetadataErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * The resource is missing or is owned by another account. Those cases
+   * are intentionally indistinguishable.
+   *
+   */
+  404: ErrorEnvelope;
+  /**
+   * The account quota was reached, the optimistic version was stale, or a
+   * case-insensitive saved-search name already exists.
+   *
+   */
+  409: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpdateAccountBookmarkMetadataError =
+  UpdateAccountBookmarkMetadataErrors[keyof UpdateAccountBookmarkMetadataErrors];
+
+export type UpdateAccountBookmarkMetadataResponses = {
+  /**
+   * Updated owned bookmark.
+   */
+  200: BookmarkEnvelope;
+};
+
+export type UpdateAccountBookmarkMetadataResponse =
+  UpdateAccountBookmarkMetadataResponses[keyof UpdateAccountBookmarkMetadataResponses];
+
 export type ListAccountSavedSearchesData = {
   body?: never;
   headers?: {
@@ -3376,6 +3554,88 @@ export type UpdateAccountSavedSearchResponses = {
 
 export type UpdateAccountSavedSearchResponse =
   UpdateAccountSavedSearchResponses[keyof UpdateAccountSavedSearchResponses];
+
+export type UpdateAccountSavedSearchSnapshotData = {
+  /**
+   * At most 50 canonical result references and the current version.
+   */
+  body: SavedSearchSnapshotRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path: {
+    /**
+     * Opaque account-owned saved-search identifier.
+     */
+    savedSearchID: string;
+  };
+  query?: never;
+  url: "/api/account/saved-searches/{savedSearchID}/snapshot";
+};
+
+export type UpdateAccountSavedSearchSnapshotErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * The resource is missing or is owned by another account. Those cases
+   * are intentionally indistinguishable.
+   *
+   */
+  404: ErrorEnvelope;
+  /**
+   * The account quota was reached, the optimistic version was stale, or a
+   * case-insensitive saved-search name already exists.
+   *
+   */
+  409: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpdateAccountSavedSearchSnapshotError =
+  UpdateAccountSavedSearchSnapshotErrors[keyof UpdateAccountSavedSearchSnapshotErrors];
+
+export type UpdateAccountSavedSearchSnapshotResponses = {
+  /**
+   * Updated baseline and check timestamp.
+   */
+  200: SavedSearchEnvelope;
+};
+
+export type UpdateAccountSavedSearchSnapshotResponse =
+  UpdateAccountSavedSearchSnapshotResponses[keyof UpdateAccountSavedSearchSnapshotResponses];
 
 export type GetAccountPreferencesData = {
   body?: never;

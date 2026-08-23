@@ -69,31 +69,33 @@ Profile analysis, search, and detail success responses also expose
 
 ## Endpoints
 
-| Method and path                                          | Purpose                                                                | Bounds                                                     |
-| -------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
-| GET `/api/health`                                        | Liveness/readiness and request-correlation check                       | No upstream or database access                             |
-| GET `/api/health/database`                               | Separate authenticated-storage readiness probe                         | One bounded ping; does not gate anonymous routes           |
-| GET `/api/github/users/{username}`                       | Normalized public user and repository summaries                        | At most 20 repositories                                    |
-| GET `/api/github/users/{username}/profile-analysis`      | Technology, calendar, portfolio, Journey, streaks, quests, proficiency | One snapshot; 20 repositories/PRs; at most 54 weeks        |
-| POST `/api/repositories/search`                          | Filtered public repositories with OSS readiness evidence               | 50 candidates, one 20-repository enrichment batch          |
-| POST `/api/issues/search`                                | Eligible, ranked, paginated public issues                              | 50 candidates, 20 detail enrichments, page size at most 50 |
-| GET `/api/issues/{owner}/{repository}/{issueNumber}`     | Complete issue recommendation and bounded repository evidence          | One canonical issue; every activity collection is bounded  |
-| GET `/api/auth/session`                                  | Optional anonymous/authenticated session bootstrap                     | Zero DB calls for absent/malformed cookies                 |
-| GET `/api/auth/github/start`                             | Store state, seal PKCE flow, redirect to GitHub                        | One state write; 15-minute maximum                         |
-| GET `/api/auth/github/callback`                          | Consume state, fetch public identity, create session                   | One-time code; fixed-origin redirect                       |
-| POST `/api/auth/session/refresh`                         | CSRF-check and atomically rotate both browser credentials              | One active session transaction                             |
-| POST `/api/auth/logout`                                  | CSRF-check, revoke server session, expire cookies                      | One session revocation                                     |
-| GET/PUT `/api/account/issue-claims`                      | List or idempotently add account-owned contribution tasks              | 200 total; page size at most 50                            |
-| PATCH/DELETE `/api/account/issue-claims/{issueClaimID}`  | CSRF/version-protected progress update or deletion                     | Personal state remains separate from GitHub state          |
-| GET `/api/account/bookmarks`                             | List normalized owned GitHub references                                | 200 total; page size at most 50                            |
-| PUT `/api/account/bookmarks`                             | CSRF-protected idempotent bookmark upsert                              | Per-account serialized quota                               |
-| DELETE `/api/account/bookmarks/{bookmarkID}`             | CSRF/version-protected owned deletion                                  | Foreign IDs masked as not found                            |
-| GET/POST `/api/account/saved-searches`                   | List/create normalized named filter documents                          | 50 total; filters at most 8192 bytes                       |
-| PUT/DELETE `/api/account/saved-searches/{savedSearchID}` | CSRF/version-protected replace/delete                                  | Case-insensitive owned names                               |
-| GET/PUT `/api/account/preferences`                       | Read defaults or CSRF/version-protected settings                       | Fixed enums; one row                                       |
-| GET/PUT `/api/account/profile-snapshots`                 | List or replace the owner's current monthly OSS aggregate              | 24 UTC months; bounded aggregate only                      |
-| GET `/api/account/export`                                | Export bounded non-secret account feature data                         | Excludes sessions, audit IDs, and GitHub payloads          |
-| DELETE `/api/account`                                    | Confirmed CSRF-protected cascading account deletion                    | Content-free audit evidence                                |
+| Method and path                                              | Purpose                                                                | Bounds                                                     |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| GET `/api/health`                                            | Liveness/readiness and request-correlation check                       | No upstream or database access                             |
+| GET `/api/health/database`                                   | Separate authenticated-storage readiness probe                         | One bounded ping; does not gate anonymous routes           |
+| GET `/api/github/users/{username}`                           | Normalized public user and repository summaries                        | At most 20 repositories                                    |
+| GET `/api/github/users/{username}/profile-analysis`          | Technology, calendar, portfolio, Journey, streaks, quests, proficiency | One snapshot; 20 repositories/PRs; at most 54 weeks        |
+| POST `/api/github/references/observe`                        | Stateless public repository, issue, or pull-request state observation  | One reference; no content copied or persisted              |
+| POST `/api/repositories/search`                              | Filtered public repositories with OSS readiness evidence               | 50 candidates, one 20-repository enrichment batch          |
+| POST `/api/issues/search`                                    | Eligible, ranked, paginated public issues                              | 50 candidates, 20 detail enrichments, page size at most 50 |
+| GET `/api/issues/{owner}/{repository}/{issueNumber}`         | Complete issue recommendation and bounded repository evidence          | One canonical issue; every activity collection is bounded  |
+| GET `/api/auth/session`                                      | Optional anonymous/authenticated session bootstrap                     | Zero DB calls for absent/malformed cookies                 |
+| GET `/api/auth/github/start`                                 | Store state, seal PKCE flow, redirect to GitHub                        | One state write; 15-minute maximum                         |
+| GET `/api/auth/github/callback`                              | Consume state, fetch public identity, create session                   | One-time code; fixed-origin redirect                       |
+| POST `/api/auth/session/refresh`                             | CSRF-check and atomically rotate both browser credentials              | One active session transaction                             |
+| POST `/api/auth/logout`                                      | CSRF-check, revoke server session, expire cookies                      | One session revocation                                     |
+| GET/PUT `/api/account/issue-claims`                          | List or idempotently add account-owned contribution tasks              | 200 total; page size at most 50                            |
+| PATCH/DELETE `/api/account/issue-claims/{issueClaimID}`      | CSRF/version-protected progress update or deletion                     | Personal state remains separate from GitHub state          |
+| GET `/api/account/bookmarks`                                 | List normalized owned GitHub references                                | 200 total; page size at most 50                            |
+| PUT `/api/account/bookmarks`                                 | CSRF-protected idempotent bookmark upsert                              | Per-account serialized quota                               |
+| PATCH/DELETE `/api/account/bookmarks/{bookmarkID}`           | Organize or delete one owned bookmark                                  | 500-char note, collection, at most 10 tags                 |
+| GET/POST `/api/account/saved-searches`                       | List/create normalized named filter documents                          | 50 total; filters at most 8192 bytes                       |
+| PUT/DELETE `/api/account/saved-searches/{savedSearchID}`     | CSRF/version-protected replace/delete                                  | Case-insensitive owned names                               |
+| PATCH `/api/account/saved-searches/{savedSearchID}/snapshot` | Store an explicit result-difference baseline                           | At most 50 normalized public reference keys                |
+| GET/PUT `/api/account/preferences`                           | Read defaults or CSRF/version-protected settings                       | Fixed enums; one row                                       |
+| GET/PUT `/api/account/profile-snapshots`                     | List or replace the owner's current monthly OSS aggregate              | 24 UTC months; bounded aggregate only                      |
+| GET `/api/account/export`                                    | Export bounded non-secret account feature data                         | Excludes sessions, audit IDs, and GitHub payloads          |
+| DELETE `/api/account`                                        | Confirmed CSRF-protected cascading account deletion                    | Content-free audit evidence                                |
 
 Unknown JSON fields, malformed path values, unsupported query keys, control
 characters, excessive collection sizes, and out-of-range pagination are

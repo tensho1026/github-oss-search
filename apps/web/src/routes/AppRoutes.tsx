@@ -31,6 +31,11 @@ const IssueDetailPage = lazy(async () => {
   return { default: module.IssueDetailPage };
 });
 
+const IssueComparePage = lazy(async () => {
+  const module = await import("../pages/IssueComparePage");
+  return { default: module.IssueComparePage };
+});
+
 const WorkspacePage = lazy(async () => {
   const module = await import("../pages/WorkspacePage");
   return { default: module.WorkspacePage };
@@ -105,6 +110,14 @@ export function AppRoutes() {
               </LazyPage>
             }
             path={appRoutes.issuePattern}
+          />
+          <Route
+            element={
+              <LazyPage>
+                <IssueComparePage />
+              </LazyPage>
+            }
+            path={appRoutes.compare}
           />
           <Route
             element={

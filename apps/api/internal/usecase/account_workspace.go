@@ -59,6 +59,14 @@ type AccountWorkspace interface {
 		account.ID,
 		UpsertBookmarkInput,
 	) (account.Bookmark, error)
+	// UpdateBookmarkMetadata replaces bounded private organization fields.
+	UpdateBookmarkMetadata(
+		context.Context,
+		account.ID,
+		account.ResourceID,
+		int64,
+		UpdateBookmarkMetadataInput,
+	) (account.Bookmark, error)
 	// DeleteBookmark requires the authenticated account, resource ID, and
 	// optimistic version.
 	DeleteBookmark(
@@ -89,6 +97,14 @@ type AccountWorkspace interface {
 		account.ResourceID,
 		int64,
 		WriteSavedSearchInput,
+	) (account.SavedSearch, error)
+	// UpdateSavedSearchSnapshot stores the latest bounded explicit-check keys.
+	UpdateSavedSearchSnapshot(
+		context.Context,
+		account.ID,
+		account.ResourceID,
+		int64,
+		[]string,
 	) (account.SavedSearch, error)
 	// DeleteSavedSearch requires the authenticated account, resource ID, and
 	// optimistic version.
@@ -149,6 +165,13 @@ type UpsertBookmarkInput struct {
 	RepositoryOwner string
 	RepositoryName  string
 	IssueNumber     *int
+}
+
+// UpdateBookmarkMetadataInput contains private bounded organization fields.
+type UpdateBookmarkMetadataInput struct {
+	Note       string
+	Collection string
+	Tags       []string
 }
 
 // WriteSavedSearchInput contains an untrusted named filter document.
@@ -388,6 +411,30 @@ func (service *accountWorkspace) UpsertBookmark(
 	return result, nil
 }
 
+func (service *accountWorkspace) UpdateBookmarkMetadata(
+	ctx context.Context,
+	accountID account.ID,
+	bookmarkID account.ResourceID,
+	version int64,
+	input UpdateBookmarkMetadataInput,
+) (account.Bookmark, error) {
+	if version < 1 {
+		return account.Bookmark{}, invalidAccountInput(account.ErrInvalidFeatureInput)
+	}
+	note, collection, tags, err := account.NormalizeBookmarkMetadata(input.Note, input.Collection, input.Tags)
+	if err != nil {
+		return account.Bookmark{}, invalidAccountInput(err)
+	}
+	result, err := service.repository.UpdateBookmark(ctx, account.Bookmark{
+		ID: bookmarkID, AccountID: accountID, Note: note,
+		Collection: collection, Tags: tags, Version: version,
+	})
+	if err != nil {
+		return account.Bookmark{}, accountStorageError(err)
+	}
+	return result, nil
+}
+
 func (service *accountWorkspace) DeleteBookmark(
 	ctx context.Context,
 	accountID account.ID,
@@ -452,6 +499,31 @@ func (service *accountWorkspace) UpdateSavedSearch(
 	savedSearch.ID = savedSearchID
 	savedSearch.Version = version
 	result, err := service.repository.UpdateSavedSearch(ctx, savedSearch)
+	if err != nil {
+		return account.SavedSearch{}, accountStorageError(err)
+	}
+	return result, nil
+}
+
+func (service *accountWorkspace) UpdateSavedSearchSnapshot(
+	ctx context.Context,
+	accountID account.ID,
+	savedSearchID account.ResourceID,
+	version int64,
+	resultKeys []string,
+) (account.SavedSearch, error) {
+	if version < 1 {
+		return account.SavedSearch{}, invalidAccountInput(account.ErrInvalidFeatureInput)
+	}
+	normalized, err := account.NormalizeSavedSearchResultKeys(resultKeys)
+	if err != nil {
+		return account.SavedSearch{}, invalidAccountInput(err)
+	}
+	checkedAt := service.now().UTC()
+	result, err := service.repository.UpdateSavedSearchSnapshot(ctx, account.SavedSearch{
+		ID: savedSearchID, AccountID: accountID, Version: version,
+		ResultKeys: normalized, LastCheckedAt: &checkedAt,
+	})
 	if err != nil {
 		return account.SavedSearch{}, accountStorageError(err)
 	}

@@ -63,6 +63,7 @@ describe("savedSearchRoute", () => {
     createdAt: "2026-08-01T00:00:00Z",
     id: "saved",
     name: "Saved",
+    resultKeys: [],
     updatedAt: "2026-08-01T00:00:00Z",
     version: 1,
   };

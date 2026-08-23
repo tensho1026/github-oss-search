@@ -306,6 +306,49 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+  /api/github/references/observe:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+    post:
+      operationId: observeGitHubReference
+      summary: Observe current public state for one GitHub reference
+      description: |
+        Performs one bounded public REST request for a repository, issue, or
+        pull request. It returns only existence/state evidence, does not copy
+        object content, does not persist the observation, and never mutates
+        GitHub. A 404 is conservatively represented as `inaccessible` because
+        the public boundary cannot distinguish deleted and private objects.
+      tags:
+        - Issue discovery
+      requestBody:
+        required: true
+        description: One bounded public reference with no copied GitHub content.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitHubReferenceObservationRequest"
+      responses:
+        "200":
+          description: Current bounded public observation.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GitHubReferenceObservationEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrigin"
+        "429":
+          $ref: "#/components/responses/GitHubRateLimited"
+        "502":
+          $ref: "#/components/responses/GitHubUpstreamError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
   /api/repositories/search:
     parameters:
       - $ref: "#/components/parameters/RequestID"
@@ -1053,6 +1096,51 @@ paths:
     parameters:
       - $ref: "#/components/parameters/RequestID"
       - $ref: "#/components/parameters/BookmarkID"
+    patch:
+      operationId: updateAccountBookmarkMetadata
+      summary: Update private bookmark organization fields
+      description: |
+        Replaces the bounded private note, collection label, and tags at the
+        current optimistic version. It never changes or copies the referenced
+        GitHub object.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        description: Complete bounded organization replacement at the current version.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookmarkMetadataUpdateRequest"
+      responses:
+        "200":
+          description: Updated owned bookmark.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookmarkEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "404":
+          $ref: "#/components/responses/AccountResourceNotFound"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
     delete:
       operationId: deleteAccountBookmark
       summary: Delete an owned bookmark
@@ -1253,6 +1341,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeletionEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/AuthMutationForbidden"
+        "404":
+          $ref: "#/components/responses/AccountResourceNotFound"
+        "409":
+          $ref: "#/components/responses/AccountConflict"
+        "503":
+          $ref: "#/components/responses/AccountStorageUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+  /api/account/saved-searches/{savedSearchID}/snapshot:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+      - $ref: "#/components/parameters/SavedSearchID"
+    patch:
+      operationId: updateAccountSavedSearchSnapshot
+      summary: Store an explicit saved-search result baseline
+      description: |
+        Stores at most 50 normalized public reference keys after a user-triggered
+        search. It stores no GitHub object content and performs no background
+        refresh or notification.
+      tags:
+        - Account workspace
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        description: At most 50 canonical result references and the current version.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedSearchSnapshotRequest"
+      responses:
+        "200":
+          description: Updated baseline and check timestamp.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearchEnvelope"
         "400":
           $ref: "#/components/responses/InvalidRequest"
         "401":
@@ -1502,6 +1639,11 @@ components:
               repositoryName: openai-go
               issueNumber: 42
               upstreamState: unverified
+              note: Review contribution guide before starting.
+              collection: This week
+              tags:
+                - Go
+                - beginner
               version: 1
               createdAt: 2026-08-01T01:02:03Z
               updatedAt: 2026-08-01T01:02:03Z
@@ -1571,6 +1713,9 @@ components:
                 includeDocumentation: false
                 includeEnglish: true
                 excludeArchived: true
+              resultKeys:
+                - openai/openai-go#42
+              lastCheckedAt: 2026-08-01T01:02:03Z
               version: 1
               createdAt: 2026-08-01T01:02:03Z
               updatedAt: 2026-08-01T01:02:03Z
@@ -1599,7 +1744,7 @@ components:
       summary: Bounded privacy export
       value:
         data:
-          schemaVersion: 3
+          schemaVersion: 4
           generatedAt: 2026-08-01T02:03:04Z
           bookmarks: []
           issueClaims: []
@@ -2928,6 +3073,54 @@ components:
               const: ready
         meta:
           $ref: "#/components/schemas/Meta"
+    GitHubReferenceObservationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - number
+        - owner
+        - repositoryName
+      properties:
+        kind:
+          type: string
+          enum:
+            - repository
+            - issue
+            - pull_request
+        owner:
+          $ref: "#/components/schemas/GitHubOwnerValue"
+        repositoryName:
+          $ref: "#/components/schemas/GitHubRepositoryValue"
+        number:
+          type: integer
+          minimum: 0
+          description: Zero for repositories; positive for issues and pull requests.
+    GitHubReferenceObservationState:
+      type: string
+      enum:
+        - available
+        - open
+        - closed
+        - merged
+        - inaccessible
+    GitHubReferenceObservationEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - state
+          properties:
+            state:
+              $ref: "#/components/schemas/GitHubReferenceObservationState"
+        meta:
+          $ref: "#/components/schemas/Meta"
     OpaqueCredential:
       type: string
       minLength: 43
@@ -3250,15 +3443,45 @@ components:
       minLength: 1
       maxLength: 100
       pattern: "^(?!\\.{1,2}$)[A-Za-z0-9._-]+$"
+    BookmarkMetadataUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - collection
+        - note
+        - tags
+        - version
+      properties:
+        note:
+          type: string
+          maxLength: 500
+        collection:
+          type: string
+          maxLength: 80
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 32
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     Bookmark:
       type: object
       additionalProperties: false
       required:
         - createdAt
+        - collection
         - id
+        - note
         - repositoryName
         - repositoryOwner
         - targetType
+        - tags
         - updatedAt
         - upstreamState
         - version
@@ -3283,6 +3506,19 @@ components:
           const: unverified
           description: |
             The reference is stored without a GitHub payload and may be stale.
+        note:
+          type: string
+          maxLength: 500
+        collection:
+          type: string
+          maxLength: 80
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 32
         version:
           type: integer
           format: int64
@@ -3424,6 +3660,25 @@ components:
       type: string
       minLength: 1
       maxLength: 80
+    SavedSearchSnapshotRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - resultKeys
+        - version
+      properties:
+        resultKeys:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 180
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     SavedSearch:
       type: object
       additionalProperties: false
@@ -3432,6 +3687,7 @@ components:
         - filters
         - id
         - name
+        - resultKeys
         - searchType
         - updatedAt
         - version
@@ -3450,6 +3706,16 @@ components:
           oneOf:
             - $ref: "#/components/schemas/IssueSearchRequest"
             - $ref: "#/components/schemas/RepositoryDiscoveryRequest"
+        resultKeys:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 180
+        lastCheckedAt:
+          type: string
+          format: date-time
         version:
           type: integer
           format: int64
@@ -3719,7 +3985,7 @@ components:
           properties:
             schemaVersion:
               type: integer
-              const: 3
+              const: 4
             generatedAt:
               type: string
               format: date-time

@@ -83,14 +83,13 @@ Neon is a compatible provider, not a domain dependency. No provider type,
 branch identifier, or connection string belongs outside configuration and the
 PostgreSQL adapter.
 
-## Bookmark and collaboration evolution
+## Bookmark organization and collaboration evolution
 
-Bookmark records deliberately contain only target type, repository owner/name,
-optional issue number, timestamps, and optimistic version. To add notes, tags,
-collections, or collaboration:
+Bookmark records contain the normalized target, bounded private note, tags,
+collection label, timestamps, and optimistic version. To add collaboration:
 
-- define maximum lengths/counts and normalization;
-- decide whether content enters privacy export and deletion;
+- define member, role, invitation, and quota limits;
+- decide how shared content enters privacy export and deletion;
 - define conflict and version behavior;
 - prevent notes from becoming a copy of untrusted issue bodies;
 - preserve per-account ownership on every query;
