@@ -119,6 +119,7 @@ export const jaMessages = {
     "GitHubの候補を確認しましたが、すべての条件を満たすものはありませんでした。フレームワーク条件を減らす、スター数を下げる、使える時間を増やすなどをお試しください。",
   "issueSearch.returnFirst": "1ページ目へ戻る",
   "issueSearch.broaden": "条件を広げる",
+  "search.relaxedTitle": "一部一致の候補を表示しています",
   "issueSearch.rankedEyebrow": "サーバー順位による推薦",
   "issueSearch.eligibleCount": "対象Issue {count}件",
   "issueSearch.checkedSummary": "{checked}件確認 · {enriched}件を詳細分析",

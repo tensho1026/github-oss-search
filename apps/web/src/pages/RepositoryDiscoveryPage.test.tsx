@@ -90,19 +90,21 @@ describe("RepositoryDiscoveryPage", () => {
   it("renders an explicit recoverable empty state", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn<typeof fetch>().mockResolvedValue(
-        jsonResponse({
-          ...repositoryDiscoveryFixture,
-          data: {
-            ...repositoryDiscoveryFixture.data,
-            items: [],
-            pagination: {
-              ...repositoryDiscoveryFixture.data.pagination,
-              total: 0,
-              totalPages: 0,
+      vi.fn<typeof fetch>().mockImplementation(() =>
+        Promise.resolve(
+          jsonResponse({
+            ...repositoryDiscoveryFixture,
+            data: {
+              ...repositoryDiscoveryFixture.data,
+              items: [],
+              pagination: {
+                ...repositoryDiscoveryFixture.data.pagination,
+                total: 0,
+                totalPages: 0,
+              },
             },
-          },
-        }),
+          }),
+        ),
       ),
     );
     const search = encodeRepositorySearchParams(
@@ -118,6 +120,44 @@ describe("RepositoryDiscoveryPage", () => {
     expect(
       screen.getByRole("link", { name: "Broaden the filters" }),
     ).toHaveAttribute("href", "#repository-filters");
+  });
+
+  it("labels relaxed repository results as partial matches", async () => {
+    const empty = structuredClone(repositoryDiscoveryFixture);
+    empty.data.items = [];
+    empty.data.pagination = {
+      ...empty.data.pagination,
+      hasNext: false,
+      total: 0,
+      totalPages: 0,
+    };
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(empty))
+      .mockResolvedValueOnce(jsonResponse(repositoryDiscoveryFixture));
+    vi.stubGlobal("fetch", request);
+    const search = encodeRepositorySearchParams(
+      createDefaultRepositoryFilters(),
+    );
+
+    renderPage(`?${search.toString()}`);
+
+    expect(
+      await screen.findByRole("heading", { name: "Showing partial matches" }),
+    ).toBeInTheDocument();
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(
+      JSON.parse(request.mock.calls[1]?.[1]?.body as string),
+    ).toMatchObject({
+      categories: [],
+      forkPolicy: "include",
+      languages: [],
+      maximumDifficulty: 5,
+      minimumReadiness: 0,
+      minimumStars: 0,
+      technologies: [],
+      updatedWithinDays: 3650,
+    });
   });
 
   it("aborts discovery when the route becomes obsolete", async () => {

@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "../../../app/AppProviders";
+import { issueSearchFixture } from "../../../test/issue-fixtures";
 import {
   createDefaultSearchFilters,
   type DecodedSearchLocation,
@@ -27,36 +28,10 @@ function location(
 describe("useIssueSearch", () => {
   it("posts the typed request and forwards query cancellation", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          data: {
-            items: [],
-            pagination: {
-              hasNext: false,
-              page: 1,
-              perPage: 20,
-              total: 0,
-              totalPages: 0,
-            },
-            searchSummary: {
-              candidatesChecked: 0,
-              enrichmentAttempted: 0,
-              enrichmentFailed: 0,
-              excludedByReason: [],
-              upstreamTotal: 0,
-            },
-            warnings: [],
-          },
-          meta: {
-            requestId: "req_search_test",
-            timestamp: "2026-07-30T00:00:00Z",
-          },
-        }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: 200,
-        },
-      ),
+      new Response(JSON.stringify(issueSearchFixture), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
     );
     vi.stubGlobal("fetch", request);
 
@@ -75,6 +50,50 @@ describe("useIssueSearch", () => {
       maximumDifficulty: 3,
       minimumStars: 10,
       username: "octocat",
+    });
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries once with relaxed filters after an empty exact search", async () => {
+    const empty = structuredClone(issueSearchFixture);
+    empty.data.items = [];
+    empty.data.pagination = {
+      ...empty.data.pagination,
+      hasNext: false,
+      total: 0,
+      totalPages: 0,
+    };
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(empty), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(issueSearchFixture), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", request);
+
+    const { result } = renderHook(() => useIssueSearch(location()), {
+      wrapper: AppProviders,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[1]).toBe(true);
+    expect(request).toHaveBeenCalledTimes(2);
+    const fallbackBody = JSON.parse(
+      request.mock.calls[1]?.[1]?.body as string,
+    ) as Record<string, unknown>;
+    expect(fallbackBody).toMatchObject({
+      frameworks: [],
+      includeStale: true,
+      languages: [],
+      maximumDifficulty: 5,
+      minimumStars: 0,
+      updatedWithinDays: 3650,
     });
   });
 

@@ -131,6 +131,32 @@ export function createDefaultSearchFilters(username = ""): SearchFilters {
   };
 }
 
+// Used only after an exact search returns no eligible results. Keep the
+// contributor identity and safety filters, while removing preference and
+// ranking thresholds that commonly make an otherwise useful search empty.
+export function createRelaxedSearchFilters(
+  filters: SearchFilters,
+): SearchFilters {
+  return {
+    ...filters,
+    frameworks: [],
+    includeDocumentation: true,
+    includeStale: true,
+    labels: [
+      "good first issue",
+      "help wanted",
+      "bug",
+      "enhancement",
+      "documentation",
+    ],
+    languages: [],
+    maximumDifficulty: 5,
+    maximumEffort: "",
+    minimumStars: 0,
+    updatedWithinDays: maximumUpdatedWithinDays,
+  };
+}
+
 const parameterNames = Object.freeze({
   excludeArchived: "excludeArchived",
   frameworks: "framework",

@@ -89,8 +89,9 @@ export function IssueSearchPage() {
   } else if (query.data) {
     resultContent = (
       <IssueSearchResults
-        envelope={query.data}
+        envelope={query.data[0]}
         isFetching={query.isFetching}
+        relaxed={query.data[1]}
         onPageChange={changePage}
       />
     );
