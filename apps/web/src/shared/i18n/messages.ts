@@ -120,6 +120,7 @@ export const enMessages = {
     "GitHub candidates were checked, but none met every validated condition. Try fewer framework terms, a lower star threshold, or more available time.",
   "issueSearch.returnFirst": "Return to page 1",
   "issueSearch.broaden": "Broaden the filters",
+  "search.relaxedTitle": "Showing partial matches",
   "issueSearch.rankedEyebrow": "Server-ranked recommendations",
   "issueSearch.eligibleCount": "{count} eligible issues",
   "issueSearch.checkedSummary": "{checked} checked · {enriched} enriched",

@@ -22,12 +22,14 @@ import { useI18n } from "../../../shared/i18n/i18n-context";
 type IssueSearchResultsProps = {
   envelope: IssueSearchEnvelope;
   isFetching: boolean;
+  relaxed?: boolean;
   onPageChange: (page: number) => void;
 };
 
 export function IssueSearchResults({
   envelope,
   isFetching,
+  relaxed,
   onPageChange,
 }: IssueSearchResultsProps) {
   const { contributionProfile, items, pagination, searchSummary, warnings } =
@@ -123,6 +125,12 @@ export function IssueSearchResults({
           </CardContent>
         ) : null}
       </Card>
+
+      {relaxed ? (
+        <Alert variant="warning">
+          <AlertTitle>{t("search.relaxedTitle")}</AlertTitle>
+        </Alert>
+      ) : null}
 
       {hasPartialEvidence ? (
         <Alert variant="warning">

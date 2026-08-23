@@ -22,12 +22,14 @@ import { useI18n } from "../../../shared/i18n/i18n-context";
 type RepositoryDiscoveryResultsProps = {
   envelope: RepositoryDiscoveryEnvelope;
   isFetching: boolean;
+  relaxed?: boolean;
   onPageChange: (page: number) => void;
 };
 
 export function RepositoryDiscoveryResults({
   envelope,
   isFetching,
+  relaxed,
   onPageChange,
 }: RepositoryDiscoveryResultsProps) {
   const { locale, t } = useI18n();
@@ -131,6 +133,12 @@ export function RepositoryDiscoveryResults({
           ) : null}
         </CardContent>
       </Card>
+
+      {relaxed ? (
+        <Alert variant="warning">
+          <AlertTitle>{t("search.relaxedTitle")}</AlertTitle>
+        </Alert>
+      ) : null}
 
       {hasPartialEvidence ? (
         <Alert variant="warning">

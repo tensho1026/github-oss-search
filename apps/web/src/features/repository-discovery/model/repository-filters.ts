@@ -170,6 +170,29 @@ export function createDefaultRepositoryFilters(): RepositoryFilters {
   };
 }
 
+// Broad discovery criteria for the single automatic retry after an exact
+// search returns no repositories. Archive exclusion remains a safety choice.
+export function createRelaxedRepositoryFilters(
+  filters: RepositoryFilters,
+): RepositoryFilters {
+  return {
+    ...filters,
+    categories: [],
+    forkPolicy: "include",
+    hasJapaneseReadme: "any",
+    languages: [],
+    licenses: [],
+    maximumDifficulty: 5,
+    maximumOpenIssues: maximumCount,
+    minimumForks: 0,
+    minimumOpenIssues: 0,
+    minimumReadiness: 0,
+    minimumStars: 0,
+    technologies: [],
+    updatedWithinDays: maximumUpdatedWithinDays,
+  };
+}
+
 const parameterNames = Object.freeze({
   categories: "category",
   excludeArchived: "excludeArchived",

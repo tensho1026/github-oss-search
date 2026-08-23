@@ -72,8 +72,9 @@ export function RepositoryDiscoveryPage() {
   } else if (query.data) {
     resultContent = (
       <RepositoryDiscoveryResults
-        envelope={query.data}
+        envelope={query.data[0]}
         isFetching={query.isFetching}
+        relaxed={query.data[1]}
         onPageChange={changePage}
       />
     );
