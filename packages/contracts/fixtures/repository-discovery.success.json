@@ -43,6 +43,39 @@
           "issuesEnabled": true,
           "discussionsEnabled": true
         },
+        "beginnerFriendliness": {
+          "score": 85,
+          "band": "ready",
+          "signals": [
+            {
+              "name": "contributing_guide",
+              "present": true,
+              "status": "exact"
+            },
+            { "name": "good_first_issue", "present": true, "status": "exact" },
+            { "name": "issue_template", "present": true, "status": "exact" },
+            { "name": "test_instructions", "present": true, "status": "exact" },
+            {
+              "name": "maintainer_response",
+              "present": true,
+              "status": "exact"
+            },
+            {
+              "name": "external_contributor_merge",
+              "present": false,
+              "status": "exact"
+            }
+          ]
+        },
+        "starterIssues": [
+          {
+            "number": 42,
+            "title": "Add a focused parser test",
+            "url": "https://github.com/example/typed-service/issues/42",
+            "labels": ["good first issue"],
+            "updatedAt": "2026-07-30T09:00:00Z"
+          }
+        ],
         "documentation": {
           "status": "sampled",
           "readmeAvailable": true,

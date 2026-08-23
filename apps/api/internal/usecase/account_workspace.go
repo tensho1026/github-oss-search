@@ -14,6 +14,10 @@ import (
 // AccountWorkspace exposes persistence only for an authenticated account.
 // Anonymous profile, repository, and issue use cases never depend on it.
 type AccountWorkspace interface {
+	// ListProfileSnapshots returns the authenticated owner's bounded history.
+	ListProfileSnapshots(context.Context, account.ID) ([]account.ProfileSnapshot, error)
+	// UpsertProfileSnapshot replaces the owner's current UTC calendar month.
+	UpsertProfileSnapshot(context.Context, account.ID, ProfileSnapshotInput) (account.ProfileSnapshot, error)
 	// ListIssueClaims returns one account-owned contribution task page.
 	ListIssueClaims(
 		context.Context,
@@ -161,6 +165,19 @@ type UpdatePreferencesInput struct {
 	ResultsPerPage int
 }
 
+// ProfileSnapshotInput is a bounded aggregate derived from the authenticated
+// user's current public profile analysis.
+type ProfileSnapshotInput struct {
+	Languages          []string
+	Frameworks         []string
+	OSSActivity        int
+	MergedPullRequests int
+	Proficiency        []account.SnapshotProficiency
+	CompletedQuests    int
+	CurrentStreak      int
+	LongestStreak      int
+}
+
 type accountWorkspace struct {
 	repository port.AccountRepository
 	newID      func() (account.ResourceID, error)
@@ -180,6 +197,44 @@ func NewAccountWorkspace(
 		newID:      account.NewResourceID,
 		now:        time.Now,
 	}
+}
+
+func (service *accountWorkspace) ListProfileSnapshots(
+	ctx context.Context,
+	accountID account.ID,
+) ([]account.ProfileSnapshot, error) {
+	result, err := service.repository.ListProfileSnapshots(ctx, accountID)
+	if err != nil {
+		return nil, accountStorageError(err)
+	}
+	return result, nil
+}
+
+func (service *accountWorkspace) UpsertProfileSnapshot(
+	ctx context.Context,
+	accountID account.ID,
+	input ProfileSnapshotInput,
+) (account.ProfileSnapshot, error) {
+	snapshot, err := account.NewProfileSnapshot(
+		accountID,
+		input.Languages,
+		input.Frameworks,
+		input.OSSActivity,
+		input.MergedPullRequests,
+		input.Proficiency,
+		input.CompletedQuests,
+		input.CurrentStreak,
+		input.LongestStreak,
+		service.now(),
+	)
+	if err != nil {
+		return account.ProfileSnapshot{}, invalidAccountInput(err)
+	}
+	result, err := service.repository.UpsertProfileSnapshot(ctx, snapshot)
+	if err != nil {
+		return account.ProfileSnapshot{}, accountStorageError(err)
+	}
+	return result, nil
 }
 
 func (service *accountWorkspace) ListIssueClaims(
@@ -510,12 +565,17 @@ func (service *accountWorkspace) Export(
 		copy := preferences
 		persistedPreferences = &copy
 	}
+	profileSnapshots, err := service.repository.ListProfileSnapshots(ctx, accountID)
+	if err != nil {
+		return account.Export{}, accountStorageError(err)
+	}
 	return account.Export{
-		GeneratedAt:   service.now().UTC(),
-		Bookmarks:     bookmarks,
-		IssueClaims:   issueClaims,
-		SavedSearches: savedSearches.Items,
-		Preferences:   persistedPreferences,
+		GeneratedAt:      service.now().UTC(),
+		Bookmarks:        bookmarks,
+		IssueClaims:      issueClaims,
+		SavedSearches:    savedSearches.Items,
+		Preferences:      persistedPreferences,
+		ProfileSnapshots: profileSnapshots,
 	}, nil
 }
 

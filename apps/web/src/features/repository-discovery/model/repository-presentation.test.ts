@@ -8,7 +8,9 @@ import {
   evidencePresentation,
   readinessPresentation,
   repositoryErrorPresentation,
+  repositoryTechnologyComparison,
 } from "./repository-presentation";
+import { repositoryDiscoveryFixture } from "../../../test/repository-fixtures";
 
 describe("repository discovery presentation", () => {
   it("maps server evidence without recomputing decisions", () => {
@@ -36,6 +38,18 @@ describe("repository discovery presentation", () => {
         reasons: ["No starter issue evidence."],
       }),
     ).toEqual({ label: "Very High", tone: "danger" });
+  });
+
+  it("compares selected contributor technologies with repository evidence", () => {
+    const item = repositoryDiscoveryFixture.data.items[0];
+    if (!item) throw new Error("fixture item is required");
+    expect(
+      repositoryTechnologyComparison(item, ["TypeScript", "React"]),
+    ).toEqual({
+      contributor: ["TypeScript", "React"],
+      repository: ["TypeScript", "React", "Docker"],
+      missing: ["Docker"],
+    });
   });
 
   it.each([

@@ -309,6 +309,40 @@ func TestRankIssuesUsesStableTieBreakersWithoutMutatingInput(t *testing.T) {
 	}
 }
 
+func TestSortRankedIssuesSupportsEveryProductOrder(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	short := rankedFixture("short/repo", 10, 10, 50, now, 1)
+	short.Analysis.Effort.Band = EffortThirtyMinutes
+	short.Analysis.Difficulty.Level = 1
+	short.Recommendation.MaintainerResponse = MaintainerResponseAssessment{Status: AggregateAvailable, Level: 5}
+	long := rankedFixture("long/repo", 10, 90, 90, now.Add(time.Hour), 2)
+	long.Analysis.Effort.Band = EffortThreeDays
+	long.Analysis.Difficulty.Level = 5
+	long.Recommendation.MaintainerResponse = MaintainerResponseAssessment{Status: AggregateAvailable, Level: 1}
+	input := []RankedIssue{long, short}
+
+	tests := []struct {
+		order SearchSort
+		want  string
+	}{
+		{SearchSortRecommendation, "long/repo"},
+		{SearchSortSkillMatch, "long/repo"},
+		{SearchSortEffort, "short/repo"},
+		{SearchSortDifficulty, "short/repo"},
+		{SearchSortMaintainerResponse, "short/repo"},
+		{SearchSortUpdated, "long/repo"},
+	}
+	for _, test := range tests {
+		t.Run(string(test.order), func(t *testing.T) {
+			got := SortRankedIssues(input, test.order)
+			if got[0].Candidate.Repository.FullName != test.want {
+				t.Fatalf("first = %q, want %q", got[0].Candidate.Repository.FullName, test.want)
+			}
+		})
+	}
+}
+
 func TestRecommendDoesNotMutateInput(t *testing.T) {
 	t.Parallel()
 	input := completeRecommendationInput(time.Now())

@@ -185,6 +185,9 @@ func TestEnrichRepositoriesUsesOneBoundedBatchAndReportsPartialData(
 			"helpWantedIssues: issues",
 			"codeOfConduct",
 			"securityPolicyUrl",
+			"starterGoodFirst: issues",
+			"recentMergedPullRequests: pullRequests",
+			"issueTemplates: object",
 			`"main:README.ja.md"`,
 			`"main:.github/CONTRIBUTING.md"`,
 			"rateLimit",
@@ -210,10 +213,21 @@ func TestEnrichRepositoriesUsesOneBoundedBatchAndReportsPartialData(
 					},
 					"securityPolicyUrl": "https://github.com/example/" +
 						"typed-service/security/policy",
+					"starterGoodFirst": map[string]any{"nodes": []map[string]any{{
+						"number": 42, "title": "Add a parser test",
+						"url":       "https://github.com/example/typed-service/issues/42",
+						"updatedAt": "2026-07-30T09:00:00Z",
+						"labels":    map[string]any{"nodes": []map[string]any{{"name": "good first issue"}}},
+					}}},
+					"recentIssues": map[string]any{"nodes": []map[string]any{{
+						"comments": map[string]any{"nodes": []map[string]any{{"authorAssociation": "MEMBER"}}},
+					}}},
+					"recentMergedPullRequests": map[string]any{"nodes": []map[string]any{{"authorAssociation": "CONTRIBUTOR"}}},
+					"issueTemplates":           map[string]any{"entries": []map[string]any{{"name": "bug.yml", "type": "blob"}}},
 					"readmeMarkdown": map[string]any{
-						"byteSize": 12,
+						"byteSize": 20,
 						"isBinary": false,
-						"text":     "English docs",
+						"text":     "English docs npm test",
 					},
 					"readmeJapanese": map[string]any{
 						"byteSize": len(japanese),
@@ -275,6 +289,11 @@ func TestEnrichRepositoriesUsesOneBoundedBatchAndReportsPartialData(
 		enrichment.HelpWantedIssues != 6 ||
 		!enrichment.HasCodeOfConduct ||
 		!enrichment.HasSecurityPolicy ||
+		!enrichment.HasIssueTemplate ||
+		!enrichment.HasTestInstructions ||
+		!enrichment.HasMaintainerResponse ||
+		!enrichment.HasExternalMergedPR ||
+		len(enrichment.StarterIssues) != 1 ||
 		!strings.Contains(enrichment.READMEText, "日本語") {
 		t.Fatalf("enrichment = %+v", enrichment)
 	}

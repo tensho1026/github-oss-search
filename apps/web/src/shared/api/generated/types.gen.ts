@@ -259,6 +259,48 @@ export type Preferences = {
   updatedAt?: string;
 };
 
+export type ProfileSnapshotProficiency = {
+  name: string;
+  level: number;
+};
+
+export type ProfileSnapshotWriteRequest = {
+  languages: Array<string>;
+  frameworks: Array<string>;
+  ossActivity: number;
+  mergedPullRequests: number;
+  proficiency: Array<ProfileSnapshotProficiency>;
+  completedQuests: number;
+  currentStreak: number;
+  longestStreak: number;
+};
+
+export type ProfileSnapshot = {
+  month: string;
+  languages: Array<string>;
+  frameworks: Array<string>;
+  ossActivity: number;
+  mergedPullRequests: number;
+  proficiency: Array<ProfileSnapshotProficiency>;
+  completedQuests: number;
+  currentStreak: number;
+  longestStreak: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProfileSnapshotEnvelope = {
+  data: ProfileSnapshot;
+  meta: Meta;
+};
+
+export type ProfileSnapshotListEnvelope = {
+  data: {
+    items: Array<ProfileSnapshot>;
+  };
+  meta: Meta;
+};
+
 export type PreferencesEnvelope = {
   data: Preferences;
   meta: Meta;
@@ -273,12 +315,13 @@ export type DeletionEnvelope = {
 
 export type AccountExportEnvelope = {
   data: {
-    schemaVersion: 2;
+    schemaVersion: 3;
     generatedAt: string;
     bookmarks: Array<Bookmark>;
     issueClaims: Array<IssueClaim>;
     savedSearches: Array<SavedSearch>;
     preferences: Preferences | null;
+    profileSnapshots: Array<ProfileSnapshot>;
   };
   meta: Meta;
 };
@@ -302,6 +345,7 @@ export type OwnedDataSummary = {
   preferences: number;
   savedSearches: number;
   sessions: number;
+  profileSnapshots: number;
 };
 
 export type GitHubUserEnvelope = {
@@ -781,6 +825,8 @@ export type RepositoryDiscoveryItem = {
   popularity: RepositoryDiscoveryPopularity;
   activity: RepositoryDiscoveryActivity;
   readiness: RepositoryDiscoveryReadiness;
+  beginnerFriendliness: RepositoryBeginnerFriendliness;
+  starterIssues: Array<RepositoryStarterIssue>;
   documentation: RepositoryDiscoveryDocumentation;
   difficulty: RepositoryDiscoveryDifficulty;
   warnings: Array<RepositoryDiscoveryWarning>;
@@ -853,6 +899,39 @@ export type RepositoryDiscoveryDocumentation = {
   codeOfConduct: boolean;
   securityPolicy: boolean;
   japaneseReadme: JapaneseReadmeEvidence;
+};
+
+export type RepositoryBeginnerFriendliness = {
+  score: number;
+  band: "needs_work" | "promising" | "ready";
+  signals: [
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+  ];
+};
+
+export type RepositoryBeginnerSignal = {
+  name:
+    | "contributing_guide"
+    | "good_first_issue"
+    | "issue_template"
+    | "test_instructions"
+    | "maintainer_response"
+    | "external_contributor_merge";
+  present: boolean;
+  status: EvidenceStatus;
+};
+
+export type RepositoryStarterIssue = {
+  number: number;
+  title: string;
+  url: string;
+  labels: Array<string>;
+  updatedAt: string;
 };
 
 export type JapaneseReadmeEvidence = {
@@ -939,6 +1018,18 @@ export type IssueSearchRequest = {
    */
   maximumEffort?:
     "thirty_minutes" | "two_hours" | "half_day" | "one_day" | "three_days";
+  /**
+   * Deterministic ordering applied to the fully analyzed eligible
+   * window before pagination. Unknown maintainer evidence sorts last.
+   *
+   */
+  sortBy?:
+    | "recommendation"
+    | "skill_match"
+    | "effort"
+    | "difficulty"
+    | "maintainer_response"
+    | "updated";
   /**
    * Maximum age for both the issue update and repository update.
    *
@@ -2322,6 +2413,127 @@ export type LogoutAuthSessionResponses = {
 
 export type LogoutAuthSessionResponse =
   LogoutAuthSessionResponses[keyof LogoutAuthSessionResponses];
+
+export type ListAccountProfileSnapshotsData = {
+  body?: never;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/account/profile-snapshots";
+};
+
+export type ListAccountProfileSnapshotsErrors = {
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not in the configured allowlist.
+   */
+  403: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type ListAccountProfileSnapshotsError =
+  ListAccountProfileSnapshotsErrors[keyof ListAccountProfileSnapshotsErrors];
+
+export type ListAccountProfileSnapshotsResponses = {
+  /**
+   * The ownership-isolated monthly trend history.
+   */
+  200: ProfileSnapshotListEnvelope;
+};
+
+export type ListAccountProfileSnapshotsResponse =
+  ListAccountProfileSnapshotsResponses[keyof ListAccountProfileSnapshotsResponses];
+
+export type UpsertAccountProfileSnapshotData = {
+  /**
+   * The bounded public-profile aggregate to retain for the current UTC month.
+   */
+  body: ProfileSnapshotWriteRequest;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/api/account/profile-snapshots";
+};
+
+export type UpsertAccountProfileSnapshotErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * Session cookies are missing, malformed, expired, revoked, or otherwise
+   * unusable.
+   *
+   */
+  401: ErrorEnvelope;
+  /**
+   * The browser Origin is not allowed or the CSRF cookie/header/server
+   * digest comparison failed.
+   *
+   */
+  403: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Optional account storage or authentication is unavailable. Anonymous
+   * profile, repository, and issue routes remain operational.
+   *
+   */
+  503: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type UpsertAccountProfileSnapshotError =
+  UpsertAccountProfileSnapshotErrors[keyof UpsertAccountProfileSnapshotErrors];
+
+export type UpsertAccountProfileSnapshotResponses = {
+  /**
+   * The inserted or replaced current-month aggregate.
+   */
+  200: ProfileSnapshotEnvelope;
+};
+
+export type UpsertAccountProfileSnapshotResponse =
+  UpsertAccountProfileSnapshotResponses[keyof UpsertAccountProfileSnapshotResponses];
 
 export type ListAccountIssueClaimsData = {
   body?: never;

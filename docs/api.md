@@ -91,6 +91,7 @@ Profile analysis, search, and detail success responses also expose
 | GET/POST `/api/account/saved-searches`                   | List/create normalized named filter documents                          | 50 total; filters at most 8192 bytes                       |
 | PUT/DELETE `/api/account/saved-searches/{savedSearchID}` | CSRF/version-protected replace/delete                                  | Case-insensitive owned names                               |
 | GET/PUT `/api/account/preferences`                       | Read defaults or CSRF/version-protected settings                       | Fixed enums; one row                                       |
+| GET/PUT `/api/account/profile-snapshots`                 | List or replace the owner's current monthly OSS aggregate              | 24 UTC months; bounded aggregate only                      |
 | GET `/api/account/export`                                | Export bounded non-secret account feature data                         | Excludes sessions, audit IDs, and GitHub payloads          |
 | DELETE `/api/account`                                    | Confirmed CSRF-protected cascading account deletion                    | Content-free audit evidence                                |
 

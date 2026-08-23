@@ -107,6 +107,7 @@ func (repository *AccountRepository) OwnedDataSummary(
 		&summary.IssueClaims,
 		&summary.SavedSearches,
 		&summary.Preferences,
+		&summary.ProfileSnapshots,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -156,5 +157,6 @@ const ownedDataSummarySQL = `SELECT
     (SELECT count(*) FROM bookmarks WHERE account_id = $1),
     (SELECT count(*) FROM issue_claims WHERE account_id = $1),
     (SELECT count(*) FROM saved_searches WHERE account_id = $1),
-    (SELECT count(*) FROM user_preferences WHERE account_id = $1)
+    (SELECT count(*) FROM user_preferences WHERE account_id = $1),
+    (SELECT count(*) FROM profile_snapshots WHERE account_id = $1)
 WHERE EXISTS (SELECT 1 FROM accounts WHERE id = $1)`

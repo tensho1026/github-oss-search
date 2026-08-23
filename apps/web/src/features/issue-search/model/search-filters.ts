@@ -2,6 +2,7 @@ import type { IssueSearchRequest } from "../../../shared/api/generated";
 import { validateGitHubUsername } from "../../../shared/lib/github-username";
 
 export type EffortBand = NonNullable<IssueSearchRequest["maximumEffort"]>;
+export type IssueSort = NonNullable<IssueSearchRequest["sortBy"]>;
 
 export type SearchFilters = {
   username: string;
@@ -18,6 +19,7 @@ export type SearchFilters = {
   includeStale: boolean;
   page: number;
   perPage: number;
+  sortBy: IssueSort;
 };
 
 export type SearchFilterErrors = Partial<
@@ -99,6 +101,14 @@ export const searchFilterOptions = Object.freeze({
     { label: "20 per page", value: 20 },
     { label: "50 per page", value: 50 },
   ] satisfies Array<FilterOption<number>>,
+  sorts: [
+    { label: "Overall recommendation", value: "recommendation" },
+    { label: "Skill match", value: "skill_match" },
+    { label: "Shortest effort", value: "effort" },
+    { label: "Lowest difficulty", value: "difficulty" },
+    { label: "Fastest maintainer response", value: "maintainer_response" },
+    { label: "Recently updated", value: "updated" },
+  ] satisfies Array<FilterOption<IssueSort>>,
 });
 
 export const searchFilterDescriptions = Object.freeze({
@@ -126,6 +136,7 @@ export function createDefaultSearchFilters(username = ""): SearchFilters {
     minimumStars: 10,
     page: 1,
     perPage: 20,
+    sortBy: "recommendation",
     updatedWithinDays: 180,
     username,
   };
@@ -170,6 +181,7 @@ const parameterNames = Object.freeze({
   minimumStars: "minimumStars",
   page: "page",
   perPage: "perPage",
+  sortBy: "sortBy",
   run: "search",
   updatedWithinDays: "updatedWithinDays",
   username: "username",
@@ -222,6 +234,11 @@ export function validateSearchFilters(
   ) {
     errors.perPage = `Page size must be between 1 and ${maximumPageSize}.`;
   }
+  if (
+    !searchFilterOptions.sorts.some((option) => option.value === filters.sortBy)
+  ) {
+    errors.sortBy = "Sort order is not supported.";
+  }
   return errors;
 }
 
@@ -240,6 +257,12 @@ export function decodeSearchParams(
     parameters,
     parameterNames.maximumEffort,
     defaults.maximumEffort,
+    locationErrors,
+  );
+  const sortBy = readScalar(
+    parameters,
+    parameterNames.sortBy,
+    defaults.sortBy,
     locationErrors,
   );
   const filters: SearchFilters = {
@@ -310,6 +333,7 @@ export function decodeSearchParams(
       defaults.perPage,
       locationErrors,
     ),
+    sortBy: sortBy as IssueSort,
   };
   const searchValues = parameters.getAll(parameterNames.run);
   const shouldSearch = searchValues.length === 1 && searchValues[0] === "1";
@@ -382,6 +406,7 @@ export function encodeSearchParams(
   );
   parameters.set(parameterNames.page, normalized.page.toString());
   parameters.set(parameterNames.perPage, normalized.perPage.toString());
+  parameters.set(parameterNames.sortBy, normalized.sortBy);
   if (shouldSearch) {
     parameters.set(parameterNames.run, "1");
   }
@@ -402,6 +427,7 @@ export function toIssueSearchRequest(
     languages: normalized.languages,
     maximumDifficulty: normalized.maximumDifficulty,
     minimumStars: normalized.minimumStars,
+    sortBy: normalized.sortBy,
     updatedWithinDays: normalized.updatedWithinDays,
     username: normalized.username,
   };

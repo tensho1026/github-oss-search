@@ -168,6 +168,8 @@ technology output. Dedicated interaction tests verify:
   evidence, and server-order preservation;
 - profile evidence states that distinguish exact, sampled, and unavailable
   observations.
+- private monthly snapshot deltas for the authenticated profile owner and
+  client-side Markdown/PNG public-profile exports.
 
 Reduced-motion preferences disable nonessential animation.
 
@@ -186,16 +188,17 @@ dictionary overhead for modules that are fetched together.
 
 Measured gzip sizes on 2026-07-30:
 
-| Checkpoint                                      | Total JS + CSS | Largest JS |
-| ----------------------------------------------- | -------------: | ---------: |
-| UI system before landing/profile feature routes |     123.83 KiB | within cap |
-| Landing and complete profile journey            |     160.84 KiB | 117.62 KiB |
-| Profile plus ranked issue search journey        |     175.35 KiB | 118.32 KiB |
-| Search plus complete issue recommendation       |     179.49 KiB |  68.80 KiB |
-| Extended profile plus repository discovery      |     192.48 KiB |  69.65 KiB |
-| English core with localization (2026-08-16)     |     216.70 KiB |  76.11 KiB |
-| Optional Japanese locale chunk                  |      12.73 KiB |  12.73 KiB |
-| Enforced core maximum                           |     217.00 KiB |  80.00 KiB |
+| Checkpoint                                       | Total JS + CSS | Largest JS |
+| ------------------------------------------------ | -------------: | ---------: |
+| UI system before landing/profile feature routes  |     123.83 KiB | within cap |
+| Landing and complete profile journey             |     160.84 KiB | 117.62 KiB |
+| Profile plus ranked issue search journey         |     175.35 KiB | 118.32 KiB |
+| Search plus complete issue recommendation        |     179.49 KiB |  68.80 KiB |
+| Extended profile plus repository discovery       |     192.48 KiB |  69.65 KiB |
+| English core with localization (2026-08-16)      |     216.70 KiB |  76.11 KiB |
+| Growth history, sharing, and Kanban (2026-08-23) |     222.75 KiB |  77.25 KiB |
+| Optional Japanese locale chunk                   |      12.73 KiB |  12.73 KiB |
+| Enforced core maximum                            |     224.00 KiB |  80.00 KiB |
 
 Run `pnpm run build:web && pnpm run bundle:check` after frontend dependency or
 route changes. The CI budget reads `config/quality-budgets.json`; changing the

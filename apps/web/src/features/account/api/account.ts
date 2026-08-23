@@ -12,6 +12,9 @@ import type {
   IssueClaimWriteRequest,
   PreferencesEnvelope,
   PreferencesWriteRequest,
+  ProfileSnapshotEnvelope,
+  ProfileSnapshotListEnvelope,
+  ProfileSnapshotWriteRequest,
   SavedSearchEnvelope,
   SavedSearchListEnvelope,
   SavedSearchUpdateRequest,
@@ -22,6 +25,24 @@ import { accountEndpoints } from "../../../shared/config/app-config";
 
 function csrfOptions(csrfToken: string) {
   return { headers: { "X-CSRF-Token": csrfToken } };
+}
+
+export function listProfileSnapshots(signal?: AbortSignal) {
+  return apiClient.get<ProfileSnapshotListEnvelope>(
+    accountEndpoints.profileSnapshots,
+    { signal },
+  );
+}
+
+export function upsertProfileSnapshot(
+  request: ProfileSnapshotWriteRequest,
+  csrfToken: string,
+) {
+  return apiClient.put<ProfileSnapshotEnvelope, ProfileSnapshotWriteRequest>(
+    accountEndpoints.profileSnapshots,
+    request,
+    csrfOptions(csrfToken),
+  );
 }
 
 export function listIssueClaims(signal?: AbortSignal) {

@@ -1,6 +1,35 @@
 # Obtain fresh local values from GET /api/auth/session. Keep them only in a
 # private HTTPYAC environment. Never commit real session or CSRF credentials.
 
+### List private monthly public-profile aggregates
+# @name listAccountProfileSnapshots
+GET {{apiBaseUrl}}/api/account/profile-snapshots
+Accept: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-Request-ID: httpyac-account-profile-snapshots-list
+
+### Store or replace the current UTC month profile aggregate
+# @name upsertAccountProfileSnapshot
+PUT {{apiBaseUrl}}/api/account/profile-snapshots
+Accept: application/json
+Content-Type: application/json
+Cookie: issuescout_session={{sessionToken}}; issuescout_csrf={{csrfToken}}
+Origin: {{frontendOrigin}}
+X-CSRF-Token: {{csrfToken}}
+X-Request-ID: httpyac-account-profile-snapshots-upsert
+
+{
+  "languages": ["Go", "TypeScript"],
+  "frameworks": ["React"],
+  "ossActivity": 42,
+  "mergedPullRequests": 5,
+  "proficiency": [{ "name": "Go", "level": 4 }],
+  "completedQuests": 3,
+  "currentStreak": 4,
+  "longestStreak": 9
+}
+
 ### List the authenticated account's private contribution tasks
 # @name listAccountIssueClaims
 GET {{apiBaseUrl}}/api/account/issue-claims?page=1&perPage=20

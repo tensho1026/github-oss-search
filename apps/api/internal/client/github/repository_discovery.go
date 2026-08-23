@@ -384,6 +384,7 @@ func writeRepositoryEnrichmentSelection(
 		"readmeJapaneseLocale": branch + ":README.ja-JP.md",
 		"contributingRoot":     branch + ":CONTRIBUTING.md",
 		"contributingGitHub":   branch + ":.github/CONTRIBUTING.md",
+		"issueTemplates":       branch + ":.github/ISSUE_TEMPLATE",
 	}
 	query.WriteString("  ")
 	query.WriteString(alias)
@@ -403,6 +404,18 @@ func writeRepositoryEnrichmentSelection(
       key
     }
     securityPolicyUrl
+    starterGoodFirst: issues(first: 3, states: OPEN, labels: ["good first issue"], orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number title url updatedAt labels(first: 10) { nodes { name } } }
+    }
+    starterHelpWanted: issues(first: 3, states: OPEN, labels: ["help wanted"], orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number title url updatedAt labels(first: 10) { nodes { name } } }
+    }
+    recentIssues: issues(first: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { comments(first: 10) { nodes { authorAssociation } } }
+    }
+    recentMergedPullRequests: pullRequests(first: 20, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { authorAssociation }
+    }
 `)
 	for _, field := range []string{
 		"readmeMarkdown",
@@ -438,6 +451,12 @@ func writeRepositoryEnrichmentSelection(
     }
 `)
 	}
+	query.WriteString("    issueTemplates: object(expression: ")
+	query.WriteString(quoteGraphQLString(expressions["issueTemplates"]))
+	query.WriteString(`) {
+      ... on Tree { entries { name type } }
+    }
+`)
 	query.WriteString("  }\n")
 }
 
@@ -636,6 +655,50 @@ type graphQLRepositoryEnrichmentNode struct {
 	ReadmeJapaneseLocale *graphQLRepositoryDiscoveryBlob `json:"readmeJapaneseLocale"`
 	ContributingRoot     *graphQLRepositoryDiscoveryBlob `json:"contributingRoot"`
 	ContributingGitHub   *graphQLRepositoryDiscoveryBlob `json:"contributingGitHub"`
+	IssueTemplates       *graphQLRepositoryDiscoveryTree `json:"issueTemplates"`
+	StarterGoodFirst     graphQLStarterIssueConnection   `json:"starterGoodFirst"`
+	StarterHelpWanted    graphQLStarterIssueConnection   `json:"starterHelpWanted"`
+	RecentIssues         graphQLRecentIssueConnection    `json:"recentIssues"`
+	RecentMergedPRs      graphQLRecentPullConnection     `json:"recentMergedPullRequests"`
+}
+
+type graphQLRepositoryDiscoveryTree struct {
+	Entries []struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"entries"`
+}
+
+type graphQLStarterIssueConnection struct {
+	Nodes []graphQLStarterIssue `json:"nodes"`
+}
+
+type graphQLStarterIssue struct {
+	Number    int       `json:"number"`
+	Title     string    `json:"title"`
+	URL       string    `json:"url"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	Labels    struct {
+		Nodes []struct {
+			Name string `json:"name"`
+		} `json:"nodes"`
+	} `json:"labels"`
+}
+
+type graphQLRecentIssueConnection struct {
+	Nodes []struct {
+		Comments struct {
+			Nodes []struct {
+				AuthorAssociation string `json:"authorAssociation"`
+			} `json:"nodes"`
+		} `json:"comments"`
+	} `json:"nodes"`
+}
+
+type graphQLRecentPullConnection struct {
+	Nodes []struct {
+		AuthorAssociation string `json:"authorAssociation"`
+	} `json:"nodes"`
 }
 
 type graphQLRepositoryDiscoveryBlob struct {
@@ -708,5 +771,82 @@ func (node graphQLRepositoryEnrichmentNode) toDomain(
 		HasCodeOfConduct: node.CodeOfConduct != nil,
 		HasSecurityPolicy: node.SecurityPolicyURL != nil &&
 			strings.TrimSpace(*node.SecurityPolicyURL) != "",
+		HasIssueTemplate:      hasIssueTemplate(node.IssueTemplates),
+		HasTestInstructions:   hasTestInstructions(content.String()),
+		HasMaintainerResponse: hasMaintainerResponse(node.RecentIssues),
+		HasExternalMergedPR:   hasExternalMergedPullRequest(node.RecentMergedPRs),
+		StarterIssues:         normalizeStarterIssues(node.StarterGoodFirst, node.StarterHelpWanted),
 	}, nil
+}
+
+func hasIssueTemplate(tree *graphQLRepositoryDiscoveryTree) bool {
+	if tree == nil {
+		return false
+	}
+	for _, entry := range tree.Entries {
+		name := strings.ToLower(strings.TrimSpace(entry.Name))
+		if name == "config.yml" || name == "config.yaml" || strings.HasSuffix(name, ".md") || strings.HasSuffix(name, ".yml") || strings.HasSuffix(name, ".yaml") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasTestInstructions(readme string) bool {
+	text := strings.ToLower(readme)
+	for _, command := range []string{"npm test", "pnpm test", "yarn test", "go test", "pytest", "cargo test", "mvn test", "gradle test", "bundle exec rspec"} {
+		if strings.Contains(text, command) {
+			return true
+		}
+	}
+	return strings.Contains(text, "## test") || strings.Contains(text, "## running tests")
+}
+
+func hasMaintainerResponse(connection graphQLRecentIssueConnection) bool {
+	for _, issueNode := range connection.Nodes {
+		for _, comment := range issueNode.Comments.Nodes {
+			switch strings.ToUpper(comment.AuthorAssociation) {
+			case "OWNER", "MEMBER", "COLLABORATOR":
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasExternalMergedPullRequest(connection graphQLRecentPullConnection) bool {
+	for _, pull := range connection.Nodes {
+		switch strings.ToUpper(pull.AuthorAssociation) {
+		case "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR":
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeStarterIssues(connections ...graphQLStarterIssueConnection) []repository.StarterIssue {
+	result := make([]repository.StarterIssue, 0, 3)
+	seen := make(map[int]struct{}, 6)
+	for _, connection := range connections {
+		for _, item := range connection.Nodes {
+			if len(result) == 3 {
+				return result
+			}
+			if item.Number < 1 || strings.TrimSpace(item.Title) == "" || item.UpdatedAt.IsZero() || validateAbsoluteHTTPURL(item.URL) != nil {
+				continue
+			}
+			if _, exists := seen[item.Number]; exists {
+				continue
+			}
+			seen[item.Number] = struct{}{}
+			labels := make([]string, 0, len(item.Labels.Nodes))
+			for _, label := range item.Labels.Nodes {
+				if value := strings.TrimSpace(label.Name); value != "" {
+					labels = append(labels, value)
+				}
+			}
+			result = append(result, repository.StarterIssue{Number: item.Number, Title: strings.TrimSpace(item.Title), URL: item.URL, UpdatedAt: item.UpdatedAt.UTC(), Labels: labels})
+		}
+	}
+	return result
 }

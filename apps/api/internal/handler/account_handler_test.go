@@ -94,6 +94,41 @@ func TestAccountHandlerIssueClaimWorkflowIsOwnedAndVersioned(t *testing.T) {
 	}
 }
 
+func TestAccountHandlerProfileSnapshotsUseAuthenticatedOwnership(t *testing.T) {
+	t.Parallel()
+	accountID := handlerAccountID(t)
+	now := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	workspace := &accountWorkspaceStub{profileSnapshots: []account.ProfileSnapshot{{
+		AccountID: accountID, Month: now, Languages: []string{"Go"},
+		Frameworks: []string{"React"}, OSSActivity: 10, MergedPullRequests: 2,
+		Proficiency:     []account.SnapshotProficiency{{Name: "Go", Level: 3}},
+		CompletedQuests: 1, CurrentStreak: 2, LongestStreak: 4,
+		CreatedAt: now, UpdatedAt: now,
+	}}}
+	handler := NewAccountHandler(workspace, authhttp.Policy{}, response.NewResponder())
+	engine := accountTestEngine(accountID)
+	engine.GET("/profile-snapshots", handler.ListProfileSnapshots)
+	engine.PUT("/profile-snapshots", handler.UpsertProfileSnapshot)
+
+	listRecorder := httptest.NewRecorder()
+	engine.ServeHTTP(listRecorder, httptest.NewRequest(http.MethodGet, "/profile-snapshots", nil))
+	if listRecorder.Code != http.StatusOK || workspace.lastAccountID != accountID ||
+		!strings.Contains(listRecorder.Body.String(), `"ossActivity":10`) {
+		t.Fatalf("list = %d %s", listRecorder.Code, listRecorder.Body.String())
+	}
+
+	writeRecorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPut, "/profile-snapshots", strings.NewReader(
+		`{"languages":["Go"],"frameworks":["React"],"ossActivity":10,"mergedPullRequests":2,"proficiency":[{"name":"Go","level":3}],"completedQuests":1,"currentStreak":2,"longestStreak":4}`,
+	))
+	request.Header.Set("Content-Type", "application/json")
+	engine.ServeHTTP(writeRecorder, request)
+	if writeRecorder.Code != http.StatusOK ||
+		!strings.Contains(writeRecorder.Body.String(), `"month":"2026-08-01T00:00:00Z"`) {
+		t.Fatalf("write = %d %s", writeRecorder.Code, writeRecorder.Body.String())
+	}
+}
+
 func TestAccountHandlerBookmarkCollectionUsesPrincipalOwnership(t *testing.T) {
 	accountID := handlerAccountID(t)
 	now := time.Date(2026, 8, 1, 1, 2, 3, 0, time.UTC)
@@ -429,7 +464,7 @@ func TestAccountHandlerPreferencesExportAndDeletion(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/export", nil),
 	)
 	if exportRecorder.Code != http.StatusOK ||
-		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":2`) ||
+		!strings.Contains(exportRecorder.Body.String(), `"schemaVersion":3`) ||
 		!strings.Contains(exportRecorder.Body.String(), `"preferences":null`) {
 		t.Fatalf(
 			"export response = %d %s",
@@ -558,6 +593,7 @@ func accountTestEngine(accountID account.ID) *gin.Engine {
 }
 
 type accountWorkspaceStub struct {
+	profileSnapshots     []account.ProfileSnapshot
 	lastAccountID        account.ID
 	lastResourceID       account.ResourceID
 	lastVersion          int64
@@ -575,6 +611,19 @@ type accountWorkspaceStub struct {
 	export               account.Export
 	summary              account.OwnedDataSummary
 	err                  error
+}
+
+func (workspace *accountWorkspaceStub) ListProfileSnapshots(_ context.Context, accountID account.ID) ([]account.ProfileSnapshot, error) {
+	workspace.lastAccountID = accountID
+	return workspace.profileSnapshots, workspace.err
+}
+
+func (workspace *accountWorkspaceStub) UpsertProfileSnapshot(_ context.Context, accountID account.ID, _ usecase.ProfileSnapshotInput) (account.ProfileSnapshot, error) {
+	workspace.lastAccountID = accountID
+	if len(workspace.profileSnapshots) > 0 {
+		return workspace.profileSnapshots[0], workspace.err
+	}
+	return account.ProfileSnapshot{}, workspace.err
 }
 
 func (workspace *accountWorkspaceStub) ListIssueClaims(

@@ -54,6 +54,44 @@ func TestAccountWorkspaceCreatesAndUpdatesIssueClaimWithoutGitHubWrites(
 	}
 }
 
+func TestAccountWorkspaceStoresAndListsNormalizedProfileSnapshot(t *testing.T) {
+	t.Parallel()
+	repository := &accountRepositoryStub{}
+	service := concreteAccountWorkspace(t, repository)
+	service.now = func() time.Time {
+		return time.Date(2026, time.August, 23, 18, 0, 0, 0, time.UTC)
+	}
+	accountID := workspaceAccountID(t)
+	written, err := service.UpsertProfileSnapshot(
+		context.Background(),
+		accountID,
+		ProfileSnapshotInput{
+			Languages:          []string{" TypeScript ", "Go"},
+			Frameworks:         []string{"React"},
+			OSSActivity:        42,
+			MergedPullRequests: 3,
+			Proficiency:        []account.SnapshotProficiency{{Name: "Go", Level: 4}},
+			CompletedQuests:    2,
+			CurrentStreak:      5,
+			LongestStreak:      9,
+		},
+	)
+	if err != nil || written.Month.Day() != 1 || written.Languages[1] != "TypeScript" {
+		t.Fatalf("UpsertProfileSnapshot() = %+v, %v", written, err)
+	}
+	items, err := service.ListProfileSnapshots(context.Background(), accountID)
+	if err != nil || len(items) != 1 || items[0].OSSActivity != 42 {
+		t.Fatalf("ListProfileSnapshots() = %+v, %v", items, err)
+	}
+
+	_, err = service.UpsertProfileSnapshot(
+		context.Background(),
+		accountID,
+		ProfileSnapshotInput{OSSActivity: -1},
+	)
+	assertApplicationError(t, err, apperror.CodeInvalidRequest)
+}
+
 func TestAccountWorkspaceRejectsSubmittedClaimWithoutPullRequest(t *testing.T) {
 	t.Parallel()
 	repository := &accountRepositoryStub{}
@@ -338,6 +376,7 @@ func TestAccountWorkspaceRejectsMissingRepositoryAndStorageListFailure(
 }
 
 type accountRepositoryStub struct {
+	profileSnapshots       []account.ProfileSnapshot
 	issueClaim             account.IssueClaim
 	upsertIssueClaimCalls  int
 	updateIssueClaimCalls  int
@@ -351,6 +390,15 @@ type accountRepositoryStub struct {
 	preferences            account.Preferences
 	summary                account.OwnedDataSummary
 	deleteCalls            int
+}
+
+func (repository *accountRepositoryStub) ListProfileSnapshots(context.Context, account.ID) ([]account.ProfileSnapshot, error) {
+	return repository.profileSnapshots, nil
+}
+
+func (repository *accountRepositoryStub) UpsertProfileSnapshot(_ context.Context, snapshot account.ProfileSnapshot) (account.ProfileSnapshot, error) {
+	repository.profileSnapshots = []account.ProfileSnapshot{snapshot}
+	return snapshot, nil
 }
 
 func (repository *accountRepositoryStub) ListIssueClaims(

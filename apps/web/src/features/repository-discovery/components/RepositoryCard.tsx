@@ -41,10 +41,12 @@ import {
   difficultyPresentation,
   evidencePresentation,
   readinessPresentation,
+  repositoryTechnologyComparison,
 } from "../model/repository-presentation";
 import { BookmarkAction } from "../../account/components/BookmarkAction";
 
 type RepositoryCardProps = {
+  contributorTechnologies?: readonly string[];
   item: RepositoryDiscoveryItem;
   rank: number;
 };
@@ -66,13 +68,29 @@ function Signal({ available, label }: SignalProps) {
   );
 }
 
-export function RepositoryCard({ item, rank }: RepositoryCardProps) {
+export function RepositoryCard({
+  contributorTechnologies = [],
+  item,
+  rank,
+}: RepositoryCardProps) {
   const { locale, t } = useI18n();
   const readiness = readinessPresentation(item.readiness);
   const difficulty = difficultyPresentation(item.difficulty);
   const documentation = evidencePresentation(item.documentation.status);
   const japanese = item.documentation.japaneseReadme;
   const japaneseEvidence = evidencePresentation(japanese.status);
+  const technologyComparison = repositoryTechnologyComparison(
+    item,
+    contributorTechnologies,
+  );
+  const beginnerSignals = {
+    contributing_guide: t("repository.beginner.contributing"),
+    external_contributor_merge: t("repository.beginner.externalMerge"),
+    good_first_issue: t("repository.beginner.goodFirst"),
+    issue_template: t("repository.beginner.issueTemplate"),
+    maintainer_response: t("repository.beginner.response"),
+    test_instructions: t("repository.beginner.tests"),
+  } as const;
 
   return (
     <Card className="overflow-hidden">
@@ -280,6 +298,100 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
+          <section className="rounded-xl border border-border bg-muted/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold">
+                {t("repository.beginner.title")}
+              </h3>
+              <Badge
+                variant={
+                  item.beginnerFriendliness.band === "ready"
+                    ? "success"
+                    : item.beginnerFriendliness.band === "promising"
+                      ? "warning"
+                      : "neutral"
+                }
+              >
+                {item.beginnerFriendliness.score}/100
+              </Badge>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              {t("repository.beginner.description")}
+            </p>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {item.beginnerFriendliness.signals.map((signal) => (
+                <Signal
+                  available={signal.present}
+                  key={signal.name}
+                  label={beginnerSignals[signal.name]}
+                />
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-xl border border-border bg-muted/30 p-4">
+            <h3 className="font-semibold">
+              {t("repository.technologyComparison")}
+            </h3>
+            <dl className="mt-3 grid gap-3 text-sm">
+              <TechnologyRow
+                label={t("repository.yourTechnologies")}
+                values={technologyComparison.contributor}
+              />
+              <TechnologyRow
+                label={t("repository.repositoryTechnologies")}
+                values={technologyComparison.repository}
+              />
+              <TechnologyRow
+                label={t("repository.newTechnologies")}
+                values={technologyComparison.missing}
+                warning
+              />
+            </dl>
+          </section>
+        </div>
+
+        <section className="rounded-xl border border-accent/20 bg-accent-soft/40 p-4">
+          <h3 className="font-semibold">{t("repository.starterIssueTitle")}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("repository.starterIssueDescription")}
+          </p>
+          {item.starterIssues.length > 0 ? (
+            <ul className="mt-3 grid gap-3">
+              {item.starterIssues.map((starter) => (
+                <li
+                  className="rounded-xl border border-border bg-surface p-3"
+                  key={starter.number}
+                >
+                  <a
+                    className="font-semibold outline-none hover:text-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    href={starter.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    #{starter.number} {starter.title}
+                  </a>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {starter.labels.map((label) => (
+                      <Badge key={label} variant="accent">
+                        {label}
+                      </Badge>
+                    ))}
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(starter.updatedAt, locale)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("repository.noStarterIssues")}
+            </p>
+          )}
+        </section>
+
+        <div className="grid gap-5 xl:grid-cols-2">
           <section aria-label={t("repository.difficultyReasons")}>
             <h3 className="font-semibold">
               {t("repository.difficultyEvidence")}
@@ -337,6 +449,36 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function TechnologyRow({
+  label,
+  values,
+  warning = false,
+}: {
+  label: string;
+  values: readonly string[];
+  warning?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <div>
+      <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+      <dd className="mt-1 flex flex-wrap gap-2">
+        {values.length > 0 ? (
+          values.map((value) => (
+            <Badge key={value} variant={warning ? "warning" : "neutral"}>
+              {value}
+            </Badge>
+          ))
+        ) : (
+          <span className="text-muted-foreground">
+            {t("repository.noneDetected")}
+          </span>
+        )}
+      </dd>
+    </div>
   );
 }
 

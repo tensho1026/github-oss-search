@@ -14,6 +14,10 @@ type DatabaseHealth interface {
 
 // AccountRepository owns account-scoped persistence and deletion semantics.
 type AccountRepository interface {
+	// ListProfileSnapshots returns at most the bounded monthly trend history.
+	ListProfileSnapshots(context.Context, account.ID) ([]account.ProfileSnapshot, error)
+	// UpsertProfileSnapshot replaces the authenticated account's current month.
+	UpsertProfileSnapshot(context.Context, account.ProfileSnapshot) (account.ProfileSnapshot, error)
 	// ListIssueClaims returns one account-owned task page and workflow summary.
 	ListIssueClaims(
 		ctx context.Context,

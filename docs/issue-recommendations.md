@@ -199,6 +199,14 @@ Tie-breakers are score, skill percentage, stars, issue update time, repository
 full name, and issue number. The first four are descending; names and numbers
 are ascending. Sorting uses a copy and does not mutate domain or cache input.
 
+Search clients may select `recommendation`, `skill_match`, `effort`,
+`difficulty`, `maintainer_response`, or `updated` ordering. Each ordering is
+applied to the complete analyzed eligible window before pagination and uses
+the stable recommendation order above for ties. Shorter effort and lower
+difficulty sort first; faster maintainer response and newer updates sort first.
+Unavailable maintainer evidence sorts after available evidence. Changing only
+the ordering reuses the canonical candidate cache.
+
 ## Available-time filtering
 
 Search accepts an optional `maximumEffort` value from the same ordered bands

@@ -240,3 +240,37 @@ func RankIssues(input []RankedIssue) []RankedIssue {
 	})
 	return ranked
 }
+
+// SortRankedIssues returns a sorted copy for the requested user-visible
+// ordering. The established recommendation order is the stable tie-breaker.
+func SortRankedIssues(input []RankedIssue, order SearchSort) []RankedIssue {
+	ranked := RankIssues(input)
+	if order == SearchSortRecommendation {
+		return ranked
+	}
+	slices.SortStableFunc(ranked, func(left, right RankedIssue) int {
+		switch order {
+		case SearchSortSkillMatch:
+			return cmp.Compare(right.Recommendation.SkillMatch.Percentage, left.Recommendation.SkillMatch.Percentage)
+		case SearchSortEffort:
+			return cmp.Compare(effortBandRank(left.Analysis.Effort.Band), effortBandRank(right.Analysis.Effort.Band))
+		case SearchSortDifficulty:
+			return cmp.Compare(left.Analysis.Difficulty.Level.Int(), right.Analysis.Difficulty.Level.Int())
+		case SearchSortMaintainerResponse:
+			leftAvailable := left.Recommendation.MaintainerResponse.Status == AggregateAvailable
+			rightAvailable := right.Recommendation.MaintainerResponse.Status == AggregateAvailable
+			if leftAvailable != rightAvailable {
+				if rightAvailable {
+					return 1
+				}
+				return -1
+			}
+			return cmp.Compare(right.Recommendation.MaintainerResponse.Level, left.Recommendation.MaintainerResponse.Level)
+		case SearchSortUpdated:
+			return right.Candidate.Issue.UpdatedAt.Compare(left.Candidate.Issue.UpdatedAt)
+		default:
+			return 0
+		}
+	})
+	return ranked
+}

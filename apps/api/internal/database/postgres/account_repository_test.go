@@ -15,7 +15,7 @@ import (
 func TestAccountRepositoryScopesSummaryToOneAccount(t *testing.T) {
 	accountID := mustAccountID(t)
 	executor := &recordingAccountExecutor{
-		row: recordingRow{values: []int64{1, 2, 3, 4, 5, 1}},
+		row: recordingRow{values: []int64{1, 2, 3, 4, 5, 1, 6}},
 	}
 	repository := AccountRepository{
 		executor:     executor,
@@ -34,7 +34,8 @@ func TestAccountRepositoryScopesSummaryToOneAccount(t *testing.T) {
 		summary.Bookmarks != 3 ||
 		summary.IssueClaims != 4 ||
 		summary.SavedSearches != 5 ||
-		summary.Preferences != 1 {
+		summary.Preferences != 1 ||
+		summary.ProfileSnapshots != 6 {
 		t.Fatalf("OwnedDataSummary() = %+v", summary)
 	}
 	if len(executor.arguments) != 1 ||
@@ -42,7 +43,7 @@ func TestAccountRepositoryScopesSummaryToOneAccount(t *testing.T) {
 		t.Fatalf("query arguments = %v", executor.arguments)
 	}
 	if strings.Contains(executor.query, accountID.String()) ||
-		strings.Count(executor.query, "$1") < 7 {
+		strings.Count(executor.query, "$1") < 8 {
 		t.Fatal("summary query did not preserve parameterized account ownership")
 	}
 }

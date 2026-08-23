@@ -2,7 +2,7 @@
 
 IssueScout keeps its public discovery product anonymous and stateless.
 GitHub sign-in unlocks only optional, account-owned contribution tasks,
-bookmarks, named saved searches, display preferences, export, and deletion. Nothing in this feature
+monthly profile snapshots, bookmarks, named saved searches, display preferences, export, and deletion. Nothing in this feature
 changes the anonymous profile, repository, issue-search, or issue-detail
 journeys.
 
@@ -43,6 +43,11 @@ form state. A `409` asks the user to reload the latest optimistic version, and
 a `503` links back to anonymous search. The privacy tab downloads the bounded
 JSON export and requires the literal `DELETE` before enabling account
 deletion.
+
+Contribution tasks open as a five-column Kanban board with an optional list
+view. Pointer users can drag between personal workflow states; the existing
+status selector remains the keyboard-accessible equivalent. Moving to
+`pr_submitted` or `merged` still requires a saved pull-request reference.
 
 The opaque session remains HttpOnly. The CSRF value exists only in React Query
 memory and mutation headers; neither credential enters `localStorage`,
@@ -123,6 +128,14 @@ Preferences store only:
 Before the first preference write, the GET route returns
 `system`/`system`/`20` with version zero without inserting a row.
 
+Monthly profile snapshots store one bounded aggregate per UTC calendar month:
+language and framework names, public OSS activity counts, observed merged PRs,
+proficiency levels, completed quests, and streak lengths. The profile page
+upserts the current month only for the authenticated owner and displays at
+most 24 months. It stores no repository payload, issue body, credential, or
+private GitHub evidence. Public profile sharing remains client-side: Markdown
+and PNG downloads are generated from the currently displayed public analysis.
+
 ## Bounds and concurrency
 
 | Resource          | Per-account quota | Payload/name bound           | Stable order                          |
@@ -131,6 +144,7 @@ Before the first preference write, the GET route returns
 | Bookmark          |               200 | Normalized GitHub reference  | `created_at DESC, id DESC`            |
 | Saved search      |                50 | 80-rune name, 8192-byte JSON | `updated_at DESC, id DESC`            |
 | Preferences       |                 1 | Fixed enums and page sizes   | One row per account                   |
+| Profile snapshot  |                24 | Bounded monthly aggregate    | `month ASC`                           |
 | List page size    |                50 | Page 1–100                   | UUID is the deterministic tie-breaker |
 
 Contribution-task, bookmark, and saved-search quota checks take a transaction-scoped PostgreSQL
@@ -148,7 +162,8 @@ must reload before retrying. `ACCOUNT_QUOTA_EXCEEDED` and
 ## Privacy export and deletion
 
 `GET /api/account/export` returns a schema-versioned bounded document with all
-contribution tasks, bookmarks, saved filter definitions, and persisted preferences. It excludes:
+contribution tasks, bookmarks, saved filter definitions, persisted preferences,
+and monthly profile snapshots. It excludes:
 
 - GitHub access tokens and GitHub response bodies;
 - session, CSRF, and OAuth state hashes;
@@ -157,7 +172,8 @@ contribution tasks, bookmarks, saved filter definitions, and persisted preferenc
 
 `DELETE /api/account` requires CSRF plus the exact JSON confirmation
 `{"confirmation":"DELETE"}`. The database deletes the account and cascades to
-identities, sessions, contribution tasks, bookmarks, saved searches, and preferences. The response
+identities, sessions, contribution tasks, bookmarks, saved searches, preferences,
+and profile snapshots. The response
 contains only removed row counts. A content-free `account_deleted` audit event
 with a null account reference and timestamp remains for privacy-safe
 operational evidence. Browser session cookies are expired after deletion.
@@ -183,6 +199,8 @@ audit retention, and jurisdiction-specific policy.
 | DELETE | `/api/account/saved-searches/{savedSearchID}` | Yes  | Versioned filter deletion     |
 | GET    | `/api/account/preferences`                    | No   | Read stored/default settings  |
 | PUT    | `/api/account/preferences`                    | Yes  | Versioned preference upsert   |
+| GET    | `/api/account/profile-snapshots`              | No   | List monthly growth history   |
+| PUT    | `/api/account/profile-snapshots`              | Yes  | Upsert current UTC month      |
 | GET    | `/api/account/export`                         | No   | Export bounded feature data   |
 | DELETE | `/api/account`                                | Yes  | Permanently delete account    |
 

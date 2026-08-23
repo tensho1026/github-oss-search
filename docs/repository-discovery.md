@@ -59,6 +59,11 @@ evidence. Confidence, sampled content, and unavailable evidence are labeled
 explicitly. The interface does not turn unavailable values into zero or
 recompute any server decision.
 
+Each card also exposes up to three recent open `good first issue` or
+`help wanted` issues from the same batched enrichment, compares repository
+technology evidence with the user's selected language and technology filters,
+and shows a separate first-contribution friendliness score.
+
 Recoverable states are separate:
 
 - a first load uses a skeleton and keeps the form operable;
@@ -123,6 +128,15 @@ repository size and contribution support signals. Readiness starts from a
 fixed point budget and records every positive or negative reason. It maps to
 `needs_work`, `promising`, or `ready`; it is not a guarantee that maintainers
 will accept a contribution.
+
+First-contribution friendliness is a separate 100-point model. A CONTRIBUTING
+guide, open good-first issue, issue template, and explicit README test command
+contribute 15 points each. A maintainer response in the bounded ten-issue
+sample and a merged pull request from an external contributor in the bounded
+twenty-PR sample contribute 20 points each. Every signal carries an evidence
+status; unavailable enrichment earns no points and remains unavailable rather
+than observed absence. Starter issue selection prefers `good first issue`,
+then fills the three-item limit from `help wanted`, de-duplicated by number.
 
 ## Partial data and privacy
 

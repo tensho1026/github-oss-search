@@ -20,6 +20,7 @@ import {
   listIssueClaims,
   updateIssueClaim,
 } from "../api/account";
+import { claimMoveRequest } from "../model/claim-board";
 import { AccountRequestAlert } from "./AccountRequestAlert";
 
 type Props = {
@@ -39,6 +40,9 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
+  const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [draggedClaimID, setDraggedClaimID] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState("");
   const query = useQuery({
     queryFn: ({ signal }) => listIssueClaims(signal),
     queryKey: queryKeys.account.issueClaims,
@@ -77,6 +81,26 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
     return items.filter((claim) => claim.archived === (filter === "archived"));
   }, [filter, query.data]);
   const summary = query.data?.data.summary;
+  const statusLabels: Record<IssueClaimStatus, string> = {
+    implementing: t("claims.implementing"),
+    merged: t("claims.merged"),
+    not_started: t("claims.notStarted"),
+    pr_submitted: t("claims.prSubmitted"),
+    researching: t("claims.researching"),
+  };
+  const moveClaim = (claim: IssueClaim, status: IssueClaimStatus) => {
+    setMoveError("");
+    const move = claimMoveRequest(claim, status);
+    if (!move.ok && move.reason === "pull_request_required") {
+      setMoveError(t("claims.movePrRequired"));
+      return;
+    }
+    if (!move.ok) return;
+    update.mutate({
+      id: claim.id,
+      request: move.request,
+    });
+  };
 
   return (
     <section aria-labelledby="issue-claims-heading" className="grid gap-5">
@@ -89,20 +113,39 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             {t("claims.description")}
           </p>
         </div>
-        <label className="grid gap-1 text-sm font-medium">
-          {t("claims.show")}
-          <select
-            className="min-h-11 rounded-xl border border-input bg-surface px-3"
-            onChange={(event) =>
-              setFilter(event.target.value as "active" | "archived" | "all")
-            }
-            value={filter}
+        <div className="flex flex-wrap items-end gap-3">
+          <div
+            aria-label={t("claims.view")}
+            className="flex rounded-xl border border-border p-1"
+            role="group"
           >
-            <option value="active">{t("claims.active")}</option>
-            <option value="archived">{t("claims.archived")}</option>
-            <option value="all">{t("claims.all")}</option>
-          </select>
-        </label>
+            {(["kanban", "list"] as const).map((option) => (
+              <Button
+                aria-pressed={view === option}
+                key={option}
+                onClick={() => setView(option)}
+                size="small"
+                variant={view === option ? "primary" : "ghost"}
+              >
+                {t(option === "kanban" ? "claims.kanban" : "claims.list")}
+              </Button>
+            ))}
+          </div>
+          <label className="grid gap-1 text-sm font-medium">
+            {t("claims.show")}
+            <select
+              className="min-h-11 rounded-xl border border-input bg-surface px-3"
+              onChange={(event) =>
+                setFilter(event.target.value as "active" | "archived" | "all")
+              }
+              value={filter}
+            >
+              <option value="active">{t("claims.active")}</option>
+              <option value="archived">{t("claims.archived")}</option>
+              <option value="all">{t("claims.all")}</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       {summary ? (
@@ -130,6 +173,11 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
       {update.error ? <AccountRequestAlert error={update.error} /> : null}
       {remove.error ? <AccountRequestAlert error={remove.error} /> : null}
       {query.error ? <AccountRequestAlert error={query.error} /> : null}
+      {moveError ? (
+        <p className="text-sm text-warning" role="alert">
+          {moveError}
+        </p>
+      ) : null}
       {update.isSuccess ? (
         <p aria-live="polite" className="text-sm text-success" role="status">
           {t("claims.updated")}
@@ -154,7 +202,7 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : view === "list" ? (
         <ul className="grid gap-4 lg:grid-cols-2">
           {claims.map((claim) => (
             <li key={`${claim.id}-${claim.version}`}>
@@ -167,6 +215,75 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             </li>
           ))}
         </ul>
+      ) : (
+        <div>
+          <p
+            className="mb-3 text-sm text-muted-foreground"
+            id="kanban-instructions"
+          >
+            {t("claims.kanbanInstructions")}
+          </p>
+          <div
+            aria-describedby="kanban-instructions"
+            className="grid auto-cols-[minmax(18rem,1fr)] grid-flow-col gap-4 overflow-x-auto pb-3"
+          >
+            {statusOptions.map((status) => {
+              const columnClaims = claims.filter(
+                (claim) => claim.status === status,
+              );
+              return (
+                <section
+                  className="min-h-56 rounded-2xl border border-border bg-muted/20 p-3"
+                  key={status}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const claim = claims.find(
+                      ({ id }) => id === draggedClaimID,
+                    );
+                    setDraggedClaimID(null);
+                    if (claim) moveClaim(claim, status);
+                  }}
+                >
+                  <h3 className="mb-3 flex items-center justify-between gap-2 font-semibold">
+                    {statusLabels[status]}
+                    <Badge variant="neutral">{columnClaims.length}</Badge>
+                  </h3>
+                  {columnClaims.length > 0 ? (
+                    <ul className="grid gap-3">
+                      {columnClaims.map((claim) => (
+                        <li
+                          aria-label={t("claims.draggableLabel", {
+                            label: `${claim.repositoryOwner}/${claim.repositoryName}#${claim.issueNumber}`,
+                          })}
+                          draggable={!update.isPending && !remove.isPending}
+                          key={`${claim.id}-${claim.version}`}
+                          onDragEnd={() => setDraggedClaimID(null)}
+                          onDragStart={() => setDraggedClaimID(claim.id)}
+                        >
+                          <IssueClaimCard
+                            busy={update.isPending || remove.isPending}
+                            claim={claim}
+                            onDelete={(id, version) =>
+                              remove.mutate({ id, version })
+                            }
+                            onUpdate={(id, request) =>
+                              update.mutate({ id, request })
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                      {t("claims.emptyColumn")}
+                    </p>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </div>
       )}
     </section>
   );
