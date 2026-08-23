@@ -73,7 +73,9 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="font-mono">#{rank}</span>
-              <span>{item.repository.fullName}</span>
+              <span className="max-w-full truncate">
+                {item.repository.fullName}
+              </span>
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1">
                 <Icon className="size-3.5" icon={Star} />
@@ -87,7 +89,7 @@ export function RecommendationCard({ item, rank }: RecommendationCardProps) {
               </span>
             </div>
             <h2
-              className="mt-3 text-xl leading-7 font-semibold tracking-[-0.03em]"
+              className="mt-3 break-words text-xl leading-7 font-semibold tracking-[-0.03em]"
               id={`issue-result-${rank}`}
             >
               {item.issue.title}
