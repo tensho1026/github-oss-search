@@ -28,24 +28,29 @@ export function Pagination({
   return (
     <nav
       aria-label={ariaLabel ?? t("pagination.defaultLabel")}
-      className="flex flex-wrap items-center justify-between gap-3"
+      className="grid grid-cols-2 items-center gap-3 xs:flex xs:flex-wrap xs:justify-between"
     >
       <Button
         aria-label={t("pagination.goTo", { page: Math.max(1, page - 1) })}
         disabled={disabled || page <= 1}
         onClick={() => onPageChange(page - 1)}
+        className="row-start-2 w-full xs:w-auto"
         variant="outline"
       >
         <Icon icon={ChevronLeft} />
         {t("pagination.previous")}
       </Button>
-      <p aria-live="polite" className="text-sm text-muted-foreground">
+      <p
+        aria-live="polite"
+        className="col-span-2 row-start-1 text-center text-sm text-muted-foreground xs:order-none"
+      >
         {t("pagination.summary", { page, totalPages })}
       </p>
       <Button
         aria-label={t("pagination.goTo", { page: page + 1 })}
         disabled={disabled || !hasNext}
         onClick={() => onPageChange(page + 1)}
+        className="row-start-2 w-full xs:w-auto"
         variant="outline"
       >
         {t("pagination.next")}

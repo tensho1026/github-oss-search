@@ -34,7 +34,7 @@ function Brand() {
   return (
     <Link
       aria-label={t("brand.home", { productName: appConfig.productName })}
-      className="inline-flex items-center gap-3 rounded-lg font-semibold tracking-[-0.02em] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex shrink-0 items-center gap-3 whitespace-nowrap rounded-lg font-semibold tracking-[-0.02em] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
       to={appRoutes.home}
     >
       <span
@@ -127,7 +127,7 @@ export function AppShell() {
           <Brand />
           <nav
             aria-label={t("nav.primary")}
-            className="hidden items-center gap-1 sm:flex"
+            className="hidden items-center gap-1 whitespace-nowrap xl:flex"
           >
             <NavigationLinks />
             <LanguageSwitcher />
@@ -139,7 +139,7 @@ export function AppShell() {
             />
             <AccountControl />
           </nav>
-          <div className="flex items-center gap-1 sm:hidden">
+          <div className="flex min-w-0 items-center gap-1 xl:hidden">
             <LanguageSwitcher compact />
             <AccountControl />
             <ThemeToggle

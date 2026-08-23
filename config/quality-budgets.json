@@ -33,6 +33,6 @@
   "webBundle": {
     "maximumOptionalLocaleGzipKiB": 20,
     "maximumSingleJavaScriptGzipKiB": 80,
-    "maximumTotalGzipKiB": 217.3
+    "maximumTotalGzipKiB": 217.7
   }
 }

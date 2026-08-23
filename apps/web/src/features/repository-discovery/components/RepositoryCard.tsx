@@ -78,7 +78,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
     <Card className="overflow-hidden">
       <CardHeader className="border-b border-border bg-muted/25">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 basis-64">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="neutral">#{rank}</Badge>
               <Badge variant="info">{categoryLabel(item.category)}</Badge>
@@ -104,7 +104,7 @@ export function RepositoryCard({ item, rank }: RepositoryCardProps) {
               {item.repository.description || t("repository.noDescription")}
             </CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex max-w-full flex-wrap gap-2 sm:justify-end">
             <Badge variant={readiness.tone}>
               {readiness.label} · {item.readiness.score}/100
             </Badge>

@@ -87,8 +87,8 @@ export function RepositoryDiscoveryResults({
       className="grid gap-5"
     >
       <Card>
-        <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="min-w-0">
             <p className="font-mono text-xs tracking-[0.14em] text-accent uppercase">
               {t("repository.orderedEyebrow")}
             </p>
@@ -101,7 +101,7 @@ export function RepositoryDiscoveryResults({
               })}
             </CardTitle>
           </div>
-          <span className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+          <span className="inline-flex shrink-0 items-center gap-2 self-start whitespace-nowrap rounded-full border border-border bg-muted px-3 py-2 text-xs text-muted-foreground sm:self-center">
             <Icon icon={Gauge} />
             {t("issueSearch.checkedSummary", {
               checked: formatCompactNumber(

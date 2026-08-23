@@ -607,14 +607,15 @@ export function RepositoryDiscoveryForm({
         )}
       />
 
-      <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-        <Button disabled={disabled} type="submit">
+      <div className="grid gap-3 border-t border-border pt-5 xs:flex xs:flex-wrap">
+        <Button className="w-full xs:w-auto" disabled={disabled} type="submit">
           <Icon icon={Search} />
           {disabled
             ? t("repositoryForm.searching")
             : t("repositoryForm.submit")}
         </Button>
         <Button
+          className="w-full xs:w-auto"
           disabled={disabled}
           onClick={() => reset(createDefaultRepositoryFilters())}
           type="button"
