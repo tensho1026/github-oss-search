@@ -82,12 +82,18 @@ type Difficulty uint8
 type SearchSort string
 
 const (
-	SearchSortRecommendation     SearchSort = "recommendation"
-	SearchSortSkillMatch         SearchSort = "skill_match"
-	SearchSortEffort             SearchSort = "effort"
-	SearchSortDifficulty         SearchSort = "difficulty"
+	// SearchSortRecommendation ranks by the overall recommendation score.
+	SearchSortRecommendation SearchSort = "recommendation"
+	// SearchSortSkillMatch ranks by personalized technology overlap.
+	SearchSortSkillMatch SearchSort = "skill_match"
+	// SearchSortEffort ranks the shortest estimated contribution first.
+	SearchSortEffort SearchSort = "effort"
+	// SearchSortDifficulty ranks the lowest difficulty first.
+	SearchSortDifficulty SearchSort = "difficulty"
+	// SearchSortMaintainerResponse ranks the fastest observed response first.
 	SearchSortMaintainerResponse SearchSort = "maintainer_response"
-	SearchSortUpdated            SearchSort = "updated"
+	// SearchSortUpdated ranks the most recently updated issue first.
+	SearchSortUpdated SearchSort = "updated"
 )
 
 // ParseSearchSort validates the public issue-search sort vocabulary.

@@ -14,7 +14,9 @@ import (
 // AccountWorkspace exposes persistence only for an authenticated account.
 // Anonymous profile, repository, and issue use cases never depend on it.
 type AccountWorkspace interface {
+	// ListProfileSnapshots returns the authenticated owner's bounded history.
 	ListProfileSnapshots(context.Context, account.ID) ([]account.ProfileSnapshot, error)
+	// UpsertProfileSnapshot replaces the owner's current UTC calendar month.
 	UpsertProfileSnapshot(context.Context, account.ID, ProfileSnapshotInput) (account.ProfileSnapshot, error)
 	// ListIssueClaims returns one account-owned contribution task page.
 	ListIssueClaims(

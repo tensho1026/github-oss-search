@@ -18,6 +18,7 @@ test(
       env: {
         ...process.env,
         ALLOWED_ORIGINS: webOrigin,
+        AUTH_FRONTEND_URL: webOrigin,
         PORT: "18181",
         STACK_STARTUP_TIMEOUT_MS: "90000",
         VITE_API_BASE_URL: apiOrigin,

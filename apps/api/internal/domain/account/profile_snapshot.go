@@ -10,9 +10,12 @@ import (
 )
 
 const (
-	MaximumProfileSnapshots     = 24
+	// MaximumProfileSnapshots bounds one account's retained monthly history.
+	MaximumProfileSnapshots = 24
+	// MaximumSnapshotTechnologies bounds each technology evidence collection.
 	MaximumSnapshotTechnologies = 20
-	MaximumSnapshotMetric       = 1_000_000
+	// MaximumSnapshotMetric bounds every retained non-negative counter.
+	MaximumSnapshotMetric = 1_000_000
 )
 
 // SnapshotProficiency is one bounded technology level retained for trends.
