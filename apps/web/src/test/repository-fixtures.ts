@@ -9,6 +9,22 @@ export const repositoryDiscoveryFixture: RepositoryDiscoveryEnvelope = {
           updatedAt: "2026-07-30T09:00:00Z",
         },
         category: "tooling",
+        beginnerFriendliness: {
+          band: "ready",
+          score: 85,
+          signals: [
+            { name: "contributing_guide", present: true, status: "exact" },
+            { name: "good_first_issue", present: true, status: "exact" },
+            { name: "issue_template", present: true, status: "exact" },
+            { name: "test_instructions", present: true, status: "exact" },
+            { name: "maintainer_response", present: true, status: "exact" },
+            {
+              name: "external_contributor_merge",
+              present: false,
+              status: "exact",
+            },
+          ],
+        },
         difficulty: {
           label: "very_low",
           level: 1,
@@ -66,8 +82,17 @@ export const repositoryDiscoveryFixture: RepositoryDiscoveryEnvelope = {
           owner: "example",
           url: "https://github.com/example/typed-service",
         },
+        starterIssues: [
+          {
+            labels: ["good first issue"],
+            number: 42,
+            title: "Add a focused parser test",
+            updatedAt: "2026-07-30T09:00:00Z",
+            url: "https://github.com/example/typed-service/issues/42",
+          },
+        ],
         technologies: ["React"],
-        topics: ["developer-tools", "react"],
+        topics: ["developer-tools", "docker", "react"],
         warnings: [
           {
             code: "readme_content_sampled",

@@ -72,6 +72,10 @@ export function RepositoryDiscoveryPage() {
   } else if (query.data) {
     resultContent = (
       <RepositoryDiscoveryResults
+        contributorTechnologies={[
+          ...location.filters.languages,
+          ...location.filters.technologies,
+        ]}
         envelope={query.data[0]}
         isFetching={query.isFetching}
         relaxed={query.data[1]}

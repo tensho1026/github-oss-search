@@ -96,6 +96,21 @@ func TestAnalyzeDiscoveryMarksUnavailableAndSampledEvidence(t *testing.T) {
 	}
 }
 
+func TestAnalyzeDiscoveryScoresFirstContributionEvidenceSeparately(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 7, 30, 0, 0, 0, 0, time.UTC)
+	candidate := discoveryCandidateFixture(now)
+	candidate.GoodFirstIssues = 1
+	result := AnalyzeDiscovery(candidate, DiscoveryEnrichment{
+		Available: true, ContributingAvailable: true, HasIssueTemplate: true,
+		HasTestInstructions: true, HasMaintainerResponse: true,
+		HasExternalMergedPR: true,
+	}, nil, now)
+	if result.Beginner.Score != 100 || result.Beginner.Band != ReadinessReady || len(result.Beginner.Signals) != 6 {
+		t.Fatalf("beginner friendliness = %+v", result.Beginner)
+	}
+}
+
 func TestSortDiscoveryResultsIsDeterministic(t *testing.T) {
 	t.Parallel()
 

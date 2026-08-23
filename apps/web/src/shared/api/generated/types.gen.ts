@@ -781,6 +781,8 @@ export type RepositoryDiscoveryItem = {
   popularity: RepositoryDiscoveryPopularity;
   activity: RepositoryDiscoveryActivity;
   readiness: RepositoryDiscoveryReadiness;
+  beginnerFriendliness: RepositoryBeginnerFriendliness;
+  starterIssues: Array<RepositoryStarterIssue>;
   documentation: RepositoryDiscoveryDocumentation;
   difficulty: RepositoryDiscoveryDifficulty;
   warnings: Array<RepositoryDiscoveryWarning>;
@@ -853,6 +855,39 @@ export type RepositoryDiscoveryDocumentation = {
   codeOfConduct: boolean;
   securityPolicy: boolean;
   japaneseReadme: JapaneseReadmeEvidence;
+};
+
+export type RepositoryBeginnerFriendliness = {
+  score: number;
+  band: "needs_work" | "promising" | "ready";
+  signals: [
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+    RepositoryBeginnerSignal,
+  ];
+};
+
+export type RepositoryBeginnerSignal = {
+  name:
+    | "contributing_guide"
+    | "good_first_issue"
+    | "issue_template"
+    | "test_instructions"
+    | "maintainer_response"
+    | "external_contributor_merge";
+  present: boolean;
+  status: EvidenceStatus;
+};
+
+export type RepositoryStarterIssue = {
+  number: number;
+  title: string;
+  url: string;
+  labels: Array<string>;
+  updatedAt: string;
 };
 
 export type JapaneseReadmeEvidence = {

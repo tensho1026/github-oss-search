@@ -71,6 +71,20 @@ func cloneRepositoryDiscoveryEntry(
 			[]string(nil),
 			item.Readiness.Reasons...,
 		)
+		cloned.Items[index].Beginner.Signals = append(
+			[]repository.BeginnerSignal(nil),
+			item.Beginner.Signals...,
+		)
+		cloned.Items[index].StarterIssues = make(
+			[]repository.StarterIssue,
+			len(item.StarterIssues),
+		)
+		for starterIndex, starter := range item.StarterIssues {
+			cloned.Items[index].StarterIssues[starterIndex] = starter
+			cloned.Items[index].StarterIssues[starterIndex].Labels = append(
+				[]string(nil), starter.Labels...,
+			)
+		}
 		cloned.Items[index].Warnings = append(
 			[]repository.DiscoveryWarning(nil),
 			item.Warnings...,

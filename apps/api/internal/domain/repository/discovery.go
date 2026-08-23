@@ -85,6 +85,36 @@ type DiscoveryEnrichment struct {
 	HelpWantedIssues       int
 	HasCodeOfConduct       bool
 	HasSecurityPolicy      bool
+	HasIssueTemplate       bool
+	HasTestInstructions    bool
+	HasMaintainerResponse  bool
+	HasExternalMergedPR    bool
+	StarterIssues          []StarterIssue
+}
+
+// StarterIssue is a bounded, normalized open issue suitable for a repository
+// card. It is discovery evidence, not a claim that the work is available.
+type StarterIssue struct {
+	Number    int
+	Title     string
+	URL       string
+	Labels    []string
+	UpdatedAt time.Time
+}
+
+// BeginnerSignal reports one independently explainable onboarding signal.
+type BeginnerSignal struct {
+	Name    string
+	Present bool
+	Status  EvidenceStatus
+}
+
+// BeginnerFriendliness is separate from general repository readiness and is
+// focused specifically on evidence useful to a first-time contributor.
+type BeginnerFriendliness struct {
+	Score   int
+	Band    ReadinessBand
+	Signals []BeginnerSignal
 }
 
 // JapaneseREADMEEvidence explains the conservative README language heuristic
@@ -141,6 +171,8 @@ type DiscoveryResult struct {
 	Documentation    DocumentationSignals
 	Difficulty       PreliminaryDifficulty
 	Readiness        ContributionReadiness
+	Beginner         BeginnerFriendliness
+	StarterIssues    []StarterIssue
 	Warnings         []DiscoveryWarning
 }
 
@@ -174,6 +206,7 @@ func AnalyzeDiscovery(
 		documentation,
 		now.UTC(),
 	)
+	beginner := beginnerFriendliness(candidate, enrichment, documentation)
 
 	warnings := make([]DiscoveryWarning, 0, 2)
 	if !enrichment.Available {
@@ -199,8 +232,43 @@ func AnalyzeDiscovery(
 		Documentation:    documentation,
 		Difficulty:       difficulty,
 		Readiness:        readiness,
+		Beginner:         beginner,
+		StarterIssues:    slices.Clone(enrichment.StarterIssues),
 		Warnings:         warnings,
 	}
+}
+
+func beginnerFriendliness(
+	candidate DiscoveryCandidate,
+	enrichment DiscoveryEnrichment,
+	documentation DocumentationSignals,
+) BeginnerFriendliness {
+	status := EvidenceExact
+	if !enrichment.Available {
+		status = EvidenceUnavailable
+	}
+	signals := []BeginnerSignal{
+		{Name: "contributing_guide", Present: documentation.ContributingAvailable, Status: status},
+		{Name: "good_first_issue", Present: candidate.GoodFirstIssues > 0, Status: status},
+		{Name: "issue_template", Present: enrichment.HasIssueTemplate, Status: status},
+		{Name: "test_instructions", Present: enrichment.HasTestInstructions, Status: status},
+		{Name: "maintainer_response", Present: enrichment.HasMaintainerResponse, Status: status},
+		{Name: "external_contributor_merge", Present: enrichment.HasExternalMergedPR, Status: status},
+	}
+	weights := []int{15, 15, 15, 15, 20, 20}
+	score := 0
+	for index, signal := range signals {
+		if signal.Present && signal.Status != EvidenceUnavailable {
+			score += weights[index]
+		}
+	}
+	band := ReadinessNeedsWork
+	if score >= 75 {
+		band = ReadinessReady
+	} else if score >= 50 {
+		band = ReadinessPromising
+	}
+	return BeginnerFriendliness{Score: score, Band: band, Signals: signals}
 }
 
 func analyzeDocumentation(

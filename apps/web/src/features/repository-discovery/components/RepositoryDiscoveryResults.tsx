@@ -20,6 +20,7 @@ import { RepositoryCard } from "./RepositoryCard";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type RepositoryDiscoveryResultsProps = {
+  contributorTechnologies?: readonly string[];
   envelope: RepositoryDiscoveryEnvelope;
   isFetching: boolean;
   relaxed?: boolean;
@@ -27,6 +28,7 @@ type RepositoryDiscoveryResultsProps = {
 };
 
 export function RepositoryDiscoveryResults({
+  contributorTechnologies = [],
   envelope,
   isFetching,
   relaxed,
@@ -163,7 +165,11 @@ export function RepositoryDiscoveryResults({
       <ol className="grid gap-5">
         {items.map((item, index) => (
           <li key={item.repository.fullName}>
-            <RepositoryCard item={item} rank={firstRank + index} />
+            <RepositoryCard
+              contributorTechnologies={contributorTechnologies}
+              item={item}
+              rank={firstRank + index}
+            />
           </li>
         ))}
       </ol>

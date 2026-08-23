@@ -157,18 +157,20 @@ type repositoryDiscoveryResponse struct {
 }
 
 type repositoryDiscoveryItemResponse struct {
-	Repository    repositoryDiscoveryIdentityResponse      `json:"repository"`
-	Topics        []string                                 `json:"topics"`
-	Technologies  []string                                 `json:"technologies"`
-	Language      string                                   `json:"language"`
-	Category      repository.Category                      `json:"category"`
-	License       repositoryDiscoveryLicenseResponse       `json:"license"`
-	Popularity    repositoryDiscoveryPopularityResponse    `json:"popularity"`
-	Activity      repositoryDiscoveryActivityResponse      `json:"activity"`
-	Readiness     repositoryDiscoveryReadinessResponse     `json:"readiness"`
-	Documentation repositoryDiscoveryDocumentationResponse `json:"documentation"`
-	Difficulty    repositoryDiscoveryDifficultyResponse    `json:"difficulty"`
-	Warnings      []repositoryDiscoveryWarningResponse     `json:"warnings"`
+	Repository    repositoryDiscoveryIdentityResponse       `json:"repository"`
+	Topics        []string                                  `json:"topics"`
+	Technologies  []string                                  `json:"technologies"`
+	Language      string                                    `json:"language"`
+	Category      repository.Category                       `json:"category"`
+	License       repositoryDiscoveryLicenseResponse        `json:"license"`
+	Popularity    repositoryDiscoveryPopularityResponse     `json:"popularity"`
+	Activity      repositoryDiscoveryActivityResponse       `json:"activity"`
+	Readiness     repositoryDiscoveryReadinessResponse      `json:"readiness"`
+	Beginner      repositoryDiscoveryBeginnerResponse       `json:"beginnerFriendliness"`
+	StarterIssues []repositoryDiscoveryStarterIssueResponse `json:"starterIssues"`
+	Documentation repositoryDiscoveryDocumentationResponse  `json:"documentation"`
+	Difficulty    repositoryDiscoveryDifficultyResponse     `json:"difficulty"`
+	Warnings      []repositoryDiscoveryWarningResponse      `json:"warnings"`
 }
 
 type repositoryDiscoveryIdentityResponse struct {
@@ -207,6 +209,26 @@ type repositoryDiscoveryReadinessResponse struct {
 	HelpWantedIssues   int                      `json:"helpWantedIssues"`
 	IssuesEnabled      bool                     `json:"issuesEnabled"`
 	DiscussionsEnabled bool                     `json:"discussionsEnabled"`
+}
+
+type repositoryDiscoveryBeginnerResponse struct {
+	Score   int                                         `json:"score"`
+	Band    repository.ReadinessBand                    `json:"band"`
+	Signals []repositoryDiscoveryBeginnerSignalResponse `json:"signals"`
+}
+
+type repositoryDiscoveryBeginnerSignalResponse struct {
+	Name    string                    `json:"name"`
+	Present bool                      `json:"present"`
+	Status  repository.EvidenceStatus `json:"status"`
+}
+
+type repositoryDiscoveryStarterIssueResponse struct {
+	Number    int       `json:"number"`
+	Title     string    `json:"title"`
+	URL       string    `json:"url"`
+	Labels    []string  `json:"labels"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type repositoryDiscoveryDocumentationResponse struct {
@@ -302,6 +324,14 @@ func newRepositoryDiscoveryItemResponse(
 		0,
 		len(item.Warnings),
 	)
+	beginnerSignals := make([]repositoryDiscoveryBeginnerSignalResponse, len(item.Beginner.Signals))
+	for index, signal := range item.Beginner.Signals {
+		beginnerSignals[index] = repositoryDiscoveryBeginnerSignalResponse{Name: signal.Name, Present: signal.Present, Status: signal.Status}
+	}
+	starterIssues := make([]repositoryDiscoveryStarterIssueResponse, len(item.StarterIssues))
+	for index, starter := range item.StarterIssues {
+		starterIssues[index] = repositoryDiscoveryStarterIssueResponse{Number: starter.Number, Title: starter.Title, URL: starter.URL, Labels: slices.Clone(starter.Labels), UpdatedAt: starter.UpdatedAt}
+	}
 	for _, warning := range item.Warnings {
 		itemWarnings = append(
 			itemWarnings,
@@ -346,6 +376,12 @@ func newRepositoryDiscoveryItemResponse(
 			IssuesEnabled:      item.HasIssuesEnabled,
 			DiscussionsEnabled: item.HasDiscussions,
 		},
+		Beginner: repositoryDiscoveryBeginnerResponse{
+			Score:   item.Beginner.Score,
+			Band:    item.Beginner.Band,
+			Signals: beginnerSignals,
+		},
+		StarterIssues: starterIssues,
 		Documentation: repositoryDiscoveryDocumentationResponse{
 			Status:            item.Documentation.Status,
 			ReadmeAvailable:   item.Documentation.READMEAvailable,

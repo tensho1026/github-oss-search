@@ -280,6 +280,25 @@ export const jaMessages = {
   "repository.evidencePartial": "リポジトリの根拠が一部不足しています",
   "repository.updated":
     "リポジトリ更新日 {date}。サーバーの順序と判断を維持しています。",
+  "repository.beginner.title": "初参加しやすさ",
+  "repository.beginner.description":
+    "初めてのコントリビューションを完了しやすい根拠を、通常の健全性とは分けて評価します。",
+  "repository.beginner.contributing": "CONTRIBUTINGガイド",
+  "repository.beginner.goodFirst": "good first issue",
+  "repository.beginner.issueTemplate": "Issueテンプレート",
+  "repository.beginner.tests": "テスト実行方法",
+  "repository.beginner.response": "最近のメンテナー応答",
+  "repository.beginner.externalMerge": "外部ContributorのMerge実績",
+  "repository.technologyComparison": "技術構成の比較",
+  "repository.yourTechnologies": "あなたの選択スキル",
+  "repository.repositoryTechnologies": "リポジトリの技術根拠",
+  "repository.newTechnologies": "新しく必要な技術",
+  "repository.noneDetected": "検出なし",
+  "repository.starterIssueTitle": "このリポジトリで始めやすいIssue",
+  "repository.starterIssueDescription":
+    "最近更新されたgood first issueまたはhelp wantedを最大3件表示します。着手前にGitHubで最新状態を確認してください。",
+  "repository.noStarterIssues":
+    "限定サンプル内に未解決の初心者向けIssueはありませんでした。",
   "repositoryForm.technologyPurpose": "技術と目的",
   "repositoryForm.languagesDescription":
     "選択した主要言語のいずれかに一致するリポジトリを対象にします。",

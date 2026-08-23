@@ -5,7 +5,56 @@ import type {
   OssCategory,
   RepositoryDiscoveryDifficulty,
   RepositoryDiscoveryReadiness,
+  RepositoryDiscoveryItem,
 } from "../../../shared/api/generated";
+
+const topicTechnologies = new Map([
+  ["docker", "Docker"],
+  ["postgresql", "PostgreSQL"],
+  ["postgres", "PostgreSQL"],
+  ["mysql", "MySQL"],
+  ["redis", "Redis"],
+  ["kubernetes", "Kubernetes"],
+  ["terraform", "Terraform"],
+  ["react", "React"],
+  ["vue", "Vue"],
+  ["angular", "Angular"],
+  ["svelte", "Svelte"],
+  ["nodejs", "Node.js"],
+]);
+
+export function repositoryTechnologyComparison(
+  item: RepositoryDiscoveryItem,
+  contributorTechnologies: readonly string[],
+) {
+  const normalizedContributor = uniqueTechnologies(contributorTechnologies);
+  const repository = uniqueTechnologies([
+    item.language,
+    ...item.technologies,
+    ...item.topics.map(
+      (topic) => topicTechnologies.get(topic.toLowerCase()) ?? "",
+    ),
+  ]);
+  const contributorKeys = new Set(
+    normalizedContributor.map((technology) => technology.toLowerCase()),
+  );
+  return {
+    contributor: normalizedContributor,
+    missing: repository.filter(
+      (technology) => !contributorKeys.has(technology.toLowerCase()),
+    ),
+    repository,
+  };
+}
+
+function uniqueTechnologies(values: readonly string[]): string[] {
+  const result = new Map<string, string>();
+  for (const raw of values) {
+    const value = raw.trim();
+    if (value) result.set(value.toLowerCase(), value);
+  }
+  return [...result.values()];
+}
 
 export type RepositoryErrorPresentation = {
   description: string;

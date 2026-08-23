@@ -282,6 +282,25 @@ export const enMessages = {
   "repository.evidencePartial": "Repository evidence is partial",
   "repository.updated":
     "Repository updated {date}. Server ordering and decisions are preserved.",
+  "repository.beginner.title": "First-contribution friendliness",
+  "repository.beginner.description":
+    "A separate, explainable score for evidence that helps a newcomer complete a first contribution.",
+  "repository.beginner.contributing": "CONTRIBUTING guide",
+  "repository.beginner.goodFirst": "Good first issues",
+  "repository.beginner.issueTemplate": "Issue templates",
+  "repository.beginner.tests": "Test instructions",
+  "repository.beginner.response": "Recent maintainer response",
+  "repository.beginner.externalMerge": "External contributor merge",
+  "repository.technologyComparison": "Technology fit",
+  "repository.yourTechnologies": "Your selected skills",
+  "repository.repositoryTechnologies": "Repository evidence",
+  "repository.newTechnologies": "New skills to learn",
+  "repository.noneDetected": "None detected",
+  "repository.starterIssueTitle": "Approachable issues in this repository",
+  "repository.starterIssueDescription":
+    "Up to three recent open good-first or help-wanted issues. Confirm availability on GitHub before starting.",
+  "repository.noStarterIssues":
+    "No open starter issue was observed in the bounded sample.",
   "repositoryForm.technologyPurpose": "Technology and purpose",
   "repositoryForm.languagesDescription":
     "Repositories matching any selected primary language are considered.",
