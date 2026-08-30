@@ -36,6 +36,86 @@ func TestIssueSearchCacheReturnsIndependentCopies(t *testing.T) {
 	}
 }
 
+func TestIssueSearchCacheClonesRankedResults(t *testing.T) {
+	cache := newTestIssueSearchCache(t, 1, time.Hour)
+	evidence := []issue.Evidence{{
+		RuleID: "test.rule",
+		Source: issue.EvidenceDerived,
+	}}
+	score := 7
+	entry := port.IssueSearchCacheEntry{
+		RankedCandidates: []issue.RankedIssue{{
+			Candidate: issue.Candidate{Issue: issue.Summary{
+				Labels:    []string{"original"},
+				Assignees: []string{"owner"},
+			}},
+			Analysis: issue.Analysis{
+				Quality: issue.QualityAssessment{Signals: []issue.QualitySignal{{
+					Evidence: evidence,
+				}}},
+				RequiredTechnologies: []issue.RequiredTechnology{{Evidence: evidence}},
+				Category: issue.CategoryAssessment{
+					Matches:  []issue.Category{issue.CategoryBackend},
+					Evidence: evidence,
+				},
+				Scope: issue.ChangeScope{
+					Areas:    []issue.ChangeArea{issue.ChangeBackend},
+					Evidence: evidence,
+				},
+				Difficulty: issue.DifficultyAssessment{Evidence: evidence},
+				Effort:     issue.EffortEstimate{Evidence: evidence},
+			},
+			Recommendation: issue.Recommendation{
+				SkillMatch: issue.SkillMatchAssessment{Skills: []issue.SkillMatch{{
+					RequirementEvidence: evidence,
+					ContributorEvidence: evidence,
+				}}},
+				RepositorySignals: []issue.RepositorySignal{{Evidence: evidence}},
+				Claim:             issue.ClaimEvidence{Evidence: evidence},
+				Stale:             issue.StaleAssessment{Evidence: evidence},
+				Breakdown: issue.ScoreBreakdown{
+					SkillMatch:        issue.ScoreComponent{Reasons: []string{"skill"}},
+					IssueQuality:      issue.ScoreComponent{Reasons: []string{"quality"}},
+					RepositoryQuality: issue.ScoreComponent{Reasons: []string{"repository"}},
+					Activity:          issue.ScoreComponent{Reasons: []string{"activity"}},
+					Maintainer:        issue.ScoreComponent{Reasons: []string{"maintainer"}},
+					Availability:      issue.ScoreComponent{Reasons: []string{"availability"}},
+				},
+				Reasons:  []string{"reason"},
+				Warnings: []issue.Warning{{Evidence: evidence}},
+			},
+			RepositoryHealth: issue.RepositoryHealthDashboard{Categories: []issue.HealthCategory{{
+				Score: &score,
+				Components: []issue.HealthComponent{{
+					Score: &score,
+				}},
+				Warnings: []string{"warning"},
+			}}},
+		}},
+		RankedCandidatesReady: true,
+	}
+	if err := cache.Set(context.Background(), "ranked", entry); err != nil {
+		t.Fatalf("Set() error = %v", err)
+	}
+	first, found, err := cache.Get(context.Background(), "ranked")
+	if err != nil || !found {
+		t.Fatalf("Get() found = %t, error = %v", found, err)
+	}
+	first.RankedCandidates[0].Analysis.Quality.Signals[0].Evidence[0].Description = "mutated"
+	first.RankedCandidates[0].Recommendation.Reasons[0] = "mutated"
+	*first.RankedCandidates[0].RepositoryHealth.Categories[0].Score = 99
+
+	second, found, err := cache.Get(context.Background(), "ranked")
+	if err != nil || !found {
+		t.Fatalf("Get() found = %t, error = %v", found, err)
+	}
+	if second.RankedCandidates[0].Analysis.Quality.Signals[0].Evidence[0].Description == "mutated" ||
+		second.RankedCandidates[0].Recommendation.Reasons[0] == "mutated" ||
+		*second.RankedCandidates[0].RepositoryHealth.Categories[0].Score == 99 {
+		t.Fatalf("ranked result was mutated = %+v", second)
+	}
+}
+
 func TestIssueSearchCacheExpiresAndEvicts(t *testing.T) {
 	cache := newTestIssueSearchCache(t, 1, time.Minute)
 	now := time.Date(2026, time.July, 30, 0, 0, 0, 0, time.UTC)
