@@ -117,14 +117,14 @@ func ExclusionReasons(
 	}
 	if !matchesAnyValue(
 		candidate.Repository.MainLanguage,
-		criteria.Languages(),
+		criteria.languages,
 	) {
 		reasons = append(reasons, ExclusionLanguageMismatch)
 	}
-	if !matchesFrameworks(candidate, criteria.Frameworks()) {
+	if !matchesFrameworks(candidate, criteria.frameworks) {
 		reasons = append(reasons, ExclusionFrameworkMismatch)
 	}
-	if !matchesAnyLabel(candidate.Issue.Labels, criteria.Labels()) {
+	if !matchesAnyLabel(candidate.Issue.Labels, criteria.labels) {
 		reasons = append(reasons, ExclusionLabelMismatch)
 	}
 	if EstimateDifficulty(candidate.Issue.Labels) >
