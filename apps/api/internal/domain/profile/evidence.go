@@ -344,13 +344,14 @@ type TechnologyProficiency struct {
 // performing I/O. Private activity is intentionally absent from ProfileSnapshot.
 func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	window := normalizeWindow(snapshot.WindowFrom, snapshot.WindowTo)
+	ownedFrameworks := inferCollectionFrameworks(snapshot.Owned)
 	ownedLanguages := topLanguageShares(
 		AggregateLanguages(collectionLanguageBytes(snapshot.Owned)),
 		maximumLanguageResults,
 	)
-	frameworkEvidence := collectionFrameworkEvidence(snapshot.Owned)
+	frameworkEvidence := collectionFrameworkEvidence(snapshot.Owned, ownedFrameworks)
 	frameworks := sortedFrameworkNames(frameworkEvidence)
-	recent := analyzeRecentTechnologies(snapshot, window.From)
+	recent := analyzeRecentTechnologies(snapshot, window.From, ownedFrameworks)
 	contributions := analyzeContributions(snapshot.Contributions)
 	portfolio := analyzePortfolio(snapshot.Portfolio, window.To)
 	journey := analyzeJourney(portfolio)
@@ -389,6 +390,14 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 		RepositoriesAnalyzed: len(snapshot.Owned.Repositories),
 		Warnings:             slices.Clone(snapshot.Warnings),
 	}
+}
+
+func inferCollectionFrameworks(collection RepositoryCollection) [][]string {
+	frameworks := make([][]string, len(collection.Repositories))
+	for index, observation := range collection.Repositories {
+		frameworks[index] = InferFrameworks(observation.Manifests)
+	}
+	return frameworks
 }
 
 func cloneContributionCalendar(

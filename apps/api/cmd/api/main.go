@@ -88,6 +88,14 @@ func main() {
 		logger.Error("compose issue search cache", "error", err)
 		os.Exit(1)
 	}
+	issueSearchRankingCache, err := memory.NewIssueSearch(
+		cfg.IssueSearchRankingCacheCapacity,
+		cfg.IssueSearchRankingCacheTTL,
+	)
+	if err != nil {
+		logger.Error("compose issue search ranking cache", "error", err)
+		os.Exit(1)
+	}
 	issueDetailCache, err := memory.NewIssueDetail(
 		cfg.IssueDetailCacheCapacity,
 		cfg.IssueDetailCacheTTL,
@@ -132,6 +140,7 @@ func main() {
 			),
 		),
 		usecase.WithContributionProfileAnalysis(analyzeGitHubProfile),
+		usecase.WithIssueSearchRankingCache(issueSearchRankingCache),
 	)
 	if err != nil {
 		logger.Error("compose issue search usecase", "error", err)

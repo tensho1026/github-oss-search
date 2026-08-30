@@ -61,25 +61,33 @@ func (cache *lruCache[K, V]) get(
 	}
 
 	cache.mu.Lock()
-	defer cache.mu.Unlock()
 
 	element, exists := cache.items[key]
 	if !exists {
+		cache.mu.Unlock()
 		return zero, false, nil
 	}
 	item, valid := element.Value.(*lruItem[K, V])
 	if !valid {
 		delete(cache.items, key)
 		cache.recency.Remove(element)
+		cache.mu.Unlock()
 		return zero, false, fmt.Errorf("cache contains an invalid item")
 	}
 	if !cache.now().Before(item.expiresAt) {
 		cache.remove(element)
+		cache.mu.Unlock()
 		return zero, false, nil
 	}
 
 	cache.recency.MoveToFront(element)
-	return cache.cloneValue(item.value), true, nil
+	value := item.value
+	cache.mu.Unlock()
+
+	// Cloning can walk large nested profile or recommendation results. Do it
+	// after releasing the recency lock so one slow reader cannot block all
+	// cache operations.
+	return cache.cloneValue(value), true, nil
 }
 
 func (cache *lruCache[K, V]) set(
@@ -91,31 +99,37 @@ func (cache *lruCache[K, V]) set(
 		return err
 	}
 
+	// Prepare the ownership-isolated value before acquiring the cache lock.
+	// Replacement only swaps this immutable snapshot into the item.
+	cloned := cache.cloneValue(value)
+
 	cache.mu.Lock()
-	defer cache.mu.Unlock()
 
 	if element, exists := cache.items[key]; exists {
 		item, valid := element.Value.(*lruItem[K, V])
 		if !valid {
 			delete(cache.items, key)
 			cache.recency.Remove(element)
+			cache.mu.Unlock()
 			return fmt.Errorf("cache contains an invalid item")
 		}
-		item.value = cache.cloneValue(value)
+		item.value = cloned
 		item.expiresAt = cache.now().Add(cache.ttl)
 		cache.recency.MoveToFront(element)
+		cache.mu.Unlock()
 		return nil
 	}
 
 	item := &lruItem[K, V]{
 		key:       key,
-		value:     cache.cloneValue(value),
+		value:     cloned,
 		expiresAt: cache.now().Add(cache.ttl),
 	}
 	cache.items[key] = cache.recency.PushFront(item)
 	if cache.recency.Len() > cache.capacity {
 		cache.remove(cache.recency.Back())
 	}
+	cache.mu.Unlock()
 	return nil
 }
 

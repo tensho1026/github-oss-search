@@ -163,6 +163,7 @@ them. Initial TTLs are deliberately different by data volatility:
 | Profile analysis     | 30 minutes |
 | Repository discovery |  5 minutes |
 | Issue search         |  5 minutes |
+| Issue ranking        |   1 minute |
 | Issue details        |  5 minutes |
 
 Repository discovery uses `REPOSITORY_DISCOVERY_RESULT_LIMIT` (maximum 50),
@@ -171,7 +172,10 @@ Repository discovery uses `REPOSITORY_DISCOVERY_RESULT_LIMIT` (maximum 50),
 `REPOSITORY_DISCOVERY_CACHE_CAPACITY` (1000 entries by default).
 Issue search uses `ISSUE_SEARCH_RESULT_LIMIT` (maximum 50),
 `ISSUE_SEARCH_CACHE_TTL` (five minutes by default), and
-`ISSUE_SEARCH_CACHE_CAPACITY` (1000 entries by default). Invalid or excessive
+`ISSUE_SEARCH_CACHE_CAPACITY` (1000 entries by default). Expensive enriched
+rankings use a separate short-lived cache controlled by
+`ISSUE_SEARCH_RANKING_CACHE_TTL` (one minute by default) and
+`ISSUE_SEARCH_RANKING_CACHE_CAPACITY` (100 entries by default). Invalid or excessive
 values fail process startup.
 
 Issue recommendation adds `ISSUE_DETAIL_ANALYSIS_LIMIT` (20 by default),

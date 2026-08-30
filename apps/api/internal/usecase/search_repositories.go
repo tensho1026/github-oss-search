@@ -81,6 +81,11 @@ type searchRepositories struct {
 	now             func() time.Time
 }
 
+type prefilteredDiscoveryCandidate struct {
+	candidate repository.DiscoveryCandidate
+	category  repository.Category
+}
+
 // NewSearchRepositories validates required ports and result/enrichment bounds.
 // Concurrent misses for an identical canonical key are collapsed.
 func NewSearchRepositories(
@@ -198,7 +203,7 @@ func (usecase *searchRepositories) loadRepositoryDiscovery(
 
 	summaries := make([]repository.Summary, len(candidates))
 	for index, candidate := range candidates {
-		summaries[index] = candidate.Repository
+		summaries[index] = candidate.candidate.Repository
 	}
 
 	enrichment := port.GitHubRepositoryEnrichmentResult{
@@ -220,7 +225,9 @@ func (usecase *searchRepositories) loadRepositoryDiscovery(
 	}
 
 	results := make([]repository.DiscoveryResult, 0, len(candidates))
-	for _, candidate := range candidates {
+	technologies := criteria.Technologies()
+	for _, shortlisted := range candidates {
+		candidate := shortlisted.candidate
 		key := strings.ToLower(candidate.Repository.FullName)
 		evidence, found := enrichment.Items[key]
 		if !found {
@@ -235,11 +242,12 @@ func (usecase *searchRepositories) loadRepositoryDiscovery(
 			candidate.HasCodeOfConduct = evidence.HasCodeOfConduct
 			candidate.HasSecurityPolicy = evidence.HasSecurityPolicy
 		}
-		result := repository.AnalyzeDiscovery(
+		result := repository.AnalyzeDiscoveryWithCategory(
 			candidate,
 			evidence,
-			criteria.Technologies(),
+			technologies,
 			now,
+			shortlisted.category,
 		)
 		if matchesAnalyzedDiscovery(result, criteria) {
 			results = append(results, result)
@@ -267,9 +275,12 @@ func prefilterDiscoveryCandidates(
 	source []repository.DiscoveryCandidate,
 	criteria repository.DiscoveryCriteria,
 	now time.Time,
-) []repository.DiscoveryCandidate {
-	candidates := make([]repository.DiscoveryCandidate, 0, len(source))
+) []prefilteredDiscoveryCandidate {
+	candidates := make([]prefilteredDiscoveryCandidate, 0, len(source))
 	cutoff := now.AddDate(0, 0, -criteria.UpdatedWithinDays())
+	languages := criteria.Languages()
+	licenses := criteria.Licenses()
+	categories := criteria.Categories()
 	for _, candidate := range source {
 		summary := candidate.Repository
 		if criteria.ExcludesArchived() && summary.IsArchived {
@@ -295,34 +306,37 @@ func prefilterDiscoveryCandidates(
 			summary.OpenIssues > maximum {
 			continue
 		}
-		if !matchesLanguage(summary.MainLanguage, criteria.Languages()) ||
-			!matchesLicense(candidate, criteria.Licenses()) ||
-			!containsCategory(
-				criteria.Categories(),
-				repository.ClassifyDiscoveryCategory(candidate),
-			) {
+		if !matchesLanguage(summary.MainLanguage, languages) ||
+			!matchesLicense(candidate, licenses) {
 			continue
 		}
-		candidates = append(candidates, candidate)
+		category := repository.ClassifyDiscoveryCategory(candidate)
+		if !containsCategory(categories, category) {
+			continue
+		}
+		candidates = append(candidates, prefilteredDiscoveryCandidate{
+			candidate: candidate,
+			category:  category,
+		})
 	}
 
 	slices.SortStableFunc(
 		candidates,
-		func(left, right repository.DiscoveryCandidate) int {
+		func(left, right prefilteredDiscoveryCandidate) int {
 			if order := cmp.Compare(
-				right.Repository.Stars,
-				left.Repository.Stars,
+				right.candidate.Repository.Stars,
+				left.candidate.Repository.Stars,
 			); order != 0 {
 				return order
 			}
-			if order := right.Repository.PushedAt.Compare(
-				left.Repository.PushedAt,
+			if order := right.candidate.Repository.PushedAt.Compare(
+				left.candidate.Repository.PushedAt,
 			); order != 0 {
 				return order
 			}
 			return strings.Compare(
-				strings.ToLower(left.Repository.FullName),
-				strings.ToLower(right.Repository.FullName),
+				strings.ToLower(left.candidate.Repository.FullName),
+				strings.ToLower(right.candidate.Repository.FullName),
 			)
 		},
 	)
