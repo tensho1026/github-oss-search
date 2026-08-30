@@ -345,8 +345,9 @@ type TechnologyProficiency struct {
 func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	window := normalizeWindow(snapshot.WindowFrom, snapshot.WindowTo)
 	ownedFrameworks := inferCollectionFrameworks(snapshot.Owned)
+	ownedLanguageBytes := collectionLanguageBytes(snapshot.Owned)
 	ownedLanguages := topLanguageShares(
-		AggregateLanguages(collectionLanguageBytes(snapshot.Owned)),
+		AggregateLanguages(ownedLanguageBytes),
 		maximumLanguageResults,
 	)
 	frameworkEvidence := collectionFrameworkEvidence(snapshot.Owned, ownedFrameworks)
@@ -358,10 +359,26 @@ func AnalyzeSnapshot(snapshot ProfileSnapshot) Analysis {
 	streak := analyzeContributionStreak(portfolio)
 	quest := analyzeOSSQuest(contributions, portfolio, window.To)
 	repositoryEvidence := RepositoryEvidence{
-		Owned:       analyzeRepositoryCollection(snapshot.Owned, window.From),
-		Contributed: analyzeRepositoryCollection(snapshot.Contributed, window.From),
-		Starred:     analyzeRepositoryCollection(snapshot.Starred, window.From),
-		Forked:      analyzeRepositoryCollection(snapshot.Forked, window.From),
+		Owned: analyzeRepositoryCollection(
+			snapshot.Owned,
+			window.From,
+			ownedLanguages,
+		),
+		Contributed: analyzeRepositoryCollection(
+			snapshot.Contributed,
+			window.From,
+			nil,
+		),
+		Starred: analyzeRepositoryCollection(
+			snapshot.Starred,
+			window.From,
+			nil,
+		),
+		Forked: analyzeRepositoryCollection(
+			snapshot.Forked,
+			window.From,
+			nil,
+		),
 	}
 
 	return Analysis{
@@ -756,6 +773,7 @@ func countMetric(evidence CountEvidence) CountMetric {
 func analyzeRepositoryCollection(
 	collection RepositoryCollection,
 	windowStart time.Time,
+	precomputedLanguages []LanguageShare,
 ) RepositorySample {
 	if !collection.Available {
 		return RepositorySample{
@@ -788,11 +806,24 @@ func analyzeRepositoryCollection(
 		Total:          total,
 		Limit:          collection.Limit,
 		ActiveInWindow: active,
-		PrimaryTechnologies: topLanguageShares(
-			AggregateLanguages(collectionLanguageBytes(collection)),
-			maximumLanguageResults,
+		PrimaryTechnologies: repositoryCollectionLanguages(
+			collection,
+			precomputedLanguages,
 		),
 	}
+}
+
+func repositoryCollectionLanguages(
+	collection RepositoryCollection,
+	precomputed []LanguageShare,
+) []LanguageShare {
+	if precomputed != nil {
+		return slices.Clone(precomputed)
+	}
+	return topLanguageShares(
+		AggregateLanguages(collectionLanguageBytes(collection)),
+		maximumLanguageResults,
+	)
 }
 
 func collectionLanguageBytes(

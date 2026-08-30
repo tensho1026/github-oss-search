@@ -384,10 +384,23 @@ func detectJapaneseREADME(
 // ClassifyDiscoveryCategory maps bounded topics and description evidence to
 // one deterministic preliminary OSS category.
 func ClassifyDiscoveryCategory(candidate DiscoveryCandidate) Category {
-	corpus := strings.ToLower(strings.Join(append(
-		slices.Clone(candidate.Topics),
-		candidate.Repository.Description,
-	), " "))
+	corpusSize := len(candidate.Repository.Description)
+	for _, topic := range candidate.Topics {
+		corpusSize += len(topic) + 1
+	}
+	var corpusBuilder strings.Builder
+	corpusBuilder.Grow(corpusSize)
+	for index, topic := range candidate.Topics {
+		if index > 0 {
+			corpusBuilder.WriteByte(' ')
+		}
+		corpusBuilder.WriteString(topic)
+	}
+	if len(candidate.Topics) > 0 {
+		corpusBuilder.WriteByte(' ')
+	}
+	corpusBuilder.WriteString(candidate.Repository.Description)
+	corpus := strings.ToLower(corpusBuilder.String())
 	rules := []struct {
 		category Category
 		terms    []string
