@@ -24,6 +24,7 @@ type technologyAccumulator struct {
 func analyzeRecentTechnologies(
 	snapshot ProfileSnapshot,
 	windowStart time.Time,
+	ownedFrameworks [][]string,
 ) []RecentTechnology {
 	accumulators := make(map[string]*technologyAccumulator)
 	accumulateCollectionTechnologies(
@@ -32,6 +33,7 @@ func analyzeRecentTechnologies(
 		RepositoryOwned,
 		windowStart,
 		true,
+		ownedFrameworks,
 	)
 	accumulateCollectionTechnologies(
 		accumulators,
@@ -39,6 +41,7 @@ func analyzeRecentTechnologies(
 		RepositoryContributed,
 		windowStart,
 		false,
+		nil,
 	)
 	accumulateCollectionTechnologies(
 		accumulators,
@@ -46,6 +49,7 @@ func analyzeRecentTechnologies(
 		RepositoryForked,
 		windowStart,
 		false,
+		nil,
 	)
 
 	result := make([]RecentTechnology, 0, len(accumulators))
@@ -89,8 +93,9 @@ func accumulateCollectionTechnologies(
 	source RepositorySource,
 	windowStart time.Time,
 	includeFrameworks bool,
+	inferredFrameworks [][]string,
 ) {
-	for _, observation := range collection.Repositories {
+	for index, observation := range collection.Repositories {
 		if observation.Repository.IsArchived {
 			continue
 		}
@@ -121,7 +126,8 @@ func accumulateCollectionTechnologies(
 		if !includeFrameworks {
 			continue
 		}
-		for _, framework := range InferFrameworks(observation.Manifests) {
+		frameworks := inferredFrameworks[index]
+		for _, framework := range frameworks {
 			accumulateTechnology(
 				accumulators,
 				framework,
@@ -162,10 +168,11 @@ func accumulateTechnology(
 
 func collectionFrameworkEvidence(
 	collection RepositoryCollection,
+	inferredFrameworks [][]string,
 ) map[string]int {
 	counts := make(map[string]int)
-	for _, observation := range collection.Repositories {
-		for _, framework := range InferFrameworks(observation.Manifests) {
+	for index := range collection.Repositories {
+		for _, framework := range inferredFrameworks[index] {
 			counts[framework]++
 		}
 	}

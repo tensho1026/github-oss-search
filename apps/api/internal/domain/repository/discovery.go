@@ -185,13 +185,30 @@ func AnalyzeDiscovery(
 	requestedTechnologies []FilterValue,
 	now time.Time,
 ) DiscoveryResult {
+	return AnalyzeDiscoveryWithCategory(
+		candidate,
+		enrichment,
+		requestedTechnologies,
+		now,
+		ClassifyDiscoveryCategory(candidate),
+	)
+}
+
+// AnalyzeDiscoveryWithCategory is the allocation-conscious variant for
+// callers that already classified the candidate during prefiltering.
+func AnalyzeDiscoveryWithCategory(
+	candidate DiscoveryCandidate,
+	enrichment DiscoveryEnrichment,
+	requestedTechnologies []FilterValue,
+	now time.Time,
+	category Category,
+) DiscoveryResult {
 	enrichment.READMEText, enrichment.READMEContentSampled =
 		boundREADMEContent(
 			enrichment.READMEText,
 			enrichment.READMEContentSampled,
 		)
 	documentation := analyzeDocumentation(candidate, enrichment)
-	category := ClassifyDiscoveryCategory(candidate)
 	technologies := detectRequestedTechnologies(
 		candidate.Topics,
 		enrichment.READMEText,
@@ -323,15 +340,18 @@ func detectJapaneseREADME(
 	japaneseRunes := 0
 	letterRunes := 0
 	for _, character := range enrichment.READMEText {
-		if unicode.IsLetter(character) {
-			letterRunes++
+		if character < utf8.RuneSelf {
+			if (character >= 'A' && character <= 'Z') ||
+				(character >= 'a' && character <= 'z') {
+				letterRunes++
+			}
+			continue
 		}
-		if unicode.In(
-			character,
-			unicode.Han,
-			unicode.Hiragana,
-			unicode.Katakana,
-		) {
+		if !unicode.IsLetter(character) {
+			continue
+		}
+		letterRunes++
+		if unicode.In(character, unicode.Han, unicode.Hiragana, unicode.Katakana) {
 			japaneseRunes++
 		}
 	}

@@ -298,14 +298,24 @@ type ProfileAnalysisCache interface {
 }
 
 // IssueSearchCacheEntry owns the bounded pre-pagination candidate and
-// exclusion window used by issue discovery.
+// exclusion window used by issue discovery. Once recommendation enrichment
+// completes, the same entry may also contain the reusable post-analysis
+// ranking; pagination and user-visible ordering remain request-local.
 type IssueSearchCacheEntry struct {
-	Candidates        []issue.Candidate
-	ExclusionCounts   map[issue.ExclusionReason]int
-	CandidatesChecked int
-	UpstreamTotal     int
-	IncompleteResults bool
-	RateLimit         RateLimit
+	Candidates                    []issue.Candidate
+	ExclusionCounts               map[issue.ExclusionReason]int
+	CandidatesChecked             int
+	UpstreamTotal                 int
+	IncompleteResults             bool
+	RateLimit                     RateLimit
+	RankedCandidates              []issue.RankedIssue
+	RankedCandidatesReady         bool
+	RecommendationAttempted       int
+	RecommendationFailed          int
+	RecommendationIncomplete      bool
+	ContributionProfileStatus     issue.ContributionProfileStatus
+	ContributionProfileIncomplete bool
+	ContributionProfileCacheHit   bool
 }
 
 // IssueSearchCache stores canonical issue-search windows. Implementations must

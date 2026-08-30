@@ -5,51 +5,53 @@ contain names and safe defaults, never credentials. Commit no `.env` file.
 
 ## API environment
 
-| Variable                                | Default                  | Bounds and purpose                                                    | Secret |
-| --------------------------------------- | ------------------------ | --------------------------------------------------------------------- | ------ |
-| `APP_ENV`                               | `development`            | One of `development`, `test`, `staging`, `production`                 | No     |
-| `PORT`                                  | `8080`                   | TCP port 1–65535 for the API listener                                 | No     |
-| `ALLOWED_ORIGINS`                       | `http://127.0.0.1:5173`  | Comma-separated absolute HTTP(S) browser origins; no wildcard         | No     |
-| `API_DOCUMENTATION_ENABLED`             | `true`                   | Serve embedded `/docs/` and `/openapi.yaml`; false omits the routes   | No     |
-| `GITHUB_API_BASE_URL`                   | `https://api.github.com` | Absolute HTTPS upstream URL; HTTP is accepted only for loopback tests | No     |
-| `GITHUB_TOKEN`                          | empty                    | Server-only GitHub credential; required by GraphQL search             | Yes    |
-| `GITHUB_REQUEST_TIMEOUT`                | `10s`                    | Positive duration, at most one minute                                 | No     |
-| `GITHUB_API_MAX_CONCURRENCY`            | `5`                      | Bounded upstream fan-out, 1–20                                        | No     |
-| `PROFILE_ANALYSIS_REPOSITORY_LIMIT`     | `20`                     | Repositories analyzed per profile, 1–20                               | No     |
-| `PROFILE_ANALYSIS_CACHE_TTL`            | `30m`                    | Profile-analysis cache lifetime, positive and at most 24 hours        | No     |
-| `PROFILE_ANALYSIS_CACHE_CAPACITY`       | `500`                    | Profile-analysis LRU entries, 1–10,000                                | No     |
-| `REPOSITORY_DISCOVERY_RESULT_LIMIT`     | `50`                     | Upstream repository candidate window, 1–50                            | No     |
-| `REPOSITORY_DISCOVERY_ENRICHMENT_LIMIT` | `10`                     | Batched enrichments, 1–20 and no more than result limit               | No     |
-| `REPOSITORY_DISCOVERY_CACHE_TTL`        | `5m`                     | Repository cache lifetime, positive and at most 24 hours              | No     |
-| `REPOSITORY_DISCOVERY_CACHE_CAPACITY`   | `1000`                   | Repository-discovery LRU entries, 1–10,000                            | No     |
-| `ISSUE_SEARCH_RESULT_LIMIT`             | `50`                     | Upstream candidate window, 1–50                                       | No     |
-| `ISSUE_SEARCH_CACHE_TTL`                | `5m`                     | Canonical candidate cache lifetime, positive and at most 24 hours     | No     |
-| `ISSUE_SEARCH_CACHE_CAPACITY`           | `1000`                   | Candidate LRU entries, 1–10,000                                       | No     |
-| `ISSUE_DETAIL_ANALYSIS_LIMIT`           | `20`                     | Enriched candidates, at least 1 and no more than search limit         | No     |
-| `ISSUE_DETAIL_CACHE_TTL`                | `5m`                     | Detail snapshot cache lifetime, positive and at most 24 hours         | No     |
-| `ISSUE_DETAIL_CACHE_CAPACITY`           | `500`                    | Detail LRU entries, 1–10,000                                          | No     |
-| `MANIFEST_FILE_LIMIT`                   | `3`                      | Supported manifests read per repository, 1–10                         | No     |
-| `DATABASE_URL`                          | empty                    | Optional TLS-only PostgreSQL URL for authenticated account data       | Yes    |
-| `DATABASE_MAX_CONNECTIONS`              | `10`                     | Hard pool ceiling, 1–100                                              | No     |
-| `DATABASE_MIN_CONNECTIONS`              | `0`                      | Warm pool floor, 0–maximum                                            | No     |
-| `DATABASE_CONNECT_TIMEOUT`              | `5s`                     | Positive duration, at most one minute                                 | No     |
-| `DATABASE_QUERY_TIMEOUT`                | `5s`                     | Query/statement/idle-transaction deadline, at most one minute         | No     |
-| `DATABASE_MAX_CONNECTION_LIFETIME`      | `30m`                    | Positive duration, at most 24 hours                                   | No     |
-| `DATABASE_MAX_CONNECTION_IDLE_TIME`     | `5m`                     | Positive duration, at most 24 hours                                   | No     |
-| `DATABASE_HEALTH_CHECK_PERIOD`          | `30s`                    | Pool health cycle, positive and at most one hour                      | No     |
-| `GITHUB_OAUTH_CLIENT_ID`                | empty                    | Required OAuth App ID when authentication is enabled; at most 255     | No     |
-| `GITHUB_OAUTH_CLIENT_SECRET`            | empty                    | Required server-only OAuth App secret; at least 20 characters         | Yes    |
-| `GITHUB_OAUTH_AUTHORIZE_URL`            | official GitHub URL      | Absolute HTTPS authorization endpoint; loopback allowed in tests      | No     |
-| `GITHUB_OAUTH_TOKEN_URL`                | official GitHub URL      | Absolute HTTPS token endpoint; loopback allowed in tests              | No     |
-| `GITHUB_OAUTH_CALLBACK_URL`             | empty                    | Exact absolute `/api/auth/github/callback` URL                        | No     |
-| `AUTH_FRONTEND_URL`                     | empty                    | One fixed origin also present in `ALLOWED_ORIGINS`                    | No     |
-| `AUTH_FLOW_ENCRYPTION_KEY`              | empty                    | Exactly 64 lowercase hex characters for AES-256-GCM                   | Yes    |
-| `AUTH_STATE_TTL`                        | `10m`                    | Positive OAuth state/cookie lifetime, at most 15 minutes              | No     |
-| `AUTH_SESSION_TTL`                      | `12h`                    | Positive server-session lifetime, at most seven days                  | No     |
-| `AUTH_MAX_SESSIONS`                     | `10`                     | Active sessions retained per account, 1–50                            | No     |
-| `AUTH_COOKIE_SECURE`                    | environment-dependent    | Defaults false in dev/test and true in staging/production             | No     |
-| `TRUSTED_PROXY_CIDRS`                   | empty                    | Canonical comma-separated ingress CIDRs; empty trusts no proxy        | No     |
-| `USE_GITHUB_API_MOCK`                   | `false`                  | Deterministic adapter; `true` is legal only with `APP_ENV=test`       | No     |
+| Variable                                | Default                  | Bounds and purpose                                                         | Secret |
+| --------------------------------------- | ------------------------ | -------------------------------------------------------------------------- | ------ |
+| `APP_ENV`                               | `development`            | One of `development`, `test`, `staging`, `production`                      | No     |
+| `PORT`                                  | `8080`                   | TCP port 1–65535 for the API listener                                      | No     |
+| `ALLOWED_ORIGINS`                       | `http://127.0.0.1:5173`  | Comma-separated absolute HTTP(S) browser origins; no wildcard              | No     |
+| `API_DOCUMENTATION_ENABLED`             | `true`                   | Serve embedded `/docs/` and `/openapi.yaml`; false omits the routes        | No     |
+| `GITHUB_API_BASE_URL`                   | `https://api.github.com` | Absolute HTTPS upstream URL; HTTP is accepted only for loopback tests      | No     |
+| `GITHUB_TOKEN`                          | empty                    | Server-only GitHub credential; required by GraphQL search                  | Yes    |
+| `GITHUB_REQUEST_TIMEOUT`                | `10s`                    | Positive duration, at most one minute                                      | No     |
+| `GITHUB_API_MAX_CONCURRENCY`            | `5`                      | Bounded upstream fan-out, 1–20                                             | No     |
+| `PROFILE_ANALYSIS_REPOSITORY_LIMIT`     | `20`                     | Repositories analyzed per profile, 1–20                                    | No     |
+| `PROFILE_ANALYSIS_CACHE_TTL`            | `30m`                    | Profile-analysis cache lifetime, positive and at most 24 hours             | No     |
+| `PROFILE_ANALYSIS_CACHE_CAPACITY`       | `500`                    | Profile-analysis LRU entries, 1–10,000                                     | No     |
+| `REPOSITORY_DISCOVERY_RESULT_LIMIT`     | `50`                     | Upstream repository candidate window, 1–50                                 | No     |
+| `REPOSITORY_DISCOVERY_ENRICHMENT_LIMIT` | `10`                     | Batched enrichments, 1–20 and no more than result limit                    | No     |
+| `REPOSITORY_DISCOVERY_CACHE_TTL`        | `5m`                     | Repository cache lifetime, positive and at most 24 hours                   | No     |
+| `REPOSITORY_DISCOVERY_CACHE_CAPACITY`   | `1000`                   | Repository-discovery LRU entries, 1–10,000                                 | No     |
+| `ISSUE_SEARCH_RESULT_LIMIT`             | `50`                     | Upstream candidate window, 1–50                                            | No     |
+| `ISSUE_SEARCH_CACHE_TTL`                | `5m`                     | Canonical candidate cache lifetime, positive and at most 24 hours          | No     |
+| `ISSUE_SEARCH_CACHE_CAPACITY`           | `1000`                   | Candidate LRU entries, 1–10,000                                            | No     |
+| `ISSUE_SEARCH_RANKING_CACHE_TTL`        | `1m`                     | Enriched ranking cache lifetime, positive, at most 24 hours and search TTL | No     |
+| `ISSUE_SEARCH_RANKING_CACHE_CAPACITY`   | `100`                    | Enriched ranking LRU entries, 1–10,000                                     | No     |
+| `ISSUE_DETAIL_ANALYSIS_LIMIT`           | `20`                     | Enriched candidates, at least 1 and no more than search limit              | No     |
+| `ISSUE_DETAIL_CACHE_TTL`                | `5m`                     | Detail snapshot cache lifetime, positive and at most 24 hours              | No     |
+| `ISSUE_DETAIL_CACHE_CAPACITY`           | `500`                    | Detail LRU entries, 1–10,000                                               | No     |
+| `MANIFEST_FILE_LIMIT`                   | `3`                      | Supported manifests read per repository, 1–10                              | No     |
+| `DATABASE_URL`                          | empty                    | Optional TLS-only PostgreSQL URL for authenticated account data            | Yes    |
+| `DATABASE_MAX_CONNECTIONS`              | `10`                     | Hard pool ceiling, 1–100                                                   | No     |
+| `DATABASE_MIN_CONNECTIONS`              | `0`                      | Warm pool floor, 0–maximum                                                 | No     |
+| `DATABASE_CONNECT_TIMEOUT`              | `5s`                     | Positive duration, at most one minute                                      | No     |
+| `DATABASE_QUERY_TIMEOUT`                | `5s`                     | Query/statement/idle-transaction deadline, at most one minute              | No     |
+| `DATABASE_MAX_CONNECTION_LIFETIME`      | `30m`                    | Positive duration, at most 24 hours                                        | No     |
+| `DATABASE_MAX_CONNECTION_IDLE_TIME`     | `5m`                     | Positive duration, at most 24 hours                                        | No     |
+| `DATABASE_HEALTH_CHECK_PERIOD`          | `30s`                    | Pool health cycle, positive and at most one hour                           | No     |
+| `GITHUB_OAUTH_CLIENT_ID`                | empty                    | Required OAuth App ID when authentication is enabled; at most 255          | No     |
+| `GITHUB_OAUTH_CLIENT_SECRET`            | empty                    | Required server-only OAuth App secret; at least 20 characters              | Yes    |
+| `GITHUB_OAUTH_AUTHORIZE_URL`            | official GitHub URL      | Absolute HTTPS authorization endpoint; loopback allowed in tests           | No     |
+| `GITHUB_OAUTH_TOKEN_URL`                | official GitHub URL      | Absolute HTTPS token endpoint; loopback allowed in tests                   | No     |
+| `GITHUB_OAUTH_CALLBACK_URL`             | empty                    | Exact absolute `/api/auth/github/callback` URL                             | No     |
+| `AUTH_FRONTEND_URL`                     | empty                    | One fixed origin also present in `ALLOWED_ORIGINS`                         | No     |
+| `AUTH_FLOW_ENCRYPTION_KEY`              | empty                    | Exactly 64 lowercase hex characters for AES-256-GCM                        | Yes    |
+| `AUTH_STATE_TTL`                        | `10m`                    | Positive OAuth state/cookie lifetime, at most 15 minutes                   | No     |
+| `AUTH_SESSION_TTL`                      | `12h`                    | Positive server-session lifetime, at most seven days                       | No     |
+| `AUTH_MAX_SESSIONS`                     | `10`                     | Active sessions retained per account, 1–50                                 | No     |
+| `AUTH_COOKIE_SECURE`                    | environment-dependent    | Defaults false in dev/test and true in staging/production                  | No     |
+| `TRUSTED_PROXY_CIDRS`                   | empty                    | Canonical comma-separated ingress CIDRs; empty trusts no proxy             | No     |
+| `USE_GITHUB_API_MOCK`                   | `false`                  | Deterministic adapter; `true` is legal only with `APP_ENV=test`            | No     |
 
 `apps/api/.env.example` is the copyable API reference. The process validates
 all values before opening a listener. Configuration errors fail closed and log
@@ -121,13 +123,14 @@ surface.
 
 ## Cache and performance behavior
 
-The four implemented caches are in-memory, capacity-bounded TTL/LRU adapters:
+The five implemented caches are in-memory, capacity-bounded TTL/LRU adapters:
 
 | Cache                | Default TTL | Default capacity | Canonical key                                              |
 | -------------------- | ----------: | ---------------: | ---------------------------------------------------------- |
 | Profile analysis     |  30 minutes |              500 | Validated lowercase username                               |
 | Repository discovery |   5 minutes |             1000 | Normalized repository filters; excludes pagination         |
 | Issue search         |   5 minutes |             1000 | Normalized filters; excludes page, effort, stale inclusion |
+| Issue ranking        |    1 minute |              100 | Normalized filters; excludes page, effort, stale inclusion |
 | Issue detail         |   5 minutes |              500 | Validated owner/repository/issue number                    |
 
 Equal misses are coalesced. Values are deep-copied at cache boundaries.

@@ -67,6 +67,7 @@ type SearchIssues interface {
 type searchIssues struct {
 	searcher        port.GitHubIssueSearcher
 	cache           port.IssueSearchCache
+	rankingCache    port.IssueSearchCache
 	resultLimit     int
 	recommender     IssueRecommender
 	profileAnalyzer AnalyzeGitHubProfile
@@ -90,6 +91,22 @@ func WithContributionProfileAnalysis(
 			return fmt.Errorf("profile analyzer is required")
 		}
 		usecase.profileAnalyzer = analyzer
+		return nil
+	}
+}
+
+// WithIssueSearchRankingCache enables a separately bounded cache for the
+// expensive post-analysis ranking. Keeping it separate from the candidate
+// cache prevents enriched responses from consuming the larger candidate
+// cache's entire memory budget.
+func WithIssueSearchRankingCache(
+	cache port.IssueSearchCache,
+) SearchIssuesOption {
+	return func(usecase *searchIssues) error {
+		if cache == nil {
+			return fmt.Errorf("issue search ranking cache is required")
+		}
+		usecase.rankingCache = cache
 		return nil
 	}
 }
@@ -252,16 +269,92 @@ func (usecase *searchIssues) issueSearchOutput(
 	input SearchIssuesInput,
 	cacheHit bool,
 ) (SearchIssuesOutput, error) {
-	contributorProfile, profileMeta, profileRateLimit :=
-		usecase.loadContributionProfile(ctx, input.Criteria)
-	ranked, recommendationMeta, err := usecase.recommendCandidates(
-		ctx,
-		entry.Candidates,
-		input.Criteria,
-		contributorProfile,
+	if !entry.RankedCandidatesReady && usecase.rankingCache != nil {
+		if rankedEntry, found, err := usecase.rankingCache.Get(
+			ctx,
+			input.Criteria.CacheKey(),
+		); err == nil && found && rankedEntry.RankedCandidatesReady {
+			entry.RankedCandidates = rankedEntry.RankedCandidates
+			entry.RankedCandidatesReady = true
+			entry.RecommendationAttempted = rankedEntry.RecommendationAttempted
+			entry.RecommendationFailed = rankedEntry.RecommendationFailed
+			entry.RecommendationIncomplete = rankedEntry.RecommendationIncomplete
+			entry.ContributionProfileStatus = rankedEntry.ContributionProfileStatus
+			entry.ContributionProfileIncomplete = rankedEntry.ContributionProfileIncomplete
+			entry.ContributionProfileCacheHit = rankedEntry.ContributionProfileCacheHit
+			entry.RateLimit = mergeRateLimits(entry.RateLimit, rankedEntry.RateLimit)
+		} else if err != nil && ctx.Err() != nil {
+			return SearchIssuesOutput{}, mapIssueSearchError(err)
+		}
+	}
+	var (
+		ranked             []issue.RankedIssue
+		recommendationMeta issueRecommendationMeta
+		profileMeta        contributionProfileMeta
+		rateLimit          port.RateLimit
 	)
-	if err != nil {
-		return SearchIssuesOutput{}, mapIssueSearchError(err)
+	if entry.RankedCandidatesReady {
+		// The expensive profile/detail analysis is valid for the same short
+		// issue-search TTL. Keep only post-analysis ordering and request-local
+		// filters below so page and sort changes do not repeat enrichment.
+		ranked = entry.RankedCandidates
+		recommendationMeta = issueRecommendationMeta{
+			attempted:  entry.RecommendationAttempted,
+			failed:     entry.RecommendationFailed,
+			incomplete: entry.RecommendationIncomplete,
+		}
+		profileMeta = contributionProfileMeta{
+			status:     entry.ContributionProfileStatus,
+			incomplete: entry.ContributionProfileIncomplete,
+			cacheHit:   entry.ContributionProfileCacheHit,
+		}
+		rateLimit = entry.RateLimit
+	} else {
+		contributorProfile, loadedProfileMeta, profileRateLimit :=
+			usecase.loadContributionProfile(ctx, input.Criteria)
+		var err error
+		ranked, recommendationMeta, err = usecase.recommendCandidates(
+			ctx,
+			entry.Candidates,
+			input.Criteria,
+			contributorProfile,
+		)
+		if err != nil {
+			return SearchIssuesOutput{}, mapIssueSearchError(err)
+		}
+		profileMeta = loadedProfileMeta
+		rateLimit = mergeRateLimits(
+			mergeRateLimits(entry.RateLimit, recommendationMeta.rateLimit),
+			profileRateLimit,
+		)
+
+		entry.RankedCandidates = ranked
+		entry.RankedCandidatesReady = true
+		entry.RecommendationAttempted = recommendationMeta.attempted
+		entry.RecommendationFailed = recommendationMeta.failed
+		entry.RecommendationIncomplete = recommendationMeta.incomplete
+		entry.ContributionProfileStatus = profileMeta.status
+		entry.ContributionProfileIncomplete = profileMeta.incomplete
+		entry.ContributionProfileCacheHit = profileMeta.cacheHit
+		entry.RateLimit = rateLimit
+		if usecase.rankingCache != nil {
+			rankingEntry := port.IssueSearchCacheEntry{
+				RankedCandidates:              ranked,
+				RankedCandidatesReady:         true,
+				RecommendationAttempted:       recommendationMeta.attempted,
+				RecommendationFailed:          recommendationMeta.failed,
+				RecommendationIncomplete:      recommendationMeta.incomplete,
+				ContributionProfileStatus:     profileMeta.status,
+				ContributionProfileIncomplete: profileMeta.incomplete,
+				ContributionProfileCacheHit:   profileMeta.cacheHit,
+				RateLimit:                     rateLimit,
+			}
+			_ = usecase.rankingCache.Set(
+				ctx,
+				input.Criteria.CacheKey(),
+				rankingEntry,
+			)
+		}
 	}
 	ranked, staleExcluded := filterRankedIssuesByStale(ranked, input.Criteria)
 	ranked = filterRankedIssuesByEffort(ranked, input.Criteria)
@@ -283,8 +376,6 @@ func (usecase *searchIssues) issueSearchOutput(
 		}
 	}
 
-	rateLimit := mergeRateLimits(entry.RateLimit, recommendationMeta.rateLimit)
-	rateLimit = mergeRateLimits(rateLimit, profileRateLimit)
 	exclusionCounts := cloneExclusionCounts(entry.ExclusionCounts)
 	if staleExcluded > 0 {
 		exclusionCounts[issue.ExclusionStale] += staleExcluded

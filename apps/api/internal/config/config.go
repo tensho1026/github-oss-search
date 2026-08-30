@@ -29,6 +29,8 @@ const (
 	defaultIssueSearchResultLimit             = issue.MaximumCandidateResults
 	defaultIssueSearchCacheTTL                = 5 * time.Minute
 	defaultIssueSearchCacheCapacity           = 1000
+	defaultIssueSearchRankingCacheTTL         = 1 * time.Minute
+	defaultIssueSearchRankingCacheCapacity    = 100
 	defaultIssueDetailAnalysisLimit           = 20
 	defaultIssueDetailCacheTTL                = 5 * time.Minute
 	defaultIssueDetailCacheCapacity           = 500
@@ -102,6 +104,8 @@ type Config struct {
 	IssueSearchResultLimit             int
 	IssueSearchCacheTTL                time.Duration
 	IssueSearchCacheCapacity           int
+	IssueSearchRankingCacheTTL         time.Duration
+	IssueSearchRankingCacheCapacity    int
 	IssueDetailAnalysisLimit           int
 	IssueDetailCacheTTL                time.Duration
 	IssueDetailCacheCapacity           int
@@ -256,6 +260,31 @@ func Load() (Config, error) {
 	)
 	if err != nil {
 		return Config{}, err
+	}
+
+	issueSearchRankingCacheTTL, err := parseDuration(
+		"ISSUE_SEARCH_RANKING_CACHE_TTL",
+		defaultIssueSearchRankingCacheTTL,
+		24*time.Hour,
+	)
+	if err != nil {
+		return Config{}, err
+	}
+
+	issueSearchRankingCacheCapacity, err := parseInt(
+		"ISSUE_SEARCH_RANKING_CACHE_CAPACITY",
+		defaultIssueSearchRankingCacheCapacity,
+		1,
+		10_000,
+	)
+	if err != nil {
+		return Config{}, err
+	}
+	if issueSearchRankingCacheTTL > issueSearchCacheTTL {
+		return Config{}, configError(
+			"ISSUE_SEARCH_RANKING_CACHE_TTL",
+			"must not exceed ISSUE_SEARCH_CACHE_TTL",
+		)
 	}
 
 	issueDetailAnalysisLimit, err := parseInt(
@@ -439,6 +468,8 @@ func Load() (Config, error) {
 		IssueSearchResultLimit:             issueSearchResultLimit,
 		IssueSearchCacheTTL:                issueSearchCacheTTL,
 		IssueSearchCacheCapacity:           issueSearchCacheCapacity,
+		IssueSearchRankingCacheTTL:         issueSearchRankingCacheTTL,
+		IssueSearchRankingCacheCapacity:    issueSearchRankingCacheCapacity,
 		IssueDetailAnalysisLimit:           issueDetailAnalysisLimit,
 		IssueDetailCacheTTL:                issueDetailCacheTTL,
 		IssueDetailCacheCapacity:           issueDetailCacheCapacity,

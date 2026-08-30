@@ -24,6 +24,8 @@ var configurationKeys = []string{
 	"ISSUE_SEARCH_RESULT_LIMIT",
 	"ISSUE_SEARCH_CACHE_TTL",
 	"ISSUE_SEARCH_CACHE_CAPACITY",
+	"ISSUE_SEARCH_RANKING_CACHE_TTL",
+	"ISSUE_SEARCH_RANKING_CACHE_CAPACITY",
 	"ISSUE_DETAIL_ANALYSIS_LIMIT",
 	"ISSUE_DETAIL_CACHE_TTL",
 	"ISSUE_DETAIL_CACHE_CAPACITY",
@@ -96,6 +98,10 @@ func TestLoadUsesSafeDefaults(t *testing.T) {
 		cfg.IssueSearchCacheCapacity != defaultIssueSearchCacheCapacity {
 		t.Fatalf("Load() issue search cache defaults = %+v", cfg)
 	}
+	if cfg.IssueSearchRankingCacheTTL != defaultIssueSearchRankingCacheTTL ||
+		cfg.IssueSearchRankingCacheCapacity != defaultIssueSearchRankingCacheCapacity {
+		t.Fatalf("Load() issue search ranking cache defaults = %+v", cfg)
+	}
 	if cfg.IssueDetailCacheTTL != defaultIssueDetailCacheTTL ||
 		cfg.IssueDetailCacheCapacity != defaultIssueDetailCacheCapacity {
 		t.Fatalf("Load() issue detail cache defaults = %+v", cfg)
@@ -151,6 +157,8 @@ func TestLoadReadsConfiguredValues(t *testing.T) {
 	t.Setenv("ISSUE_SEARCH_RESULT_LIMIT", "30")
 	t.Setenv("ISSUE_SEARCH_CACHE_TTL", "4m")
 	t.Setenv("ISSUE_SEARCH_CACHE_CAPACITY", "900")
+	t.Setenv("ISSUE_SEARCH_RANKING_CACHE_TTL", "2m")
+	t.Setenv("ISSUE_SEARCH_RANKING_CACHE_CAPACITY", "80")
 	t.Setenv("ISSUE_DETAIL_ANALYSIS_LIMIT", "10")
 	t.Setenv("ISSUE_DETAIL_CACHE_TTL", "3m")
 	t.Setenv("ISSUE_DETAIL_CACHE_CAPACITY", "450")
@@ -195,6 +203,8 @@ func TestLoadReadsConfiguredValues(t *testing.T) {
 		cfg.IssueSearchResultLimit != 30 ||
 		cfg.IssueSearchCacheTTL != 4*time.Minute ||
 		cfg.IssueSearchCacheCapacity != 900 ||
+		cfg.IssueSearchRankingCacheTTL != 2*time.Minute ||
+		cfg.IssueSearchRankingCacheCapacity != 80 ||
 		cfg.IssueDetailAnalysisLimit != 10 ||
 		cfg.IssueDetailCacheTTL != 3*time.Minute ||
 		cfg.IssueDetailCacheCapacity != 450 ||
@@ -389,6 +399,26 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 			key:     "ISSUE_SEARCH_CACHE_CAPACITY",
 			value:   "0",
 			message: "ISSUE_SEARCH_CACHE_CAPACITY",
+		},
+		{
+			name:    "search ranking cache TTL",
+			key:     "ISSUE_SEARCH_RANKING_CACHE_TTL",
+			value:   "25h",
+			message: "ISSUE_SEARCH_RANKING_CACHE_TTL",
+		},
+		{
+			name:     "search ranking cache exceeds candidate cache",
+			key:      "ISSUE_SEARCH_RANKING_CACHE_TTL",
+			value:    "6m",
+			message:  "ISSUE_SEARCH_RANKING_CACHE_TTL",
+			preKey:   "ISSUE_SEARCH_CACHE_TTL",
+			preValue: "5m",
+		},
+		{
+			name:    "search ranking cache capacity",
+			key:     "ISSUE_SEARCH_RANKING_CACHE_CAPACITY",
+			value:   "0",
+			message: "ISSUE_SEARCH_RANKING_CACHE_CAPACITY",
 		},
 		{
 			name:     "detail exceeds search",
