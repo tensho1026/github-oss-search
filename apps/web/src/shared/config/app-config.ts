@@ -80,6 +80,9 @@ export const profileEndpoints = Object.freeze({
   user(username: string): `/${string}` {
     return `/api/github/users/${encodeURIComponent(username)}`;
   },
+  snapshot(username: string): `/${string}` {
+    return `/api/github/users/${encodeURIComponent(username)}/profile-snapshot`;
+  },
 });
 
 export const issueEndpoints = Object.freeze({

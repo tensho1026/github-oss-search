@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { getGitHubUser, getProfileAnalysis } from "../../../shared/api/profile";
+import { getProfileSnapshot } from "../../../shared/api/profile";
 import type {
   GitHubUser,
   Meta,
   ProfileAnalysis,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
-import { prioritizedProfileError } from "../model/profile-error";
 
 export type ProfileSnapshot = {
   analysis: ProfileAnalysis;
@@ -18,35 +17,29 @@ export type ProfileSnapshot = {
 };
 
 export function useProfileSnapshot(username: string, enabled = true) {
-  const userQuery = useQuery({
+  const query = useQuery({
     enabled,
-    queryFn: ({ signal }) => getGitHubUser(username, signal),
-    queryKey: queryKeys.profile.user(username),
-  });
-  const analysisQuery = useQuery({
-    enabled,
-    queryFn: ({ signal }) => getProfileAnalysis(username, signal),
-    queryKey: queryKeys.profile.analysis(username),
+    queryFn: ({ signal }) => getProfileSnapshot(username, signal),
+    queryKey: queryKeys.profile.snapshot(username),
   });
 
   const refetch = useCallback(async () => {
-    await Promise.all([userQuery.refetch(), analysisQuery.refetch()]);
-  }, [analysisQuery, userQuery]);
+    await query.refetch();
+  }, [query]);
 
-  const snapshot =
-    userQuery.data && analysisQuery.data
-      ? {
-          analysis: analysisQuery.data.data,
-          analysisMeta: analysisQuery.data.meta,
-          user: userQuery.data.data,
-          userMeta: userQuery.data.meta,
-        }
-      : undefined;
+  const snapshot = query.data
+    ? {
+        analysis: query.data.data.analysis,
+        analysisMeta: query.data.meta,
+        user: query.data.data.user,
+        userMeta: query.data.meta,
+      }
+    : undefined;
 
   return {
-    error: prioritizedProfileError([userQuery.error, analysisQuery.error]),
-    isFetching: userQuery.isFetching || analysisQuery.isFetching,
-    isPending: userQuery.isPending || analysisQuery.isPending,
+    error: query.error,
+    isFetching: query.isFetching,
+    isPending: query.isPending,
     refetch,
     snapshot,
   };

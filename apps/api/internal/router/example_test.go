@@ -56,6 +56,10 @@ func ExampleNew() {
 			10,
 			3,
 		),
+		GetGitHubProfileSnapshot: usecase.NewGitHubProfileSnapshot(
+			usecase.NewGetGitHubUser(reader, 10),
+			usecase.NewAnalyzeGitHubProfile(reader, profileCache, 10, 3),
+		),
 		SearchIssues:       issueSearch,
 		SearchRepositories: repositorySearch,
 		RecommendIssue:     recommender,

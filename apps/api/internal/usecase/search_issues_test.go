@@ -169,12 +169,14 @@ func TestSearchIssuesCachesRankedOutputAcrossPagesAndSorts(t *testing.T) {
 	criteria := searchCriteria(t, issue.SearchCriteriaOptions{Username: "octocat"})
 	first, err := contract.Execute(context.Background(), SearchIssuesInput{
 		Criteria:   criteria,
-		Pagination: searchPagination(t, 1, 1),
+		Pagination: searchPagination(t, 1, 2),
 	})
 	if err != nil {
 		t.Fatalf("Execute(first) error = %v", err)
 	}
-	if len(first.Items) != 1 || first.Items[0].Candidate.Issue.Number != 2 {
+	if len(first.Items) != 2 ||
+		first.Items[0].Candidate.Issue.Number != 2 ||
+		first.Items[1].Candidate.Issue.Number != 1 {
 		t.Fatalf("first output = %+v", first)
 	}
 
@@ -213,6 +215,86 @@ func TestSearchIssuesCachesRankedOutputAcrossPagesAndSorts(t *testing.T) {
 	if third.Items[0].Candidate.Issue.Labels[0] == "mutated" ||
 		recommender.Calls() != 2 {
 		t.Fatalf("ranked cache was mutated or recomputed = %+v", third)
+	}
+}
+
+func TestSearchIssuesAdaptsAnalysisToRequestedPageWithoutRepeatingDetails(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+	searcher := &issueSearcherStub{result: port.GitHubIssueSearchResult{
+		Candidates: []issue.Candidate{
+			searchCandidate(now, 1, 10),
+			searchCandidate(now, 2, 20),
+			searchCandidate(now, 3, 30),
+		},
+		TotalCount: 3,
+	}}
+	for index := range searcher.result.Candidates {
+		name := "repo-" + strconv.Itoa(index+1)
+		searcher.result.Candidates[index].Repository.Name = name
+		searcher.result.Candidates[index].Repository.FullName = "example/" + name
+	}
+	recommender := &searchRecommenderStub{
+		now:    now,
+		scores: map[int]int{1: 30, 2: 20, 3: 10},
+	}
+	cache, err := memory.NewIssueSearch(10, time.Hour)
+	if err != nil {
+		t.Fatalf("NewIssueSearch() error = %v", err)
+	}
+	rankingCache, err := memory.NewIssueSearch(10, time.Hour)
+	if err != nil {
+		t.Fatalf("NewIssueSearch(ranking) error = %v", err)
+	}
+	contract, err := NewSearchIssues(
+		searcher,
+		cache,
+		50,
+		WithIssueRecommendationEnrichment(recommender, 3, 2),
+		WithIssueSearchRankingCache(rankingCache),
+	)
+	if err != nil {
+		t.Fatalf("NewSearchIssues() error = %v", err)
+	}
+	criteria := searchCriteria(t, issue.SearchCriteriaOptions{Username: "octocat"})
+
+	first, err := contract.Execute(context.Background(), SearchIssuesInput{
+		Criteria:   criteria,
+		Pagination: searchPagination(t, 1, 1),
+	})
+	if err != nil {
+		t.Fatalf("Execute(first) error = %v", err)
+	}
+	if first.EnrichmentAttempted != 1 || recommender.Calls() != 1 {
+		t.Fatalf("first output = %+v, calls = %d", first, recommender.Calls())
+	}
+
+	second, err := contract.Execute(context.Background(), SearchIssuesInput{
+		Criteria:   criteria,
+		Pagination: searchPagination(t, 2, 1),
+	})
+	if err != nil {
+		t.Fatalf("Execute(second) error = %v", err)
+	}
+	if second.EnrichmentAttempted != 2 ||
+		second.Items[0].Candidate.Issue.Number != 2 ||
+		recommender.Calls() != 2 {
+		t.Fatalf("second output = %+v, calls = %d", second, recommender.Calls())
+	}
+
+	sorted := searchCriteria(t, issue.SearchCriteriaOptions{
+		Username: "octocat",
+		SortBy:   func() *string { value := string(issue.SearchSortUpdated); return &value }(),
+	})
+	third, err := contract.Execute(context.Background(), SearchIssuesInput{
+		Criteria:   sorted,
+		Pagination: searchPagination(t, 1, 1),
+	})
+	if err != nil {
+		t.Fatalf("Execute(third) error = %v", err)
+	}
+	if third.EnrichmentAttempted != 2 || recommender.Calls() != 2 {
+		t.Fatalf("third output = %+v, calls = %d", third, recommender.Calls())
 	}
 }
 
