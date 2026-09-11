@@ -8,6 +8,7 @@ import type {
   ProfileAnalysis,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
+import { prioritizedProfileError } from "../model/profile-error";
 
 export type ProfileSnapshot = {
   analysis: ProfileAnalysis;
@@ -37,7 +38,7 @@ export function useProfileSnapshot(username: string, enabled = true) {
     : undefined;
 
   return {
-    error: query.error,
+    error: prioritizedProfileError([query.error]),
     isFetching: query.isFetching,
     isPending: query.isPending,
     refetch,

@@ -17,6 +17,7 @@ type GitHubProfileSnapshotOutput struct {
 // GetGitHubProfileSnapshot loads the two profile views concurrently while
 // preserving the existing independently cached analysis path.
 type GetGitHubProfileSnapshot interface {
+	// Execute loads the public profile and its bounded analysis concurrently.
 	Execute(
 		ctx context.Context,
 		username user.Username,
