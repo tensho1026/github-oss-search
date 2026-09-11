@@ -8,6 +8,14 @@ import { repositoryDiscoveryFixture } from "../src/test/repository-fixtures";
 import gitHubUserFixture from "../../../packages/contracts/fixtures/github-user.success.json" with { type: "json" };
 import profileAnalysisFixture from "../../../packages/contracts/fixtures/profile-analysis.success.json" with { type: "json" };
 
+const profileSnapshotFixture = {
+  data: {
+    analysis: profileAnalysisFixture.data,
+    user: gitHubUserFixture.data,
+  },
+  meta: profileAnalysisFixture.meta,
+};
+
 const apiBaseURL = "http://127.0.0.1:18080";
 
 test("serves keyboard-accessible Swagger UI without runtime network dependencies", async ({
@@ -82,9 +90,12 @@ test("analyzes a valid username through the production profile route", async ({
   page,
 }) => {
   await page.route("**/api/github/users/octocat**", async (route) => {
-    const payload = route.request().url().endsWith("/profile-analysis")
-      ? profileAnalysisFixture
-      : gitHubUserFixture;
+    const pathname = new URL(route.request().url()).pathname;
+    const payload = pathname.endsWith("/profile-snapshot")
+      ? profileSnapshotFixture
+      : pathname.endsWith("/profile-analysis")
+        ? profileAnalysisFixture
+        : gitHubUserFixture;
     await route.fulfill({
       body: JSON.stringify(payload),
       contentType: "application/json",

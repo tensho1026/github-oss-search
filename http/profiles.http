@@ -16,6 +16,12 @@ GET {{apiBaseUrl}}/api/github/users/{{username}}/profile-analysis
 Accept: application/json
 X-Request-ID: httpyac-profile-analysis-cache-repeat
 
+### Load the combined profile page snapshot
+# @name getGitHubProfileSnapshot
+GET {{apiBaseUrl}}/api/github/users/{{username}}/profile-snapshot
+Accept: application/json
+X-Request-ID: httpyac-profile-snapshot
+
 ### [negative] Reject an invalid GitHub login before upstream I/O
 # @name rejectInvalidGitHubUser
 GET {{apiBaseUrl}}/api/github/users/invalid--login

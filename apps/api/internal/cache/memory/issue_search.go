@@ -71,6 +71,10 @@ func cloneIssueSearchEntry(
 		cloned.ExclusionCounts[reason] = count
 	}
 	cloned.RankedCandidates = cloneRankedIssues(entry.RankedCandidates)
+	cloned.RecommendationEnrichedKeys = append(
+		[]string(nil),
+		entry.RecommendationEnrichedKeys...,
+	)
 	return cloned
 }
 

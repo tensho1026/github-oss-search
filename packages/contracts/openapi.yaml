@@ -206,6 +206,45 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+  /api/github/users/{username}/profile-snapshot:
+    parameters:
+      - $ref: "#/components/parameters/RequestID"
+      - $ref: "#/components/parameters/GitHubUsername"
+    get:
+      operationId: getGitHubProfileSnapshot
+      summary: Load the public profile page snapshot in one request
+      description: |
+        Loads the normalized public GitHub profile and bounded technical
+        analysis concurrently on the server. The response keeps the two
+        existing payloads under one envelope so profile pages avoid a
+        client-side waterfall or duplicate request orchestration. Profile
+        analysis continues to reuse its bounded username cache.
+      tags:
+        - GitHub profiles
+      responses:
+        "200":
+          description: The public profile and bounded analysis snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GitHubProfileSnapshotEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrigin"
+        "404":
+          $ref: "#/components/responses/GitHubUserNotFound"
+        "429":
+          $ref: "#/components/responses/GitHubRateLimited"
+        "502":
+          $ref: "#/components/responses/GitHubUpstreamError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
   /api/issues/search:
     parameters:
       - $ref: "#/components/parameters/RequestID"
@@ -4132,6 +4171,28 @@ components:
           maxItems: 20
           items:
             $ref: "#/components/schemas/RepositorySummary"
+    GitHubProfileSnapshotEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: "#/components/schemas/GitHubProfileSnapshot"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    GitHubProfileSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - analysis
+        - user
+      properties:
+        user:
+          $ref: "#/components/schemas/GitHubUser"
+        analysis:
+          $ref: "#/components/schemas/ProfileAnalysis"
     RepositorySummary:
       type: object
       additionalProperties: false

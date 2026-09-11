@@ -21,21 +21,22 @@ import (
 // Anonymous dependencies are always required; account dependencies are
 // required only when Config.AuthEnabled is true.
 type Dependencies struct {
-	Config               config.Config
-	Logger               *slog.Logger
-	Responder            response.Responder
-	Documentation        http.Handler
-	GetGitHubUser        usecase.GetGitHubUser
-	AnalyzeGitHubProfile usecase.AnalyzeGitHubProfile
-	SearchIssues         usecase.SearchIssues
-	SearchRepositories   usecase.SearchRepositories
-	RecommendIssue       usecase.IssueRecommender
-	ObserveReference     usecase.ObserveGitHubReference
-	DatabaseHealth       port.DatabaseHealth
-	DatabaseConfigured   bool
-	Authentication       usecase.Authentication
-	AuthFlowCodec        *authcrypto.FlowCodec
-	AccountWorkspace     usecase.AccountWorkspace
+	Config                   config.Config
+	Logger                   *slog.Logger
+	Responder                response.Responder
+	Documentation            http.Handler
+	GetGitHubUser            usecase.GetGitHubUser
+	AnalyzeGitHubProfile     usecase.AnalyzeGitHubProfile
+	GetGitHubProfileSnapshot usecase.GetGitHubProfileSnapshot
+	SearchIssues             usecase.SearchIssues
+	SearchRepositories       usecase.SearchRepositories
+	RecommendIssue           usecase.IssueRecommender
+	ObserveReference         usecase.ObserveGitHubReference
+	DatabaseHealth           port.DatabaseHealth
+	DatabaseConfigured       bool
+	Authentication           usecase.Authentication
+	AuthFlowCodec            *authcrypto.FlowCodec
+	AccountWorkspace         usecase.AccountWorkspace
 }
 
 // New composes concrete HTTP dependencies. Feature handlers are constructed by
@@ -56,6 +57,11 @@ func New(dependencies Dependencies) (http.Handler, error) {
 	if dependencies.AnalyzeGitHubProfile == nil {
 		return nil, fmt.Errorf(
 			"compose router: analyze GitHub profile usecase is required",
+		)
+	}
+	if dependencies.GetGitHubProfileSnapshot == nil {
+		return nil, fmt.Errorf(
+			"compose router: get GitHub profile snapshot usecase is required",
 		)
 	}
 	if dependencies.SearchIssues == nil {
@@ -127,6 +133,10 @@ func New(dependencies Dependencies) (http.Handler, error) {
 		dependencies.AnalyzeGitHubProfile,
 		dependencies.Responder,
 	)
+	gitHubProfileSnapshotHandler := handler.NewGitHubProfileSnapshotHandler(
+		dependencies.GetGitHubProfileSnapshot,
+		dependencies.Responder,
+	)
 	issueSearchHandler := handler.NewIssueSearchHandler(
 		dependencies.SearchIssues,
 		dependencies.Responder,
@@ -194,6 +204,14 @@ func New(dependencies Dependencies) (http.Handler, error) {
 			dependencies.Responder,
 		),
 		gitHubProfileAnalysisHandler.Get,
+	)
+	api.GET(
+		"/github/users/:username/profile-snapshot",
+		middleware.Timeout(
+			dependencies.Config.ProfileRequestTimeout,
+			dependencies.Responder,
+		),
+		gitHubProfileSnapshotHandler.Get,
 	)
 	api.POST(
 		"/github/references/observe",

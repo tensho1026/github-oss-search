@@ -5,8 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { AppProviders } from "../app/AppProviders";
 import {
   errorEnvelope,
-  gitHubUserFixture,
-  profileAnalysisFixture,
+  profileSnapshotFixture,
 } from "../test/profile-fixtures";
 import { ProfilePage } from "./ProfilePage";
 
@@ -15,13 +14,6 @@ function jsonResponse(payload: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
     status,
   });
-}
-
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === "string") {
-    return input;
-  }
-  return input instanceof URL ? input.href : input.url;
 }
 
 function renderProfile(path = "/profiles/octocat") {
@@ -44,15 +36,8 @@ afterEach(() => {
 
 describe("ProfilePage", () => {
   it("renders normalized profile and analysis API responses", async () => {
-    const request = vi.fn<typeof fetch>().mockImplementation((input) => {
-      const url = requestUrl(input);
-      return Promise.resolve(
-        jsonResponse(
-          url.endsWith("/profile-analysis")
-            ? profileAnalysisFixture
-            : gitHubUserFixture,
-        ),
-      );
+    const request = vi.fn<typeof fetch>().mockImplementation(() => {
+      return Promise.resolve(jsonResponse(profileSnapshotFixture));
     });
     vi.stubGlobal("fetch", request);
 
@@ -80,7 +65,7 @@ describe("ProfilePage", () => {
       "href",
       expect.stringMatching(/^\/repositories\?.*language=TypeScript/),
     );
-    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenCalledTimes(1);
     for (const [, options] of request.mock.calls) {
       expect(options?.signal).toBeInstanceOf(AbortSignal);
     }
@@ -92,15 +77,7 @@ describe("ProfilePage", () => {
       "fetch",
       vi
         .fn<typeof fetch>()
-        .mockImplementation((input) =>
-          Promise.resolve(
-            jsonResponse(
-              requestUrl(input).endsWith("/profile-analysis")
-                ? profileAnalysisFixture
-                : gitHubUserFixture,
-            ),
-          ),
-        ),
+        .mockResolvedValue(jsonResponse(profileSnapshotFixture)),
     );
 
     renderProfile();
@@ -148,31 +125,21 @@ describe("ProfilePage", () => {
   });
 
   it("renders explicit empty repository and framework states", async () => {
-    const emptyUser = {
-      ...gitHubUserFixture,
-      data: { ...gitHubUserFixture.data, repositories: [] },
-    };
-    const emptyAnalysis = {
-      ...profileAnalysisFixture,
+    const emptySnapshot = {
+      ...profileSnapshotFixture,
       data: {
-        ...profileAnalysisFixture.data,
-        frameworks: [],
-        languages: [],
+        ...profileSnapshotFixture.data,
+        user: { ...profileSnapshotFixture.data.user, repositories: [] },
+        analysis: {
+          ...profileSnapshotFixture.data.analysis,
+          frameworks: [],
+          languages: [],
+        },
       },
     };
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn<typeof fetch>()
-        .mockImplementation((input) =>
-          Promise.resolve(
-            jsonResponse(
-              requestUrl(input).endsWith("/profile-analysis")
-                ? emptyAnalysis
-                : emptyUser,
-            ),
-          ),
-        ),
+      vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(emptySnapshot)),
     );
 
     renderProfile();
@@ -185,7 +152,7 @@ describe("ProfilePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("aborts both requests when the profile route becomes obsolete", async () => {
+  it("aborts the snapshot request when the profile route becomes obsolete", async () => {
     const signals: Array<AbortSignal> = [];
     vi.stubGlobal(
       "fetch",
@@ -204,7 +171,7 @@ describe("ProfilePage", () => {
 
     const view = renderProfile();
     await waitFor(() => {
-      expect(signals).toHaveLength(2);
+      expect(signals).toHaveLength(1);
     });
     view.unmount();
 

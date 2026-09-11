@@ -36,6 +36,9 @@ export const queryKeys = Object.freeze({
       return ["profile", username.toLowerCase(), "analysis"] as const;
     },
     root: ["profile"] as const,
+    snapshot(username: string) {
+      return ["profile", username.toLowerCase(), "snapshot"] as const;
+    },
     user(username: string) {
       return ["profile", username.toLowerCase(), "user"] as const;
     },

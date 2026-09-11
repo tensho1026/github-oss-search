@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -279,6 +280,10 @@ func (usecase *searchIssues) issueSearchOutput(
 			entry.RecommendationAttempted = rankedEntry.RecommendationAttempted
 			entry.RecommendationFailed = rankedEntry.RecommendationFailed
 			entry.RecommendationIncomplete = rankedEntry.RecommendationIncomplete
+			entry.RecommendationEnrichedKeys = append(
+				[]string(nil),
+				rankedEntry.RecommendationEnrichedKeys...,
+			)
 			entry.ContributionProfileStatus = rankedEntry.ContributionProfileStatus
 			entry.ContributionProfileIncomplete = rankedEntry.ContributionProfileIncomplete
 			entry.ContributionProfileCacheHit = rankedEntry.ContributionProfileCacheHit
@@ -293,7 +298,14 @@ func (usecase *searchIssues) issueSearchOutput(
 		profileMeta        contributionProfileMeta
 		rateLimit          port.RateLimit
 	)
-	if entry.RankedCandidatesReady {
+	analysisLimit := usecase.analysisLimitFor(input, len(entry.Candidates))
+	if entry.RankedCandidatesReady && usecase.hasEnrichmentFor(
+		entry.Candidates,
+		entry.RecommendationEnrichedKeys,
+		entry.RecommendationAttempted,
+		entry.RecommendationFailed,
+		analysisLimit,
+	) {
 		// The expensive profile/detail analysis is valid for the same short
 		// issue-search TTL. Keep only post-analysis ordering and request-local
 		// filters below so page and sort changes do not repeat enrichment.
@@ -302,6 +314,10 @@ func (usecase *searchIssues) issueSearchOutput(
 			attempted:  entry.RecommendationAttempted,
 			failed:     entry.RecommendationFailed,
 			incomplete: entry.RecommendationIncomplete,
+			enrichedKeys: append(
+				[]string(nil),
+				entry.RecommendationEnrichedKeys...,
+			),
 		}
 		profileMeta = contributionProfileMeta{
 			status:     entry.ContributionProfileStatus,
@@ -318,6 +334,14 @@ func (usecase *searchIssues) issueSearchOutput(
 			entry.Candidates,
 			input.Criteria,
 			contributorProfile,
+			analysisLimit,
+			entry.RankedCandidates,
+			entry.RecommendationEnrichedKeys,
+			issueRecommendationMeta{
+				attempted:  entry.RecommendationAttempted,
+				failed:     entry.RecommendationFailed,
+				incomplete: entry.RecommendationIncomplete,
+			},
 		)
 		if err != nil {
 			return SearchIssuesOutput{}, mapIssueSearchError(err)
@@ -333,6 +357,10 @@ func (usecase *searchIssues) issueSearchOutput(
 		entry.RecommendationAttempted = recommendationMeta.attempted
 		entry.RecommendationFailed = recommendationMeta.failed
 		entry.RecommendationIncomplete = recommendationMeta.incomplete
+		entry.RecommendationEnrichedKeys = append(
+			[]string(nil),
+			recommendationMeta.enrichedKeys...,
+		)
 		entry.ContributionProfileStatus = profileMeta.status
 		entry.ContributionProfileIncomplete = profileMeta.incomplete
 		entry.ContributionProfileCacheHit = profileMeta.cacheHit
@@ -344,6 +372,7 @@ func (usecase *searchIssues) issueSearchOutput(
 				RecommendationAttempted:       recommendationMeta.attempted,
 				RecommendationFailed:          recommendationMeta.failed,
 				RecommendationIncomplete:      recommendationMeta.incomplete,
+				RecommendationEnrichedKeys:    recommendationMeta.enrichedKeys,
 				ContributionProfileStatus:     profileMeta.status,
 				ContributionProfileIncomplete: profileMeta.incomplete,
 				ContributionProfileCacheHit:   profileMeta.cacheHit,
@@ -464,10 +493,55 @@ func filterRankedIssuesByEffort(
 }
 
 type issueRecommendationMeta struct {
-	attempted  int
-	failed     int
-	incomplete bool
-	rateLimit  port.RateLimit
+	attempted    int
+	failed       int
+	incomplete   bool
+	rateLimit    port.RateLimit
+	enrichedKeys []string
+}
+
+func (usecase *searchIssues) analysisLimitFor(
+	input SearchIssuesInput,
+	candidateCount int,
+) int {
+	if usecase.recommender == nil || candidateCount == 0 {
+		return 0
+	}
+	limit := usecase.analysisLimit
+	if input.Pagination.Page <= limit/input.Pagination.PerPage {
+		limit = min(limit, input.Pagination.Page*input.Pagination.PerPage)
+	}
+	return min(limit, candidateCount)
+}
+
+func (usecase *searchIssues) hasEnrichmentFor(
+	candidates []issue.Candidate,
+	enrichedKeys []string,
+	attempted int,
+	failed int,
+	limit int,
+) bool {
+	if usecase.recommender == nil || limit == 0 {
+		return true
+	}
+	enriched := make(map[string]struct{}, len(enrichedKeys))
+	for _, key := range enrichedKeys {
+		enriched[key] = struct{}{}
+	}
+	required := make(map[string]struct{}, limit)
+	for index := 0; index < limit; index++ {
+		required[repositoryRecommendationKey(candidates[index])] = struct{}{}
+	}
+	if len(enriched) == 0 && failed == 0 && attempted >= len(required) {
+		// Accept entries written before RecommendationEnrichedKeys existed.
+		return true
+	}
+	for key := range required {
+		if _, ok := enriched[key]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func (usecase *searchIssues) recommendCandidates(
@@ -475,24 +549,37 @@ func (usecase *searchIssues) recommendCandidates(
 	candidates []issue.Candidate,
 	criteria issue.SearchCriteria,
 	contributorProfile issue.ContributorProfile,
+	limit int,
+	existingRanked []issue.RankedIssue,
+	existingEnrichedKeys []string,
+	previousMeta issueRecommendationMeta,
 ) ([]issue.RankedIssue, issueRecommendationMeta, error) {
 	desiredSkills := desiredIssueSkills(criteria)
 	ranked := make([]issue.RankedIssue, len(candidates))
-	limit := 0
-	if usecase.recommender != nil {
-		limit = min(usecase.analysisLimit, len(candidates))
+	meta := previousMeta
+	meta.enrichedKeys = append([]string(nil), existingEnrichedKeys...)
+	existingByCandidate := make(map[string]issue.RankedIssue, len(existingRanked))
+	for _, item := range existingRanked {
+		existingByCandidate[issueRecommendationKey(item.Candidate)] = item
 	}
-	meta := issueRecommendationMeta{}
+	enrichedRepositories := make(map[string]struct{}, len(existingEnrichedKeys))
+	for _, key := range existingEnrichedKeys {
+		enrichedRepositories[key] = struct{}{}
+	}
 	detailOutputs := make([]RecommendIssueOutput, limit)
 	detailErrors := make([]error, limit)
 	leaderFor := make([]int, limit)
+	for index := range leaderFor {
+		leaderFor[index] = -1
+	}
 	leaders := make([]int, 0, limit)
 	leaderByRepository := make(map[string]int, limit)
 	for index := range limit {
 		candidate := candidates[index]
-		key := strings.ToLower(
-			candidate.Repository.Owner + "/" + candidate.Repository.Name,
-		)
+		key := repositoryRecommendationKey(candidate)
+		if _, alreadyEnriched := enrichedRepositories[key]; alreadyEnriched {
+			continue
+		}
 		if leader, exists := leaderByRepository[key]; exists {
 			leaderFor[index] = leader
 			continue
@@ -501,7 +588,7 @@ func (usecase *searchIssues) recommendCandidates(
 		leaderFor[index] = index
 		leaders = append(leaders, index)
 	}
-	meta.attempted = len(leaders)
+	meta.attempted += len(leaders)
 
 	group, groupContext := errgroup.WithContext(ctx)
 	group.SetLimit(usecase.maxConcurrency)
@@ -541,9 +628,36 @@ func (usecase *searchIssues) recommendCandidates(
 		return nil, issueRecommendationMeta{}, err
 	}
 
+	for _, leader := range leaders {
+		if detailErrors[leader] == nil {
+			enrichedRepositories[repositoryRecommendationKey(candidates[leader])] = struct{}{}
+		}
+	}
+	meta.enrichedKeys = meta.enrichedKeys[:0]
+	for key := range enrichedRepositories {
+		meta.enrichedKeys = append(meta.enrichedKeys, key)
+	}
+	slices.Sort(meta.enrichedKeys)
+
 	for index, candidate := range candidates {
+		if existing, ok := existingByCandidate[issueRecommendationKey(candidate)]; ok {
+			ranked[index] = existing
+		}
 		if index < limit {
 			leader := leaderFor[index]
+			if leader < 0 {
+				if ranked[index].Candidate.Issue.Number != 0 {
+					continue
+				}
+				ranked[index] = fallbackRecommendation(
+					usecase,
+					candidate,
+					desiredSkills,
+					contributorProfile,
+					false,
+				)
+				continue
+			}
 			if detailErrors[leader] == nil {
 				output := detailOutputs[leader]
 				if index == leader {
@@ -570,6 +684,9 @@ func (usecase *searchIssues) recommendCandidates(
 				meta.incomplete = true
 			}
 		}
+		if ranked[index].Candidate.Issue.Number != 0 {
+			continue
+		}
 		ranked[index] = fallbackRecommendation(
 			usecase,
 			candidate,
@@ -579,6 +696,17 @@ func (usecase *searchIssues) recommendCandidates(
 		)
 	}
 	return issue.RankIssues(ranked), meta, nil
+}
+
+func repositoryRecommendationKey(candidate issue.Candidate) string {
+	return strings.ToLower(
+		candidate.Repository.Owner + "/" + candidate.Repository.Name,
+	)
+}
+
+func issueRecommendationKey(candidate issue.Candidate) string {
+	return repositoryRecommendationKey(candidate) + "#" +
+		fmt.Sprint(candidate.Issue.Number)
 }
 
 func sharedRepositoryRecommendation(

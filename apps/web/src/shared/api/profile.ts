@@ -1,6 +1,10 @@
 import { profileEndpoints } from "../config/app-config";
 import { apiClient, type ApiClient } from "./client";
-import type { GitHubUserEnvelope, ProfileAnalysisEnvelope } from "./generated";
+import type {
+  GitHubProfileSnapshotEnvelope,
+  GitHubUserEnvelope,
+  ProfileAnalysisEnvelope,
+} from "./generated";
 
 export function getGitHubUser(
   username: string,
@@ -19,6 +23,17 @@ export function getProfileAnalysis(
 ): Promise<ProfileAnalysisEnvelope> {
   return client.get<ProfileAnalysisEnvelope>(
     profileEndpoints.analysis(username),
+    { signal },
+  );
+}
+
+export function getProfileSnapshot(
+  username: string,
+  signal?: AbortSignal,
+  client: ApiClient = apiClient,
+): Promise<GitHubProfileSnapshotEnvelope> {
+  return client.get<GitHubProfileSnapshotEnvelope>(
+    profileEndpoints.snapshot(username),
     { signal },
   );
 }

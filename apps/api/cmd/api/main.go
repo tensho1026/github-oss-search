@@ -80,6 +80,10 @@ func main() {
 		cfg.ProfileRepositoryLimit,
 		cfg.ManifestFileLimit,
 	)
+	getGitHubProfileSnapshot := usecase.NewGitHubProfileSnapshot(
+		getGitHubUser,
+		analyzeGitHubProfile,
+	)
 	issueSearchCache, err := memory.NewIssueSearch(
 		cfg.IssueSearchCacheCapacity,
 		cfg.IssueSearchCacheTTL,
@@ -178,21 +182,22 @@ func main() {
 		}
 	}
 	httpHandler, err := router.New(router.Dependencies{
-		Config:               cfg,
-		Logger:               logger,
-		Responder:            response.NewResponder(),
-		Documentation:        documentationHandler,
-		GetGitHubUser:        getGitHubUser,
-		AnalyzeGitHubProfile: analyzeGitHubProfile,
-		SearchIssues:         searchIssues,
-		SearchRepositories:   searchRepositories,
-		RecommendIssue:       recommendIssue,
-		ObserveReference:     observeReference,
-		DatabaseHealth:       databasePool,
-		DatabaseConfigured:   databaseConfigured,
-		Authentication:       authentication.Service,
-		AuthFlowCodec:        authentication.FlowCodec,
-		AccountWorkspace:     accountWorkspace,
+		Config:                   cfg,
+		Logger:                   logger,
+		Responder:                response.NewResponder(),
+		Documentation:            documentationHandler,
+		GetGitHubUser:            getGitHubUser,
+		AnalyzeGitHubProfile:     analyzeGitHubProfile,
+		GetGitHubProfileSnapshot: getGitHubProfileSnapshot,
+		SearchIssues:             searchIssues,
+		SearchRepositories:       searchRepositories,
+		RecommendIssue:           recommendIssue,
+		ObserveReference:         observeReference,
+		DatabaseHealth:           databasePool,
+		DatabaseConfigured:       databaseConfigured,
+		Authentication:           authentication.Service,
+		AuthFlowCodec:            authentication.FlowCodec,
+		AccountWorkspace:         accountWorkspace,
 	})
 	if err != nil {
 		logger.Error("compose API router", "error", err)
