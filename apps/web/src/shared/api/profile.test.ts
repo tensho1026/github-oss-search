@@ -13,7 +13,7 @@ afterEach(() => {
 
 describe("profile API adapters", () => {
   it("maps each profile request to its canonical endpoint", async () => {
-    const get = vi.fn().mockResolvedValue({});
+    const get = vi.fn((path: string) => Promise.resolve(path));
     const client = { get } as unknown as ApiClient;
 
     await getGitHubUser("octo cat", undefined, client);
