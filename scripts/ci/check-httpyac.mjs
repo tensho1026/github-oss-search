@@ -32,6 +32,7 @@ const negativeRequired = new Set([
 const anonymousOperations = new Set([
   "GET /api/github/users/{username}",
   "GET /api/github/users/{username}/profile-analysis",
+  "GET /api/github/users/{username}/profile-snapshot",
   "GET /api/health",
   "GET /api/health/database",
   "GET /api/issues/{owner}/{repository}/{issueNumber}",

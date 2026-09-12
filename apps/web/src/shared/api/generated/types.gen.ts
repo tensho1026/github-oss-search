@@ -401,6 +401,16 @@ export type GitHubUser = {
   repositories: Array<RepositorySummary>;
 };
 
+export type GitHubProfileSnapshotEnvelope = {
+  data: GitHubProfileSnapshot;
+  meta: Meta;
+};
+
+export type GitHubProfileSnapshot = {
+  user: GitHubUser;
+  analysis: ProfileAnalysis;
+};
+
 export type RepositorySummary = {
   owner: string;
   name: string;
@@ -1936,6 +1946,71 @@ export type AnalyzeGitHubProfileResponses = {
 
 export type AnalyzeGitHubProfileResponse =
   AnalyzeGitHubProfileResponses[keyof AnalyzeGitHubProfileResponses];
+
+export type GetGitHubProfileSnapshotData = {
+  body?: never;
+  headers?: {
+    /**
+     * Optional caller correlation identifier. Values must contain 1–64
+     * visible ASCII letters, digits, period, underscore, or hyphen;
+     * malformed values are replaced with a server-generated identifier.
+     *
+     */
+    "X-Request-ID"?: string;
+  };
+  path: {
+    /**
+     * Public GitHub login, without a leading at-sign.
+     */
+    username: string;
+  };
+  query?: never;
+  url: "/api/github/users/{username}/profile-snapshot";
+};
+
+export type GetGitHubProfileSnapshotErrors = {
+  /**
+   * A path or request value failed validation.
+   */
+  400: ErrorEnvelope;
+  /**
+   * The browser Origin is not in the configured allowlist.
+   */
+  403: ErrorEnvelope;
+  /**
+   * The requested GitHub user does not exist.
+   */
+  404: ErrorEnvelope;
+  /**
+   * GitHub refused the request because its rate limit was exhausted.
+   */
+  429: ErrorEnvelope;
+  /**
+   * An unexpected internal failure was recovered without exposing details.
+   */
+  500: ErrorEnvelope;
+  /**
+   * Required public data could not be retrieved from GitHub.
+   */
+  502: ErrorEnvelope;
+  /**
+   * The bounded request deadline elapsed or the client cancelled.
+   */
+  504: ErrorEnvelope;
+};
+
+export type GetGitHubProfileSnapshotError =
+  GetGitHubProfileSnapshotErrors[keyof GetGitHubProfileSnapshotErrors];
+
+export type GetGitHubProfileSnapshotResponses = {
+  /**
+   * The public profile and bounded analysis snapshot.
+   */
+  200: GitHubProfileSnapshotEnvelope;
+};
+
+export type GetGitHubProfileSnapshotResponse =
+  GetGitHubProfileSnapshotResponses[keyof GetGitHubProfileSnapshotResponses];
 
 export type SearchGitHubIssuesData = {
   /**
