@@ -152,8 +152,17 @@ export const accountEndpoints = Object.freeze({
       id,
     )}?version=${version}`;
   },
-  issueClaims(page = 1, perPage = 50): `/${string}` {
-    return `/api/account/issue-claims?page=${page}&perPage=${perPage}`;
+  issueClaims(
+    page = 1,
+    perPage = 50,
+    filter: "active" | "archived" | "all" = "all",
+  ): `/${string}` {
+    const query = new URLSearchParams({
+      filter,
+      page: page.toString(),
+      perPage: perPage.toString(),
+    });
+    return `/api/account/issue-claims?${query.toString()}`;
   },
   preferences: "/api/account/preferences" as const,
   profileSnapshots: "/api/account/profile-snapshots" as const,

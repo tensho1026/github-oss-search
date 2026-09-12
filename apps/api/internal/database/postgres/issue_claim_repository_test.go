@@ -43,7 +43,12 @@ func TestAccountRepositoryListsIssueClaimsWithSummary(t *testing.T) {
 	repository := AccountRepository{executor: executor, queryTimeout: time.Second}
 	page, _ := account.NewPage(2, 10)
 
-	result, err := repository.ListIssueClaims(context.Background(), accountID, page)
+	result, err := repository.ListIssueClaims(
+		context.Background(),
+		accountID,
+		page,
+		account.IssueClaimFilterActive,
+	)
 	if err != nil {
 		t.Fatalf("ListIssueClaims() error = %v", err)
 	}
@@ -58,7 +63,9 @@ func TestAccountRepositoryListsIssueClaimsWithSummary(t *testing.T) {
 	}
 	call := executor.calls[0]
 	if !strings.Contains(call.query, "WHERE account_id = $1") ||
-		call.arguments[0] != accountID.String() || call.arguments[2] != 10 {
+		!strings.Contains(call.query, "$4 = 'archived'") ||
+		call.arguments[0] != accountID.String() || call.arguments[2] != 10 ||
+		call.arguments[3] != "active" {
 		t.Fatalf("ListIssueClaims() query = %+v", call)
 	}
 }
@@ -213,7 +220,7 @@ func TestAccountRepositoryListIssueClaimFailures(t *testing.T) {
 				executor: test.executor, queryTimeout: time.Second,
 			}
 			if _, err := repository.ListIssueClaims(
-				context.Background(), accountID, page,
+				context.Background(), accountID, page, account.IssueClaimFilterAll,
 			); !errors.Is(err, ErrQueryFailed) {
 				t.Fatalf("ListIssueClaims() error = %v", err)
 			}

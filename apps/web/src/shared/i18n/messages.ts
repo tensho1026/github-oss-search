@@ -631,6 +631,7 @@ export const enMessages = {
   "bookmarks.openGitHub": "Open GitHub",
   "bookmarks.deleteLabel": "Delete bookmark {label}",
   "bookmarks.delete": "Delete",
+  "bookmarks.pagination": "Bookmark pagination",
   "saved.loading": "Loading saved searches…",
   "saved.empty": "No saved searches yet",
   "saved.emptyDescription":
@@ -641,6 +642,7 @@ export const enMessages = {
   "saved.rename": "Rename",
   "saved.deleteLabel": "Delete saved search {name}",
   "saved.delete": "Delete",
+  "saved.pagination": "Saved search pagination",
   "analytics.segmentUnavailable": "GitHub did not provide this public segment.",
   "analytics.observedWindow": "Observed in a bounded window of up to {limit}.",
   "analytics.totalWindow": "{total} public total · bounded limit {limit}.",
@@ -745,6 +747,7 @@ export const enMessages = {
   "claims.archive": "Archive",
   "claims.deleteLabel": "Delete contribution task {label}",
   "claims.delete": "Delete",
+  "claims.pagination": "Contribution task pagination",
   "calendar.title": "Public contribution calendar",
   "calendar.unavailable":
     "GitHub did not provide a public daily calendar. Other profile evidence remains available.",

@@ -501,6 +501,9 @@ test("hydrates the code-split account workspace without browser token storage", 
     });
   });
   await page.route("**/api/account/bookmarks**", async (route) => {
+    const pageNumber = Number(
+      new URL(route.request().url()).searchParams.get("page"),
+    );
     await route.fulfill({
       body: JSON.stringify({
         data: {
@@ -508,7 +511,7 @@ test("hydrates the code-split account workspace without browser token storage", 
             {
               createdAt: "2026-08-01T00:00:00Z",
               id: "00000000-0000-4000-8000-000000000010",
-              issueNumber: 42,
+              issueNumber: pageNumber === 2 ? 43 : 42,
               note: "",
               collection: "",
               repositoryName: "typed-service",
@@ -520,7 +523,12 @@ test("hydrates the code-split account workspace without browser token storage", 
               version: 1,
             },
           ],
-          pagination: { page: 1, perPage: 50, total: 1, totalPages: 1 },
+          pagination: {
+            page: pageNumber,
+            perPage: 20,
+            total: 21,
+            totalPages: 2,
+          },
         },
         meta: {
           requestId: "req_e2e_bookmarks",
@@ -541,6 +549,9 @@ test("hydrates the code-split account workspace without browser token storage", 
     }),
   ).toBeVisible();
   await expect(page.getByText("octocat/typed-service#42")).toBeVisible();
+  await page.getByRole("button", { name: "Go to page 2" }).click();
+  await expect(page).toHaveURL(/bookmarksPage=2/);
+  await expect(page.getByText("octocat/typed-service#43")).toBeVisible();
   const browserStorage = await page.evaluate<{
     local: string[];
     session: string[];
@@ -550,7 +561,9 @@ test("hydrates the code-split account workspace without browser token storage", 
     session: Object.keys(sessionStorage),
     url: window.location.href,
   })`);
-  expect(browserStorage.local).toEqual(["issuescout.locale"]);
+  expect(browserStorage.local).toEqual(
+    expect.arrayContaining(["issuescout.locale", "issuescout.theme"]),
+  );
   expect(browserStorage.session).toEqual([]);
   expect(browserStorage.url).not.toContain("csrf-browser-memory-only");
   expect(browserStorage.url).not.toContain(

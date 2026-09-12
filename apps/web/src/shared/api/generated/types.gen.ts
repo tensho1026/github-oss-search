@@ -2727,6 +2727,10 @@ export type ListAccountIssueClaimsData = {
      * Bounded number of account-owned rows per page.
      */
     perPage?: number;
+    /**
+     * Filter tasks by archive state before counting and pagination.
+     */
+    filter?: "active" | "archived" | "all";
   };
   url: "/api/account/issue-claims";
 };

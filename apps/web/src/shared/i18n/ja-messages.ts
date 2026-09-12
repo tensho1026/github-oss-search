@@ -629,6 +629,7 @@ export const jaMessages = {
   "bookmarks.openGitHub": "GitHubを開く",
   "bookmarks.deleteLabel": "ブックマーク{label}を削除",
   "bookmarks.delete": "削除",
+  "bookmarks.pagination": "ブックマークのページ移動",
   "saved.loading": "保存済み検索を読み込み中…",
   "saved.empty": "保存済み検索はまだありません",
   "saved.emptyDescription":
@@ -639,6 +640,7 @@ export const jaMessages = {
   "saved.rename": "名前を変更",
   "saved.deleteLabel": "保存済み検索{name}を削除",
   "saved.delete": "削除",
+  "saved.pagination": "保存済み検索のページ移動",
   "analytics.segmentUnavailable":
     "GitHubからこの公開範囲が提供されませんでした。",
   "analytics.observedWindow": "最大{limit}件の限定範囲で観測。",
@@ -744,6 +746,7 @@ export const jaMessages = {
   "claims.archive": "アーカイブ",
   "claims.deleteLabel": "コントリビューションタスク{label}を削除",
   "claims.delete": "削除",
+  "claims.pagination": "コントリビューションタスクのページ移動",
   "calendar.title": "公開コントリビューションカレンダー",
   "calendar.unavailable":
     "GitHubから公開日別カレンダーが提供されませんでした。他のプロフィール根拠は引き続き利用できます。",

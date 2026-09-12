@@ -329,6 +329,80 @@ describe("WorkspacePage", () => {
     });
   });
 
+  it("pages each workspace list and resets task pages when filtering", async () => {
+    const request = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const path = requestUrl(input);
+      if (path === "/api/auth/session") {
+        return jsonResponse(authenticatedSession);
+      }
+      const isClaims = path.startsWith("/api/account/issue-claims?");
+      const page = Number(
+        new URL(path, "https://example.test").searchParams.get("page"),
+      );
+      return jsonResponse({
+        data: {
+          items: [],
+          pagination: {
+            page,
+            perPage: 20,
+            total: isClaims ? 41 : 21,
+            totalPages: isClaims ? 3 : 2,
+          },
+          ...(isClaims
+            ? {
+                summary: {
+                  archived: 0,
+                  implementing: 0,
+                  merged: 0,
+                  notStarted: 41,
+                  prSubmitted: 0,
+                  researching: 0,
+                  total: 41,
+                },
+              }
+            : {}),
+        },
+        meta,
+      });
+    });
+    vi.stubGlobal("fetch", request);
+    const user = userEvent.setup();
+
+    renderWorkspace("/workspace?tab=bookmarks&bookmarksPage=1");
+    await user.click(
+      await screen.findByRole("button", { name: "Go to page 2" }),
+    );
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith(
+        "/api/account/bookmarks?page=2&perPage=20",
+        expect.any(Object),
+      );
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Saved searches" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Go to page 2" }),
+    );
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith(
+        "/api/account/saved-searches?page=2&perPage=20",
+        expect.any(Object),
+      );
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Contribution tasks" }));
+    await user.selectOptions(
+      await screen.findByRole("combobox", { name: "Show tasks" }),
+      "archived",
+    );
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith(
+        "/api/account/issue-claims?filter=archived&page=1&perPage=20",
+        expect.any(Object),
+      );
+    });
+  });
+
   it("loads and updates versioned display preferences", async () => {
     const request = vi.fn<typeof fetch>().mockImplementation((input, init) => {
       const path = requestUrl(input);
@@ -339,7 +413,7 @@ describe("WorkspacePage", () => {
         data: {
           reducedMotion: "reduce",
           resultsPerPage: 50,
-          theme: "dark",
+          theme: init?.method === "PUT" ? "light" : "dark",
           version: init?.method === "PUT" ? 5 : 4,
         },
         meta,
@@ -349,9 +423,10 @@ describe("WorkspacePage", () => {
     const user = userEvent.setup();
 
     renderWorkspace("/workspace?tab=preferences");
-    await user.click(
-      await screen.findByRole("button", { name: "Save preferences" }),
-    );
+    await user.click(await screen.findByRole("combobox", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: "Light" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    await user.click(screen.getByRole("button", { name: "Save preferences" }));
 
     await waitFor(() => {
       const update = request.mock.calls.find(
@@ -361,11 +436,11 @@ describe("WorkspacePage", () => {
       expect(JSON.parse(update?.[1]?.body as string)).toEqual({
         reducedMotion: "reduce",
         resultsPerPage: 50,
-        theme: "dark",
+        theme: "light",
         version: 4,
       });
     });
-    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.theme).toBe("light");
     expect(document.documentElement.dataset.reducedMotion).toBe("reduce");
   });
 

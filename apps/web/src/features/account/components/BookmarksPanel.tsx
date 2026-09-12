@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link } from "react-router";
 
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
+import { Pagination } from "../../../components/ui/pagination";
 import { ApiError } from "../../../shared/api/client";
 import { appRoutes, externalLinks } from "../../../shared/config/app-config";
 import { queryKeys } from "../../../shared/query/query-keys";
@@ -15,16 +17,32 @@ import { BookmarkMetadataEditor } from "./BookmarkMetadataEditor";
 
 type Props = {
   csrfToken: string;
+  onPageChange: (page: number) => void;
   onSessionExpired: () => Promise<void>;
+  page: number;
 };
 
-export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
+const pageSize = 20;
+
+export function BookmarksPanel({
+  csrfToken,
+  onPageChange,
+  onSessionExpired,
+  page,
+}: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryFn: ({ signal }) => listBookmarks(signal),
-    queryKey: queryKeys.account.bookmarks,
+    queryFn: ({ signal }) => listBookmarks(page, pageSize, signal),
+    queryKey: queryKeys.account.bookmarkPage(page, pageSize),
   });
+
+  useEffect(() => {
+    const pagination = query.data?.data.pagination;
+    if (pagination && page > 1 && page > pagination.totalPages) {
+      onPageChange(Math.max(1, pagination.totalPages));
+    }
+  }, [onPageChange, page, query.data]);
 
   async function handleError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
@@ -163,6 +181,16 @@ export function BookmarksPanel({ csrfToken, onSessionExpired }: Props) {
           })}
         </ul>
       )}
+      {query.data ? (
+        <Pagination
+          ariaLabel={t("bookmarks.pagination")}
+          disabled={query.isFetching}
+          hasNext={page < query.data.data.pagination.totalPages}
+          onPageChange={onPageChange}
+          page={page}
+          totalPages={query.data.data.pagination.totalPages}
+        />
+      ) : null}
     </section>
   );
 }

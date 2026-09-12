@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 
 import { Button } from "../../../components/ui/button";
 import {
@@ -22,10 +22,10 @@ import type {
   Preferences,
   PreferencesWriteRequest,
   ReducedMotionPreference,
-  ThemePreference,
 } from "../../../shared/api/generated";
 import { queryKeys } from "../../../shared/query/query-keys";
 import { useI18n } from "../../../shared/i18n/i18n-context";
+import { useTheme } from "../../../shared/theme/theme-context";
 import { getPreferences, updatePreferences } from "../api/account";
 import { applyPreferences, preferenceOptions } from "../model/preferences";
 import { AccountRequestAlert } from "./AccountRequestAlert";
@@ -52,7 +52,7 @@ function PreferencesForm({
   preferences: Preferences;
 }) {
   const { t } = useI18n();
-  const [theme, setTheme] = useState<ThemePreference>(preferences.theme);
+  const { preference: theme, setPreference: setTheme } = useTheme();
   const [reducedMotion, setReducedMotion] = useState<ReducedMotionPreference>(
     preferences.reducedMotion,
   );
@@ -74,7 +74,11 @@ function PreferencesForm({
     <form className="grid gap-5 md:grid-cols-3" onSubmit={submit}>
       <Field htmlFor="preference-theme" label={t("preferences.theme")}>
         <Select
-          onValueChange={(value) => setTheme(value as ThemePreference)}
+          onValueChange={(value) => {
+            if (value === "system" || value === "light" || value === "dark") {
+              setTheme(value);
+            }
+          }}
           value={theme}
         >
           <SelectTrigger id="preference-theme">
@@ -151,16 +155,18 @@ function PreferencesForm({
 export function PreferencesPanel({ csrfToken, onSessionExpired }: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const { setPreference: setTheme } = useTheme();
   const query = useQuery({
     queryFn: ({ signal }) => getPreferences(signal),
     queryKey: queryKeys.account.preferences,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (query.data) {
       applyPreferences(query.data.data);
+      setTheme(query.data.data.theme);
     }
-  }, [query.data]);
+  }, [query.data, setTheme]);
 
   const update = useMutation({
     mutationFn: (request: PreferencesWriteRequest) =>
@@ -173,6 +179,7 @@ export function PreferencesPanel({ csrfToken, onSessionExpired }: Props) {
     onSuccess(envelope) {
       queryClient.setQueryData(queryKeys.account.preferences, envelope);
       applyPreferences(envelope.data);
+      setTheme(envelope.data.theme);
     },
   });
 
