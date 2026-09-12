@@ -313,6 +313,7 @@ type IssueSearchCacheEntry struct {
 	RecommendationAttempted       int
 	RecommendationFailed          int
 	RecommendationIncomplete      bool
+	RecommendationEnrichedKeys    []string
 	ContributionProfileStatus     issue.ContributionProfileStatus
 	ContributionProfileIncomplete bool
 	ContributionProfileCacheHit   bool
