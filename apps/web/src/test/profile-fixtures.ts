@@ -1,4 +1,5 @@
 import type {
+  GitHubProfileSnapshotEnvelope,
   GitHubUserEnvelope,
   ProfileAnalysisEnvelope,
 } from "../shared/api/generated";
@@ -307,6 +308,14 @@ export const profileAnalysisFixture: ProfileAnalysisEnvelope = {
     repositoriesAnalyzed: 8,
     username: "octocat",
     warnings: [],
+  },
+  meta,
+};
+
+export const profileSnapshotFixture: GitHubProfileSnapshotEnvelope = {
+  data: {
+    analysis: profileAnalysisFixture.data,
+    user: gitHubUserFixture.data,
   },
   meta,
 };

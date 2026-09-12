@@ -92,6 +92,11 @@ func TestAnonymousCoreRoutesNeverProbeDatabase(t *testing.T) {
 			nil,
 		),
 		httptest.NewRequest(
+			http.MethodGet,
+			"/api/github/users/octocat/profile-snapshot",
+			nil,
+		),
+		httptest.NewRequest(
 			http.MethodPost,
 			"/api/issues/search",
 			strings.NewReader(`{"username":"octocat"}`),
@@ -297,6 +302,33 @@ func TestProfileAnalysisRouteUsesStandardEnvelope(t *testing.T) {
 	}
 }
 
+func TestProfileSnapshotRouteUsesStandardEnvelope(t *testing.T) {
+	router := newTestRouter(t)
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/github/users/octocat/profile-snapshot",
+		nil,
+	)
+	request.Header.Set("X-Request-ID", "req_profile_snapshot")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	for _, fragment := range []string{
+		`"user":{"login":"octocat"`,
+		`"analysis":{"username":"octocat"`,
+		`"rateLimitRemaining":41`,
+		`"requestId":"req_profile_snapshot"`,
+	} {
+		if !strings.Contains(recorder.Body.String(), fragment) {
+			t.Errorf("body missing %s: %s", fragment, recorder.Body.String())
+		}
+	}
+}
+
 func TestIssueSearchRouteUsesStandardEnvelope(t *testing.T) {
 	router := newTestRouter(t)
 	request := httptest.NewRequest(
@@ -433,14 +465,15 @@ func newTestRouterWithDatabase(
 		) {
 			_, _ = writer.Write([]byte("injected documentation"))
 		}),
-		GetGitHubUser:        routerGetGitHubUserStub{},
-		AnalyzeGitHubProfile: routerAnalyzeGitHubProfileStub{},
-		SearchIssues:         routerSearchIssuesStub{},
-		SearchRepositories:   routerSearchRepositoriesStub{},
-		RecommendIssue:       routerRecommendIssueStub{},
-		ObserveReference:     routerObserveReferenceStub{},
-		DatabaseHealth:       databaseHealth,
-		DatabaseConfigured:   databaseConfigured,
+		GetGitHubUser:            routerGetGitHubUserStub{},
+		AnalyzeGitHubProfile:     routerAnalyzeGitHubProfileStub{},
+		GetGitHubProfileSnapshot: routerGitHubProfileSnapshotStub{},
+		SearchIssues:             routerSearchIssuesStub{},
+		SearchRepositories:       routerSearchRepositoriesStub{},
+		RecommendIssue:           routerRecommendIssueStub{},
+		ObserveReference:         routerObserveReferenceStub{},
+		DatabaseHealth:           databaseHealth,
+		DatabaseConfigured:       databaseConfigured,
 	})
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
@@ -456,6 +489,7 @@ func newTestRouterFromDependencies(
 	dependencies.Responder = response.NewResponder()
 	dependencies.GetGitHubUser = routerGetGitHubUserStub{}
 	dependencies.AnalyzeGitHubProfile = routerAnalyzeGitHubProfileStub{}
+	dependencies.GetGitHubProfileSnapshot = routerGitHubProfileSnapshotStub{}
 	dependencies.SearchIssues = routerSearchIssuesStub{}
 	dependencies.SearchRepositories = routerSearchRepositoriesStub{}
 	dependencies.RecommendIssue = routerRecommendIssueStub{}
@@ -497,6 +531,24 @@ func (routerAnalyzeGitHubProfileStub) Execute(
 		RateLimit: port.RateLimit{
 			Known:     true,
 			Remaining: 41,
+		},
+	}, nil
+}
+
+type routerGitHubProfileSnapshotStub struct{}
+
+func (routerGitHubProfileSnapshotStub) Execute(
+	context.Context,
+	user.Username,
+) (usecase.GitHubProfileSnapshotOutput, error) {
+	return usecase.GitHubProfileSnapshotOutput{
+		User: usecase.GetGitHubUserOutput{
+			Profile:   user.Profile{Login: "octocat"},
+			RateLimit: port.RateLimit{Known: true, Remaining: 42},
+		},
+		Analysis: usecase.AnalyzeGitHubProfileOutput{
+			Analysis:  profile.Analysis{Username: "octocat"},
+			RateLimit: port.RateLimit{Known: true, Remaining: 41},
 		},
 	}, nil
 }
