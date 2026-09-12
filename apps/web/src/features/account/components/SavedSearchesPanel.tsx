@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { Badge } from "../../../components/ui/badge";
@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Field } from "../../../components/ui/field";
 import { Input } from "../../../components/ui/input";
+import { Pagination } from "../../../components/ui/pagination";
 import { ApiError } from "../../../shared/api/client";
 import type {
   IssueSearchRequest,
@@ -27,7 +28,9 @@ import { SavedSearchDifferenceChecker } from "./SavedSearchDifferenceChecker";
 
 type Props = {
   csrfToken: string;
+  onPageChange: (page: number) => void;
   onSessionExpired: () => Promise<void>;
+  page: number;
 };
 
 function updateRequest(
@@ -122,13 +125,27 @@ function SavedSearchRow({
   );
 }
 
-export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
+const pageSize = 20;
+
+export function SavedSearchesPanel({
+  csrfToken,
+  onPageChange,
+  onSessionExpired,
+  page,
+}: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryFn: ({ signal }) => listSavedSearches(signal),
-    queryKey: queryKeys.account.savedSearches,
+    queryFn: ({ signal }) => listSavedSearches(page, pageSize, signal),
+    queryKey: queryKeys.account.savedSearchPage(page, pageSize),
   });
+
+  useEffect(() => {
+    const pagination = query.data?.data.pagination;
+    if (pagination && page > 1 && page > pagination.totalPages) {
+      onPageChange(Math.max(1, pagination.totalPages));
+    }
+  }, [onPageChange, page, query.data]);
 
   async function handleError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
@@ -210,6 +227,16 @@ export function SavedSearchesPanel({ csrfToken, onSessionExpired }: Props) {
           ))}
         </ul>
       )}
+      {query.data ? (
+        <Pagination
+          ariaLabel={t("saved.pagination")}
+          disabled={query.isFetching}
+          hasNext={page < query.data.data.pagination.totalPages}
+          onPageChange={onPageChange}
+          page={page}
+          totalPages={query.data.data.pagination.totalPages}
+        />
+      ) : null}
     </section>
   );
 }

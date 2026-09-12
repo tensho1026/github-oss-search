@@ -7,6 +7,21 @@ Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
   value: () => undefined,
 });
 
+Object.defineProperties(HTMLElement.prototype, {
+  hasPointerCapture: {
+    configurable: true,
+    value: () => false,
+  },
+  releasePointerCapture: {
+    configurable: true,
+    value: () => undefined,
+  },
+  setPointerCapture: {
+    configurable: true,
+    value: () => undefined,
+  },
+});
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();

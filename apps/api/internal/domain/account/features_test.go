@@ -242,6 +242,16 @@ func TestAccountFeatureValueObjectsRejectInvalidValues(t *testing.T) {
 	if _, err := NewPage(0, 50); !errors.Is(err, ErrInvalidFeatureInput) {
 		t.Fatalf("NewPage() error = %v", err)
 	}
+	if filter, err := NewIssueClaimFilter("archived"); err != nil ||
+		filter != IssueClaimFilterArchived {
+		t.Fatalf("NewIssueClaimFilter() = %q, %v", filter, err)
+	}
+	if _, err := NewIssueClaimFilter("unknown"); !errors.Is(
+		err,
+		ErrInvalidFeatureInput,
+	) {
+		t.Fatalf("NewIssueClaimFilter() error = %v", err)
+	}
 }
 
 func TestResourceIDRoundTripAndRejectsAccountBoundaryMistakes(t *testing.T) {

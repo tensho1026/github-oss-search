@@ -1,11 +1,20 @@
 export const queryKeys = Object.freeze({
   account: Object.freeze({
     bookmarks: ["account", "bookmarks"] as const,
+    bookmarkPage(page: number, perPage: number) {
+      return ["account", "bookmarks", page, perPage] as const;
+    },
     issueClaims: ["account", "issue-claims"] as const,
+    issueClaimPage(filter: string, page: number, perPage: number) {
+      return ["account", "issue-claims", filter, page, perPage] as const;
+    },
     preferences: ["account", "preferences"] as const,
     profileSnapshots: ["account", "profile-snapshots"] as const,
     root: ["account"] as const,
     savedSearches: ["account", "saved-searches"] as const,
+    savedSearchPage(page: number, perPage: number) {
+      return ["account", "saved-searches", page, perPage] as const;
+    },
   }),
   auth: Object.freeze({
     session: ["auth", "session"] as const,

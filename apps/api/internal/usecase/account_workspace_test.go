@@ -405,6 +405,7 @@ func (repository *accountRepositoryStub) ListIssueClaims(
 	_ context.Context,
 	_ account.ID,
 	page account.Page,
+	_ account.IssueClaimFilter,
 ) (account.IssueClaimPage, error) {
 	return account.IssueClaimPage{PageResult: account.PageResult[account.IssueClaim]{
 		Page: page,

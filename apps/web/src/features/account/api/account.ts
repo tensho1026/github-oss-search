@@ -47,10 +47,16 @@ export function upsertProfileSnapshot(
   );
 }
 
-export function listIssueClaims(signal?: AbortSignal) {
-  return apiClient.get<IssueClaimListEnvelope>(accountEndpoints.issueClaims(), {
-    signal,
-  });
+export function listIssueClaims(
+  page = 1,
+  perPage = 50,
+  filter: "active" | "archived" | "all" = "all",
+  signal?: AbortSignal,
+) {
+  return apiClient.get<IssueClaimListEnvelope>(
+    accountEndpoints.issueClaims(page, perPage, filter),
+    { signal },
+  );
 }
 
 export function upsertIssueClaim(
@@ -88,10 +94,13 @@ export function deleteIssueClaim(
   );
 }
 
-export function listBookmarks(signal?: AbortSignal) {
-  return apiClient.get<BookmarkListEnvelope>(accountEndpoints.bookmarks(), {
-    signal,
-  });
+export function listBookmarks(page = 1, perPage = 50, signal?: AbortSignal) {
+  return apiClient.get<BookmarkListEnvelope>(
+    accountEndpoints.bookmarks(page, perPage),
+    {
+      signal,
+    },
+  );
 }
 
 export function upsertBookmark(
@@ -125,9 +134,13 @@ export function updateBookmarkMetadata(
   );
 }
 
-export function listSavedSearches(signal?: AbortSignal) {
+export function listSavedSearches(
+  page = 1,
+  perPage = 50,
+  signal?: AbortSignal,
+) {
   return apiClient.get<SavedSearchListEnvelope>(
-    accountEndpoints.savedSearches(),
+    accountEndpoints.savedSearches(page, perPage),
     { signal },
   );
 }

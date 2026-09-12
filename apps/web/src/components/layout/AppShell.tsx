@@ -1,5 +1,4 @@
 import { Menu, MoonStar, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router";
 
 import { appConfig, appRoutes } from "../../shared/config/app-config";
@@ -18,15 +17,7 @@ import {
 import { Icon } from "../ui/icon";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
-type Theme = "dark" | "light";
-
-function preferredTheme(): Theme {
-  return typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-color-scheme: light)").matches
-    ? "light"
-    : "dark";
-}
+import { useTheme } from "../../shared/theme/theme-context";
 
 function Brand() {
   const { t } = useI18n();
@@ -54,7 +45,7 @@ function ThemeToggle({
   theme,
 }: {
   onChange: () => void;
-  theme: Theme;
+  theme: "dark" | "light";
 }) {
   const { t } = useI18n();
   const nextTheme = theme === "dark" ? "light" : "dark";
@@ -108,11 +99,9 @@ function NavigationLinks() {
 
 export function AppShell() {
   const { t } = useI18n();
-  const [theme, setTheme] = useState<Theme>(preferredTheme);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  const { resolvedTheme, setPreference } = useTheme();
+  const toggleTheme = () =>
+    setPreference(resolvedTheme === "dark" ? "light" : "dark");
 
   return (
     <div className="app-backdrop min-h-screen bg-background text-foreground">
@@ -131,23 +120,13 @@ export function AppShell() {
           >
             <NavigationLinks />
             <LanguageSwitcher />
-            <ThemeToggle
-              onChange={() =>
-                setTheme((current) => (current === "dark" ? "light" : "dark"))
-              }
-              theme={theme}
-            />
+            <ThemeToggle onChange={toggleTheme} theme={resolvedTheme} />
             <AccountControl />
           </nav>
           <div className="flex min-w-0 items-center gap-1 xl:hidden">
             <LanguageSwitcher compact />
             <AccountControl />
-            <ThemeToggle
-              onChange={() =>
-                setTheme((current) => (current === "dark" ? "light" : "dark"))
-              }
-              theme={theme}
-            />
+            <ThemeToggle onChange={toggleTheme} theme={resolvedTheme} />
             <Dialog>
               <DialogTrigger asChild>
                 <Button aria-label={t("nav.open")} size="icon" variant="ghost">

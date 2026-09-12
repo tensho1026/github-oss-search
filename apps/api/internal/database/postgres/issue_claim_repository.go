@@ -15,6 +15,7 @@ func (repository *AccountRepository) ListIssueClaims(
 	ctx context.Context,
 	accountID account.ID,
 	page account.Page,
+	filter account.IssueClaimFilter,
 ) (account.IssueClaimPage, error) {
 	queryContext, cancel := context.WithTimeout(ctx, repository.queryTimeout)
 	defer cancel()
@@ -24,6 +25,7 @@ func (repository *AccountRepository) ListIssueClaims(
 		accountID.String(),
 		page.PerPage,
 		page.Offset(),
+		string(filter),
 	)
 	if err != nil {
 		return account.IssueClaimPage{}, ErrQueryFailed
@@ -273,6 +275,7 @@ const listIssueClaimsSQL = `SELECT ` + issueClaimColumns + `,
     count(*) FILTER (WHERE archived) OVER ()
 FROM issue_claims
 WHERE account_id = $1
+  AND ($4 = 'all' OR archived = ($4 = 'archived'))
 ORDER BY archived, updated_at DESC, id DESC
 LIMIT $2 OFFSET $3`
 

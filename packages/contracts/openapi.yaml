@@ -885,6 +885,13 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AccountPage"
         - $ref: "#/components/parameters/AccountPerPage"
+        - name: filter
+          in: query
+          description: Filter tasks by archive state before counting and pagination.
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: all
       responses:
         "200":
           description: An ownership-isolated contribution task page.

@@ -27,12 +27,29 @@ const tabs = [
 ] as const;
 
 type WorkspaceTab = (typeof tabs)[number]["value"];
+type ClaimFilter = "active" | "archived" | "all";
+
+const pageParameters: Record<"bookmarks" | "saved" | "tasks", string> = {
+  bookmarks: "bookmarksPage",
+  saved: "savedPage",
+  tasks: "tasksPage",
+};
 
 function readTab(parameters: URLSearchParams): WorkspaceTab {
   const value = parameters.get("tab");
   return tabs.some((tab) => tab.value === value)
     ? (value as WorkspaceTab)
     : "bookmarks";
+}
+
+function readPage(parameters: URLSearchParams, key: string): number {
+  const value = Number(parameters.get(key));
+  return Number.isSafeInteger(value) && value > 0 ? value : 1;
+}
+
+function readClaimFilter(parameters: URLSearchParams): ClaimFilter {
+  const value = parameters.get("claimFilter");
+  return value === "archived" || value === "all" ? value : "active";
 }
 
 export function WorkspaceDashboard({
@@ -44,6 +61,13 @@ export function WorkspaceDashboard({
   const { t } = useI18n();
   const [parameters, setParameters] = useSearchParams();
   const activeTab = readTab(parameters);
+  const claimFilter = readClaimFilter(parameters);
+
+  function setPage(tab: keyof typeof pageParameters, page: number) {
+    const next = new URLSearchParams(parameters);
+    next.set(pageParameters[tab], Math.max(1, page).toString());
+    setParameters(next);
+  }
 
   return (
     <div className="mx-auto min-h-[68vh] w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
@@ -107,19 +131,32 @@ export function WorkspaceDashboard({
         {activeTab === "tasks" ? (
           <IssueClaimsPanel
             csrfToken={csrfToken}
+            filter={claimFilter}
+            onFilterChange={(filter) => {
+              const next = new URLSearchParams(parameters);
+              next.set("claimFilter", filter);
+              next.set(pageParameters.tasks, "1");
+              setParameters(next);
+            }}
+            onPageChange={(page) => setPage("tasks", page)}
             onSessionExpired={onSessionExpired}
+            page={readPage(parameters, pageParameters.tasks)}
           />
         ) : null}
         {activeTab === "bookmarks" ? (
           <BookmarksPanel
             csrfToken={csrfToken}
+            onPageChange={(page) => setPage("bookmarks", page)}
             onSessionExpired={onSessionExpired}
+            page={readPage(parameters, pageParameters.bookmarks)}
           />
         ) : null}
         {activeTab === "saved" ? (
           <SavedSearchesPanel
             csrfToken={csrfToken}
+            onPageChange={(page) => setPage("saved", page)}
             onSessionExpired={onSessionExpired}
+            page={readPage(parameters, pageParameters.saved)}
           />
         ) : null}
         {activeTab === "preferences" ? (

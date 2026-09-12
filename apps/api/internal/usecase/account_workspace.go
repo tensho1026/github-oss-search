@@ -23,6 +23,7 @@ type AccountWorkspace interface {
 		context.Context,
 		account.ID,
 		account.Page,
+		account.IssueClaimFilter,
 	) (account.IssueClaimPage, error)
 	// UpsertIssueClaim idempotently starts a personal issue workflow.
 	UpsertIssueClaim(
@@ -264,8 +265,9 @@ func (service *accountWorkspace) ListIssueClaims(
 	ctx context.Context,
 	accountID account.ID,
 	page account.Page,
+	filter account.IssueClaimFilter,
 ) (account.IssueClaimPage, error) {
-	result, err := service.repository.ListIssueClaims(ctx, accountID, page)
+	result, err := service.repository.ListIssueClaims(ctx, accountID, page, filter)
 	if err != nil {
 		return account.IssueClaimPage{}, accountStorageError(err)
 	}
@@ -596,7 +598,12 @@ func (service *accountWorkspace) Export(
 	issueClaims := make([]account.IssueClaim, 0, account.MaximumIssueClaims)
 	for pageNumber := 1; ; pageNumber++ {
 		page, _ := account.NewPage(pageNumber, account.MaximumPageSize)
-		result, err := service.repository.ListIssueClaims(ctx, accountID, page)
+		result, err := service.repository.ListIssueClaims(
+			ctx,
+			accountID,
+			page,
+			account.IssueClaimFilterAll,
+		)
 		if err != nil {
 			return account.Export{}, accountStorageError(err)
 		}

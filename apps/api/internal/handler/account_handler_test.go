@@ -94,6 +94,44 @@ func TestAccountHandlerIssueClaimWorkflowIsOwnedAndVersioned(t *testing.T) {
 	}
 }
 
+func TestAccountHandlerFiltersIssueClaimsBeforePagination(t *testing.T) {
+	t.Parallel()
+	accountID := handlerAccountID(t)
+	workspace := &accountWorkspaceStub{}
+	engine := accountTestEngine(accountID)
+	handler := NewAccountHandler(
+		workspace,
+		authhttp.Policy{},
+		response.NewResponder(),
+	)
+	engine.GET("/claims", handler.ListIssueClaims)
+
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(
+		recorder,
+		httptest.NewRequest(
+			http.MethodGet,
+			"/claims?page=2&perPage=10&filter=archived",
+			nil,
+		),
+	)
+	if recorder.Code != http.StatusOK ||
+		workspace.lastIssueClaimFilter != account.IssueClaimFilterArchived ||
+		workspace.lastIssueClaimPage.Number != 2 ||
+		workspace.lastIssueClaimPage.PerPage != 10 {
+		t.Fatalf("list = %d %s; workspace = %+v", recorder.Code, recorder.Body.String(), workspace)
+	}
+
+	invalid := httptest.NewRecorder()
+	engine.ServeHTTP(
+		invalid,
+		httptest.NewRequest(http.MethodGet, "/claims?filter=unknown", nil),
+	)
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("invalid filter = %d %s", invalid.Code, invalid.Body.String())
+	}
+}
+
 func TestAccountHandlerUpdatesBookmarkMetadataAndSavedSearchSnapshot(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	accountID := handlerAccountID(t)
@@ -636,6 +674,8 @@ type accountWorkspaceStub struct {
 	lastBookmarkUpdate   usecase.UpdateBookmarkMetadataInput
 	lastIssueClaimInput  usecase.UpsertIssueClaimInput
 	lastIssueClaimUpdate usecase.UpdateIssueClaimInput
+	lastIssueClaimFilter account.IssueClaimFilter
+	lastIssueClaimPage   account.Page
 	lastSavedInput       usecase.WriteSavedSearchInput
 	lastPreferencesInput usecase.UpdatePreferencesInput
 	bookmarkPage         account.PageResult[account.Bookmark]
@@ -666,8 +706,11 @@ func (workspace *accountWorkspaceStub) ListIssueClaims(
 	_ context.Context,
 	accountID account.ID,
 	page account.Page,
+	filter account.IssueClaimFilter,
 ) (account.IssueClaimPage, error) {
 	workspace.lastAccountID = accountID
+	workspace.lastIssueClaimFilter = filter
+	workspace.lastIssueClaimPage = page
 	return account.IssueClaimPage{PageResult: account.PageResult[account.IssueClaim]{
 		Page: page,
 	}}, workspace.err

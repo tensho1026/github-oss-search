@@ -23,6 +23,7 @@ type AccountRepository interface {
 		ctx context.Context,
 		accountID account.ID,
 		page account.Page,
+		filter account.IssueClaimFilter,
 	) (account.IssueClaimPage, error)
 	// UpsertIssueClaim inserts or idempotently returns one canonical issue task.
 	UpsertIssueClaim(

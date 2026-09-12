@@ -384,6 +384,32 @@ type IssueClaimSummary struct {
 	Archived     int
 }
 
+// IssueClaimFilter selects active, archived, or all owned contribution tasks.
+type IssueClaimFilter string
+
+const (
+	// IssueClaimFilterActive includes only non-archived tasks.
+	IssueClaimFilterActive IssueClaimFilter = "active"
+	// IssueClaimFilterArchived includes only archived tasks.
+	IssueClaimFilterArchived IssueClaimFilter = "archived"
+	// IssueClaimFilterAll includes tasks regardless of archive state.
+	IssueClaimFilterAll IssueClaimFilter = "all"
+)
+
+// NewIssueClaimFilter validates an account task list filter.
+func NewIssueClaimFilter(value string) (IssueClaimFilter, error) {
+	filter := IssueClaimFilter(value)
+	switch filter {
+	case IssueClaimFilterActive, IssueClaimFilterArchived, IssueClaimFilterAll:
+		return filter, nil
+	default:
+		return "", fmt.Errorf(
+			"%w: filter must be active, archived, or all",
+			ErrInvalidFeatureInput,
+		)
+	}
+}
+
 // IssueClaimPage combines one owned page with progress counts.
 type IssueClaimPage struct {
 	PageResult[IssueClaim]

@@ -36,7 +36,7 @@ describe("account API", () => {
     vi.stubGlobal("fetch", request);
     const signal = new AbortController().signal;
 
-    await listBookmarks(signal);
+    await listBookmarks(1, 50, signal);
     await upsertBookmark(
       {
         issueNumber: 42,
@@ -47,7 +47,7 @@ describe("account API", () => {
       "csrf",
     );
     await deleteBookmark("bookmark", 2, "csrf");
-    await listSavedSearches(signal);
+    await listSavedSearches(1, 50, signal);
     await createSavedSearch(
       {
         filters: { username: "octocat" },

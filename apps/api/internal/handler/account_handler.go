@@ -77,7 +77,7 @@ func (handler AccountHandler) ListIssueClaims(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-	page, err := parseAccountPage(ctx)
+	page, filter, err := parseIssueClaimListQuery(ctx)
 	if err != nil {
 		handler.invalidRequest(ctx, err)
 		return
@@ -86,6 +86,7 @@ func (handler AccountHandler) ListIssueClaims(ctx *gin.Context) {
 		ctx.Request.Context(),
 		accountID,
 		page,
+		filter,
 	)
 	if err != nil {
 		handler.responder.Error(ctx, err)
@@ -1012,6 +1013,49 @@ func parseAccountPage(ctx *gin.Context) (account.Page, error) {
 		return account.Page{}, err
 	}
 	return account.NewPage(page, perPage)
+}
+
+func parseIssueClaimListQuery(
+	ctx *gin.Context,
+) (account.Page, account.IssueClaimFilter, error) {
+	query := ctx.Request.URL.Query()
+	for key := range query {
+		if key != "page" && key != "perPage" && key != "filter" {
+			return account.Page{}, "", fmt.Errorf(
+				"unsupported query parameter %q",
+				key,
+			)
+		}
+	}
+	pageNumber, err := parseSingleQueryInteger(query["page"], 1)
+	if err != nil {
+		return account.Page{}, "", fmt.Errorf("page: %w", err)
+	}
+	perPage, err := parseSingleQueryInteger(
+		query["perPage"],
+		account.DefaultPageSize,
+	)
+	if err != nil {
+		return account.Page{}, "", fmt.Errorf("perPage: %w", err)
+	}
+	page, err := account.NewPage(pageNumber, perPage)
+	if err != nil {
+		return account.Page{}, "", err
+	}
+	filterValue := "all"
+	if values, exists := query["filter"]; exists {
+		if len(values) != 1 || values[0] == "" {
+			return account.Page{}, "", fmt.Errorf(
+				"filter must be provided exactly once",
+			)
+		}
+		filterValue = values[0]
+	}
+	filter, err := account.NewIssueClaimFilter(filterValue)
+	if err != nil {
+		return account.Page{}, "", err
+	}
+	return page, filter, nil
 }
 
 func parseRequiredVersion(ctx *gin.Context) (int64, error) {

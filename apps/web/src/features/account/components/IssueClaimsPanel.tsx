@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
+import { Pagination } from "../../../components/ui/pagination";
 import { ApiError } from "../../../shared/api/client";
 import type {
   IssueClaim,
@@ -26,7 +27,11 @@ import { ReferenceObservationButton } from "./ReferenceObservationButton";
 
 type Props = {
   csrfToken: string;
+  filter: "active" | "archived" | "all";
+  onFilterChange: (filter: "active" | "archived" | "all") => void;
+  onPageChange: (page: number) => void;
   onSessionExpired: () => Promise<void>;
+  page: number;
 };
 
 const statusOptions: IssueClaimStatus[] = [
@@ -37,17 +42,32 @@ const statusOptions: IssueClaimStatus[] = [
   "merged",
 ];
 
-export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
+const pageSize = 20;
+
+export function IssueClaimsPanel({
+  csrfToken,
+  filter,
+  onFilterChange,
+  onPageChange,
+  onSessionExpired,
+  page,
+}: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"active" | "archived" | "all">("active");
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [draggedClaimID, setDraggedClaimID] = useState<string | null>(null);
   const [moveError, setMoveError] = useState("");
   const query = useQuery({
-    queryFn: ({ signal }) => listIssueClaims(signal),
-    queryKey: queryKeys.account.issueClaims,
+    queryFn: ({ signal }) => listIssueClaims(page, pageSize, filter, signal),
+    queryKey: queryKeys.account.issueClaimPage(filter, page, pageSize),
   });
+
+  useEffect(() => {
+    const pagination = query.data?.data.pagination;
+    if (pagination && page > 1 && page > pagination.totalPages) {
+      onPageChange(Math.max(1, pagination.totalPages));
+    }
+  }, [onPageChange, page, query.data]);
 
   async function handleError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
@@ -76,11 +96,7 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
     onError: handleError,
     onSuccess: refresh,
   });
-  const claims = useMemo(() => {
-    const items = query.data?.data.items ?? [];
-    if (filter === "all") return items;
-    return items.filter((claim) => claim.archived === (filter === "archived"));
-  }, [filter, query.data]);
+  const claims = query.data?.data.items ?? [];
   const summary = query.data?.data.summary;
   const statusLabels: Record<IssueClaimStatus, string> = {
     implementing: t("claims.implementing"),
@@ -137,7 +153,9 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
             <select
               className="min-h-11 rounded-xl border border-input bg-surface px-3"
               onChange={(event) =>
-                setFilter(event.target.value as "active" | "archived" | "all")
+                onFilterChange(
+                  event.target.value as "active" | "archived" | "all",
+                )
               }
               value={filter}
             >
@@ -286,6 +304,16 @@ export function IssueClaimsPanel({ csrfToken, onSessionExpired }: Props) {
           </div>
         </div>
       )}
+      {query.data ? (
+        <Pagination
+          ariaLabel={t("claims.pagination")}
+          disabled={query.isFetching}
+          hasNext={page < query.data.data.pagination.totalPages}
+          onPageChange={onPageChange}
+          page={page}
+          totalPages={query.data.data.pagination.totalPages}
+        />
+      ) : null}
     </section>
   );
 }

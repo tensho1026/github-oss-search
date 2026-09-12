@@ -58,9 +58,15 @@ status selector remains the keyboard-accessible equivalent. Moving to
 The opaque session remains HttpOnly. The CSRF value exists only in React Query
 memory and mutation headers; neither credential enters `localStorage`,
 `sessionStorage`, URLs, logs, analytics, source maps, or static artifacts.
-Theme and reduced-motion preferences are applied as document data attributes
-without browser persistence. The authenticated route is code-split, and the
-bundle gate limits every JavaScript asset to 80 KiB gzip.
+Theme and reduced-motion preferences are applied as document data attributes.
+The theme has one shared state source: anonymous and header-toggle changes are
+stored locally and work on public routes without an account request. After an
+authenticated user opens Preferences, the server value takes precedence and is
+also copied to local storage. Selecting a value in Preferences is a local
+preview until Save succeeds; a version conflict leaves the server unchanged.
+The `system` value follows OS changes, while explicit light or dark values do
+not. The authenticated route is code-split, and the bundle gate limits every
+JavaScript asset to 80 KiB gzip.
 
 ## Ownership and request boundary
 
@@ -161,7 +167,7 @@ and PNG downloads are generated from the currently displayed public analysis.
 | Saved search      |                50 | 80-rune name, 8192-byte JSON         | `updated_at DESC, id DESC`            |
 | Preferences       |                 1 | Fixed enums and page sizes           | One row per account                   |
 | Profile snapshot  |                24 | Bounded monthly aggregate            | `month ASC`                           |
-| List page size    |                50 | Page 1–100                           | UUID is the deterministic tie-breaker |
+| List page size    |                50 | Page 1–100; workspace requests 20    | UUID is the deterministic tie-breaker |
 
 Contribution-task, bookmark, and saved-search quota checks take a transaction-scoped PostgreSQL
 advisory lock keyed by account ID in the same statement as the insert. A
