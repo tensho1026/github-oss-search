@@ -405,11 +405,8 @@ describe("WorkspacePage", () => {
       return jsonResponse({ data: {}, meta });
     });
     vi.stubGlobal("fetch", request);
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL: vi.fn(() => "blob:export"),
-      revokeObjectURL: vi.fn(),
-    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:export");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
       () => undefined,
     );
