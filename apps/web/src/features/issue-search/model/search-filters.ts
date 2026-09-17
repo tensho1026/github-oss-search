@@ -122,7 +122,14 @@ export const searchFilterDescriptions = Object.freeze({
 
 const defaultLabels = ["good first issue", "help wanted"];
 
-export function createDefaultSearchFilters(username = ""): SearchFilters {
+export type SearchFilterDefaults = {
+  perPage?: number;
+};
+
+export function createDefaultSearchFilters(
+  username = "",
+  defaults: SearchFilterDefaults = {},
+): SearchFilters {
   return {
     excludeArchived: true,
     frameworks: [],
@@ -135,7 +142,7 @@ export function createDefaultSearchFilters(username = ""): SearchFilters {
     maximumEffort: "",
     minimumStars: 10,
     page: 1,
-    perPage: 20,
+    perPage: defaults.perPage ?? 20,
     sortBy: "recommendation",
     updatedWithinDays: 180,
     username,
@@ -244,8 +251,9 @@ export function validateSearchFilters(
 
 export function decodeSearchParams(
   parameters: URLSearchParams,
+  options: SearchFilterDefaults = {},
 ): DecodedSearchLocation {
-  const defaults = createDefaultSearchFilters();
+  const defaults = createDefaultSearchFilters("", options);
   const locationErrors: string[] = [];
   const username = readScalar(
     parameters,
@@ -364,12 +372,17 @@ export function encodeSearchParams(
 ): URLSearchParams {
   const normalized = normalizeSearchFilters(filters);
   const errors = validateSearchFilters(normalized);
+  if (!shouldSearch && errors.username && normalized.username.trim() === "") {
+    delete errors.username;
+  }
   if (Object.keys(errors).length > 0) {
     throw new Error("Cannot encode invalid issue search filters.");
   }
 
   const parameters = new URLSearchParams();
-  parameters.set(parameterNames.username, normalized.username);
+  if (normalized.username) {
+    parameters.set(parameterNames.username, normalized.username);
+  }
   appendList(parameters, parameterNames.languages, normalized.languages);
   appendList(parameters, parameterNames.frameworks, normalized.frameworks);
   appendList(parameters, parameterNames.labels, normalized.labels);

@@ -118,5 +118,12 @@ describe("issue search filter model", () => {
         perPage: 100,
       }),
     ).toThrow(/invalid issue search filters/i);
+    const prefill = encodeSearchParams(createDefaultSearchFilters(), false);
+    expect(prefill.get("username")).toBeNull();
+    expect(prefill.get("search")).toBeNull();
+    expect(prefill.getAll("label")).toEqual([
+      "good first issue",
+      "help wanted",
+    ]);
   });
 });

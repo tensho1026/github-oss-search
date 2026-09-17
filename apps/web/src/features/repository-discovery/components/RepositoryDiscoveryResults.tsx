@@ -15,13 +15,16 @@ import {
 import { Icon } from "../../../components/ui/icon";
 import { Pagination } from "../../../components/ui/pagination";
 import type { RepositoryDiscoveryEnvelope } from "../../../shared/api/generated";
-import { formatCompactNumber } from "../../../shared/lib/format";
-import { RepositoryCard } from "./RepositoryCard";
 import { useI18n } from "../../../shared/i18n/i18n-context";
+import { formatCompactNumber } from "../../../shared/lib/format";
+import type { RepositoryFilters } from "../model/repository-filters";
+import { RepositoryCard } from "./RepositoryCard";
 
 type RepositoryDiscoveryResultsProps = {
   contributorTechnologies?: readonly string[];
+  emptyActions?: ReadonlyArray<{ href: string; label: string }>;
   envelope: RepositoryDiscoveryEnvelope;
+  filters: RepositoryFilters;
   isFetching: boolean;
   relaxed?: boolean;
   onPageChange: (page: number) => void;
@@ -29,7 +32,9 @@ type RepositoryDiscoveryResultsProps = {
 
 export function RepositoryDiscoveryResults({
   contributorTechnologies = [],
+  emptyActions = [],
   envelope,
+  filters,
   isFetching,
   relaxed,
   onPageChange,
@@ -64,12 +69,23 @@ export function RepositoryDiscoveryResults({
               {t("issueSearch.returnFirst")}
             </Button>
           ) : (
-            <a
-              className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-              href="#repository-filters"
-            >
-              {t("issueSearch.broaden")}
-            </a>
+            <div className="grid justify-items-center gap-3">
+              {emptyActions.map((action) => (
+                <a
+                  className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  href={action.href}
+                  key={action.href}
+                >
+                  {action.label}
+                </a>
+              ))}
+              <a
+                className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                href="#repository-filters"
+              >
+                {t("issueSearch.broaden")}
+              </a>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -167,6 +183,7 @@ export function RepositoryDiscoveryResults({
           <li key={item.repository.fullName}>
             <RepositoryCard
               contributorTechnologies={contributorTechnologies}
+              filters={filters}
               item={item}
               rank={firstRank + index}
             />

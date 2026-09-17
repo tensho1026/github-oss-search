@@ -8,7 +8,7 @@ import { issueSearchFixture } from "../../../test/issue-fixtures";
 import { IssueSearchResults } from "./IssueSearchResults";
 
 describe("IssueSearchResults", () => {
-  it("preserves API order and renders every required recommendation field", () => {
+  it("preserves API order and renders every required recommendation field", async () => {
     render(
       <AppProviders>
         <MemoryRouter>
@@ -29,8 +29,14 @@ describe("IssueSearchResults", () => {
     expect(screen.getByRole("meter")).toHaveAccessibleName(
       "83 out of 100, Strong fit",
     );
-    expect(screen.getByText("Difficulty 3: Intermediate")).toBeInTheDocument();
     expect(screen.getByText("Half a day")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Difficulty 3: Intermediate"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show recommendation details" }),
+    );
+    expect(screen.getByText("Difficulty 3: Intermediate")).toBeInTheDocument();
     expect(screen.getByText("good first issue")).toBeInTheDocument();
     expect(screen.getByText("TypeScript: matched")).toBeInTheDocument();
     expect(screen.getByText("Maintainer response")).toBeInTheDocument();
@@ -109,7 +115,18 @@ describe("IssueSearchResults", () => {
             onPageChange={vi.fn()}
             onSelectionChange={onSelectionChange}
             returnTo="/search?search=1"
-            selectedItems={[first, second]}
+            selectedItems={[
+              {
+                issueNumber: first.issue.number,
+                owner: first.repository.owner,
+                repository: first.repository.name,
+              },
+              {
+                issueNumber: second.issue.number,
+                owner: second.repository.owner,
+                repository: second.repository.name,
+              },
+            ]}
             skills={["TypeScript"]}
           />
         </MemoryRouter>
@@ -146,7 +163,13 @@ describe("IssueSearchResults", () => {
             onClearSelection={vi.fn()}
             onPageChange={vi.fn()}
             onSelectionChange={vi.fn()}
-            selectedItems={[first]}
+            selectedItems={[
+              {
+                issueNumber: first.issue.number,
+                owner: first.repository.owner,
+                repository: first.repository.name,
+              },
+            ]}
           />
         </MemoryRouter>
       </AppProviders>,
@@ -161,6 +184,12 @@ describe("IssueSearchResults", () => {
     render(
       <MemoryRouter>
         <IssueSearchResults
+          emptyActions={[
+            {
+              href: "/search?username=octocat&maximumDifficulty=4&search=1",
+              label: "Increase maximum difficulty",
+            },
+          ]}
           envelope={{
             ...issueSearchFixture,
             data: {
@@ -182,6 +211,12 @@ describe("IssueSearchResults", () => {
     );
 
     expect(screen.getByText("No eligible issues found")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Increase maximum difficulty" }),
+    ).toHaveAttribute(
+      "href",
+      "/search?username=octocat&maximumDifficulty=4&search=1",
+    );
     expect(
       screen.getByRole("link", { name: "Broaden the filters" }),
     ).toHaveAttribute("href", "#search-filters");

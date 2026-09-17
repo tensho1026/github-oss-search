@@ -119,6 +119,21 @@ export const jaMessages = {
     "GitHubの候補を確認しましたが、すべての条件を満たすものはありませんでした。フレームワーク条件を減らす、スター数を下げる、使える時間を増やすなどをお試しください。",
   "issueSearch.returnFirst": "1ページ目へ戻る",
   "issueSearch.broaden": "条件を広げる",
+  "search.copyLink": "検索リンクをコピー",
+  "search.copyLinkCopied": "リンクをコピーしました",
+  "search.copyLinkFailed": "リンクをコピーできませんでした",
+  "search.showFilters": "条件を編集",
+  "search.hideFilters": "条件を隠す",
+  "search.moreFilters": "詳細条件",
+  "search.fewerFilters": "詳細条件を隠す",
+  "search.activeFilters": "適用中の条件",
+  "search.removeFilter": "{label} を外す",
+  "search.emptyRaiseDifficulty": "難易度の上限を1上げる",
+  "search.emptyRelaxRecency": "更新日の範囲を広げる",
+  "search.emptyClearStars": "スター数の下限を外す",
+  "search.emptyClearEffort": "所要時間の制限を外す",
+  "search.emptyClearFrameworks": "フレームワーク条件を外す",
+  "search.emptyClearTechnologies": "技術条件を外す",
   "search.relaxedTitle": "一部一致の候補を表示しています",
   "issueSearch.rankedEyebrow": "サーバー順位による推薦",
   "issueSearch.eligibleCount": "対象Issue {count}件",
@@ -139,6 +154,8 @@ export const jaMessages = {
     "以下のカードはAPIが返した順序を維持しています。",
   "issueForm.profileDescription":
     "この公開GitHubプロフィールと推薦候補を照合します。",
+  "issueForm.usingProfile": "照合中の公開プロフィール @{login}",
+  "issueForm.differentProfile": "別のプロフィールで検索",
   "issueForm.languages": "言語",
   "issueForm.languagesDescription":
     "選択した主要言語のいずれかに一致するリポジトリを対象にします。",
@@ -184,6 +201,9 @@ export const jaMessages = {
   "issueForm.includeDocumentation": "ドキュメントを含める",
   "issueForm.includeDocumentationDescription":
     "documentationラベルのIssueを追加します。",
+  "issueForm.includeStale": "停滞Issueを含める",
+  "issueForm.includeStaleDescription":
+    "stale-v1判定のIssueを表示します。証拠が不明なものは引き続き表示されます。",
   "issueForm.includeEnglish": "英語のIssueを含める",
   "issueForm.includeEnglishDescription":
     "主にラテン文字で書かれたIssueを許可します。",
@@ -295,6 +315,8 @@ export const jaMessages = {
   "repository.newTechnologies": "新しく必要な技術",
   "repository.noneDetected": "検出なし",
   "repository.starterIssueTitle": "このリポジトリで始めやすいIssue",
+  "repository.searchIssues": "この条件でIssueを検索",
+  "repository.openStarter": "IssueScoutで開く",
   "repository.starterIssueDescription":
     "最近更新されたgood first issueまたはhelp wantedを最大3件表示します。着手前にGitHubで最新状態を確認してください。",
   "repository.noStarterIssues":
@@ -386,8 +408,9 @@ export const jaMessages = {
   "profile.nextStep": "次のステップ",
   "profile.searchTitle": "このプロフィールから範囲を限定したIssue検索へ",
   "profile.searchDescription":
-    "検出した言語とフレームワークを入力済みにしています。GitHub検索の前に各フィルターを確認してください。",
+    "検出した言語とフレームワークを入力済みにしています。そのまま検索するか、先に条件を確認できます。",
   "profile.findIssues": "一致するIssueを探す",
+  "profile.reviewFilters": "先に条件を確認",
   "profile.discoverRepositories": "リポジトリを探す",
   "profile.languageDistribution": "言語の分布",
   "profile.languageDistributionDescription":
@@ -506,6 +529,9 @@ export const jaMessages = {
   "savedSearch.nameRequired": "この検索の名前を入力してください。",
   "savedSearch.saving": "保存中…",
   "savedSearch.save": "検索を保存",
+  "savedSearch.updateCurrent": "保存済み検索を更新",
+  "savedSearch.updating": "更新中…",
+  "savedSearch.updated": "保存済み検索を更新しました",
   "detail.startSearch": "新しいIssue検索を始める",
   "detail.invalidEyebrow": "詳細URLが不正です",
   "detail.invalidTitle": "この推薦リンクを確認してください。",
@@ -535,6 +561,11 @@ export const jaMessages = {
   "detail.dates": "日付",
   "detail.noLabels": "公開ラベルなし",
   "detail.description": "Issueの説明",
+  "detail.contents": "このページの内容",
+  "detail.jumpScore": "スコア",
+  "detail.jumpQuality": "品質シグナル",
+  "detail.jumpBody": "Issueの説明",
+  "detail.jumpWarnings": "警告",
   "detail.involves": "この作業に含まれるもの",
   "detail.category": "カテゴリ",
   "detail.effort": "所要時間",
@@ -630,6 +661,12 @@ export const jaMessages = {
   "bookmarks.deleteLabel": "ブックマーク{label}を削除",
   "bookmarks.delete": "削除",
   "bookmarks.pagination": "ブックマークのページ移動",
+  "bookmarks.filterCollection": "コレクション",
+  "bookmarks.filterTag": "タグ",
+  "bookmarks.allCollections": "すべてのコレクション",
+  "bookmarks.allTags": "すべてのタグ",
+  "bookmarks.noFilterMatches":
+    "読み込み済みのページに、この条件に合うブックマークはありません。",
   "saved.loading": "保存済み検索を読み込み中…",
   "saved.empty": "保存済み検索はまだありません",
   "saved.emptyDescription":
@@ -640,6 +677,8 @@ export const jaMessages = {
   "saved.rename": "名前を変更",
   "saved.deleteLabel": "保存済み検索{name}を削除",
   "saved.delete": "削除",
+  "saved.duplicate": "複製",
+  "saved.duplicateLabel": "{name} を複製",
   "saved.pagination": "保存済み検索のページ移動",
   "analytics.segmentUnavailable":
     "GitHubからこの公開範囲が提供されませんでした。",
@@ -672,6 +711,8 @@ export const jaMessages = {
   "issueSearch.contributionProfile":
     "コントリビューションプロフィール: {status} · モデル {version}",
   "recommendation.partialMatch": "一部一致 {count}件",
+  "recommendation.showDetails": "推薦の詳細を表示",
+  "recommendation.hideDetails": "推薦の詳細を隠す",
   "recommendation.staleStatus": "停滞状態: {state}",
   "recommendation.staleCheck": "停滞チェック: {state}",
   "recommendation.healthSummary": "リポジトリ健全性の概要",
@@ -747,6 +788,8 @@ export const jaMessages = {
   "claims.deleteLabel": "コントリビューションタスク{label}を削除",
   "claims.delete": "削除",
   "claims.pagination": "コントリビューションタスクのページ移動",
+  "claims.observeVisible": "表示中の参照を確認",
+  "claims.observing": "参照を確認中…",
   "calendar.title": "公開コントリビューションカレンダー",
   "calendar.unavailable":
     "GitHubから公開日別カレンダーが提供されませんでした。他のプロフィール根拠は引き続き利用できます。",
@@ -863,6 +906,9 @@ export const jaMessages = {
   "compare.description":
     "貢献先を選ぶ前に、2〜3件の候補を同じ限定的な根拠で比較します。",
   "compare.back": "検索結果へ戻る",
+  "compare.copyLink": "比較リンクをコピー",
+  "compare.addTasks": "比較中のIssueをタスクに追加",
+  "compare.relativelyBetter": "相対的に良い",
   "compare.invalid": "比較リンクが無効です",
   "compare.loading": "比較用の根拠を読み込み中…",
   "compare.error": "一部の比較データを取得できません",

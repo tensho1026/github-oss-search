@@ -23,6 +23,7 @@ describe("RepositoryDiscoveryForm", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: "More filters" }));
     const stars = screen.getByRole("spinbutton", { name: "Minimum stars" });
     await user.clear(stars);
     await user.type(stars, "75");

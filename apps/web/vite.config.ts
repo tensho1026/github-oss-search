@@ -19,9 +19,19 @@ export default defineConfig({
           if (
             id.includes("/src/components/ui/") ||
             id.includes("/src/shared/") ||
-            id.includes("/src/features/issue-search/model/") ||
+            id.endsWith(
+              "/features/issue-search/model/search-presentation.ts",
+            ) ||
+            id.endsWith("/features/issue-search/model/search-filters.ts") ||
             id.includes("/node_modules/@tanstack/")
           ) {
+            if (
+              id.endsWith("/components/ui/copy-link-button.tsx") ||
+              id.endsWith("/components/ui/filter-chip-list.tsx") ||
+              id.endsWith("/shared/lib/saved-search-location.ts")
+            ) {
+              return;
+            }
             return "app-shared";
           }
         },

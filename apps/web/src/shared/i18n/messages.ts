@@ -120,6 +120,21 @@ export const enMessages = {
     "GitHub candidates were checked, but none met every validated condition. Try fewer framework terms, a lower star threshold, or more available time.",
   "issueSearch.returnFirst": "Return to page 1",
   "issueSearch.broaden": "Broaden the filters",
+  "search.copyLink": "Copy search link",
+  "search.copyLinkCopied": "Link copied",
+  "search.copyLinkFailed": "Could not copy the link",
+  "search.showFilters": "Edit filters",
+  "search.hideFilters": "Hide filters",
+  "search.moreFilters": "More filters",
+  "search.fewerFilters": "Hide extra filters",
+  "search.activeFilters": "Active filters",
+  "search.removeFilter": "Remove {label}",
+  "search.emptyRaiseDifficulty": "Increase maximum difficulty",
+  "search.emptyRelaxRecency": "Include older updates",
+  "search.emptyClearStars": "Remove the star minimum",
+  "search.emptyClearEffort": "Allow any available time",
+  "search.emptyClearFrameworks": "Remove framework filters",
+  "search.emptyClearTechnologies": "Remove technology filters",
   "search.relaxedTitle": "Showing partial matches",
   "issueSearch.rankedEyebrow": "Server-ranked recommendations",
   "issueSearch.eligibleCount": "{count} eligible issues",
@@ -140,6 +155,8 @@ export const enMessages = {
     "Cards below preserve the exact order returned by the API.",
   "issueForm.profileDescription":
     "Recommendations are matched against this public GitHub profile.",
+  "issueForm.usingProfile": "Matching public profile @{login}",
+  "issueForm.differentProfile": "Search a different profile",
   "issueForm.languages": "Languages",
   "issueForm.languagesDescription":
     "Repositories matching any selected primary language are considered.",
@@ -185,6 +202,9 @@ export const enMessages = {
   "issueForm.includeDocumentation": "Include documentation",
   "issueForm.includeDocumentationDescription":
     "Add documentation-labelled issues.",
+  "issueForm.includeStale": "Include stale issues",
+  "issueForm.includeStaleDescription":
+    "Show issues classified as stale-v1; unknown evidence stays visible.",
   "issueForm.includeEnglish": "Include English issues",
   "issueForm.includeEnglishDescription":
     "Allow predominantly Latin-script issue text.",
@@ -297,6 +317,8 @@ export const enMessages = {
   "repository.newTechnologies": "New skills to learn",
   "repository.noneDetected": "None detected",
   "repository.starterIssueTitle": "Approachable issues in this repository",
+  "repository.searchIssues": "Search issues with these filters",
+  "repository.openStarter": "Open in IssueScout",
   "repository.starterIssueDescription":
     "Up to three recent open good-first or help-wanted issues. Confirm availability on GitHub before starting.",
   "repository.noStarterIssues":
@@ -388,8 +410,9 @@ export const enMessages = {
   "profile.nextStep": "Next step",
   "profile.searchTitle": "Turn this profile into a bounded issue search",
   "profile.searchDescription":
-    "Detected languages and frameworks are prefilled. Review every filter before GitHub search begins.",
+    "Detected languages and frameworks are prefilled. Start a ranked search, or open the form first to review every condition.",
   "profile.findIssues": "Find matching issues",
+  "profile.reviewFilters": "Review filters first",
   "profile.discoverRepositories": "Discover repositories",
   "profile.languageDistribution": "Language distribution",
   "profile.languageDistributionDescription":
@@ -507,6 +530,9 @@ export const enMessages = {
   "savedSearch.nameRequired": "Enter a name for this search.",
   "savedSearch.saving": "Saving…",
   "savedSearch.save": "Save search",
+  "savedSearch.updateCurrent": "Update saved search",
+  "savedSearch.updating": "Updating…",
+  "savedSearch.updated": "Saved search updated",
   "detail.startSearch": "Start a new issue search",
   "detail.invalidEyebrow": "Invalid detail URL",
   "detail.invalidTitle": "Check this recommendation link.",
@@ -537,6 +563,11 @@ export const enMessages = {
   "detail.dates": "Dates",
   "detail.noLabels": "No public labels",
   "detail.description": "Issue description",
+  "detail.contents": "On this page",
+  "detail.jumpScore": "Score",
+  "detail.jumpQuality": "Quality signals",
+  "detail.jumpBody": "Issue description",
+  "detail.jumpWarnings": "Warnings",
   "detail.involves": "What this work involves",
   "detail.category": "Category",
   "detail.effort": "Effort",
@@ -632,6 +663,12 @@ export const enMessages = {
   "bookmarks.deleteLabel": "Delete bookmark {label}",
   "bookmarks.delete": "Delete",
   "bookmarks.pagination": "Bookmark pagination",
+  "bookmarks.filterCollection": "Collection",
+  "bookmarks.filterTag": "Tag",
+  "bookmarks.allCollections": "All collections",
+  "bookmarks.allTags": "All tags",
+  "bookmarks.noFilterMatches":
+    "No bookmarks match these filters on the loaded page.",
   "saved.loading": "Loading saved searches…",
   "saved.empty": "No saved searches yet",
   "saved.emptyDescription":
@@ -642,6 +679,8 @@ export const enMessages = {
   "saved.rename": "Rename",
   "saved.deleteLabel": "Delete saved search {name}",
   "saved.delete": "Delete",
+  "saved.duplicate": "Duplicate",
+  "saved.duplicateLabel": "Duplicate {name}",
   "saved.pagination": "Saved search pagination",
   "analytics.segmentUnavailable": "GitHub did not provide this public segment.",
   "analytics.observedWindow": "Observed in a bounded window of up to {limit}.",
@@ -673,6 +712,8 @@ export const enMessages = {
   "issueSearch.contributionProfile":
     "Contribution profile: {status} · model {version}",
   "recommendation.partialMatch": "{count} partial",
+  "recommendation.showDetails": "Show recommendation details",
+  "recommendation.hideDetails": "Hide recommendation details",
   "recommendation.staleStatus": "Stale status: {state}",
   "recommendation.staleCheck": "Stale check: {state}",
   "recommendation.healthSummary": "Repository health summary",
@@ -748,6 +789,8 @@ export const enMessages = {
   "claims.deleteLabel": "Delete contribution task {label}",
   "claims.delete": "Delete",
   "claims.pagination": "Contribution task pagination",
+  "claims.observeVisible": "Check visible references",
+  "claims.observing": "Checking references…",
   "calendar.title": "Public contribution calendar",
   "calendar.unavailable":
     "GitHub did not provide a public daily calendar. Other profile evidence remains available.",
@@ -863,6 +906,9 @@ export const enMessages = {
   "compare.description":
     "Review the same bounded evidence across two or three candidates before choosing where to contribute.",
   "compare.back": "Back to results",
+  "compare.copyLink": "Copy comparison link",
+  "compare.addTasks": "Add compared issues to tasks",
+  "compare.relativelyBetter": "Relatively better",
   "compare.invalid": "This comparison link is invalid",
   "compare.loading": "Loading comparison evidence…",
   "compare.error": "Some comparison evidence is unavailable",

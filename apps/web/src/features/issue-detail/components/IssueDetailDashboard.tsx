@@ -60,9 +60,17 @@ type Sample = Pick<
   "confidence" | "sampleSize" | "truncated" | "windowDays"
 >;
 
-function Section({ children, title }: { children: ReactNode; title: string }) {
+function Section({
+  children,
+  id,
+  title,
+}: {
+  children: ReactNode;
+  id?: string;
+  title: string;
+}) {
   return (
-    <Card className="min-w-0 overflow-hidden">
+    <Card className="min-w-0 overflow-hidden" id={id}>
       <CardHeader className="border-b border-border bg-muted/25">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
@@ -330,6 +338,36 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
         {t("detail.backResults")}
       </Link>
 
+      <nav
+        aria-label={t("detail.contents")}
+        className="mt-4 flex flex-wrap gap-3 text-sm font-semibold"
+      >
+        <a
+          className="text-accent underline-offset-4 hover:underline"
+          href="#issue-score"
+        >
+          {t("detail.jumpScore")}
+        </a>
+        <a
+          className="text-accent underline-offset-4 hover:underline"
+          href="#issue-quality"
+        >
+          {t("detail.jumpQuality")}
+        </a>
+        <a
+          className="text-accent underline-offset-4 hover:underline"
+          href="#issue-body"
+        >
+          {t("detail.jumpBody")}
+        </a>
+        <a
+          className="text-accent underline-offset-4 hover:underline"
+          href="#issue-warnings"
+        >
+          {t("detail.jumpWarnings")}
+        </a>
+      </nav>
+
       {data.inspection.incomplete ? (
         <Alert className="mt-4" variant="warning">
           <AlertTitle>{t("detail.partialTitle")}</AlertTitle>
@@ -337,7 +375,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
         </Alert>
       ) : null}
 
-      <Card className="mt-4 overflow-hidden">
+      <Card className="mt-4 overflow-hidden" id="issue-score">
         <CardHeader className="border-b border-border bg-muted/30 p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="min-w-0 flex-1">
@@ -500,7 +538,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.28fr)_minmax(19rem,0.72fr)]">
         <div className="grid min-w-0 gap-6">
-          <Section title={t("detail.description")}>
+          <Section id="issue-body" title={t("detail.description")}>
             <SafeIssueBody body={data.issue.body} />
           </Section>
 
@@ -568,7 +606,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               ))}
             </ul>
 
-            <h3 className="mt-6 font-semibold">
+            <h3 className="mt-6 font-semibold" id="issue-quality">
               {t("detail.quality")} · {data.analysis.quality.score}/100 ·{" "}
               {data.analysis.quality.confidence} confidence
             </h3>
@@ -743,7 +781,7 @@ export function IssueDetailDashboard({ envelope, returnTo }: Props) {
               />
               <EvidenceList items={data.recommendation.stale.evidence} />
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 grid gap-2" id="issue-warnings">
               {data.recommendation.warnings.map((warning) => (
                 <Alert
                   key={`${warning.code}-${warning.message}`}

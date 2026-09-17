@@ -16,19 +16,25 @@ import { ReferenceObservationButton } from "./ReferenceObservationButton";
 import { BookmarkMetadataEditor } from "./BookmarkMetadataEditor";
 
 type Props = {
+  collection?: string;
   csrfToken: string;
+  onFilterChange: (filters: { collection: string; tag: string }) => void;
   onPageChange: (page: number) => void;
   onSessionExpired: () => Promise<void>;
   page: number;
+  tag?: string;
 };
 
 const pageSize = 20;
 
 export function BookmarksPanel({
+  collection = "",
   csrfToken,
+  onFilterChange,
   onPageChange,
   onSessionExpired,
   page,
+  tag = "",
 }: Props) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -61,6 +67,17 @@ export function BookmarksPanel({
     },
   });
 
+  const items = query.data?.data.items ?? [];
+  const collections = [
+    ...new Set(items.map((item) => item.collection).filter(Boolean)),
+  ];
+  const tags = [...new Set(items.flatMap((item) => item.tags))];
+  const visibleItems = items.filter((item) => {
+    const collectionMatch = !collection || item.collection === collection;
+    const tagMatch = !tag || item.tags.includes(tag);
+    return collectionMatch && tagMatch;
+  });
+
   return (
     <section aria-labelledby="bookmarks-heading" className="grid gap-5">
       <h2 className="sr-only" id="bookmarks-heading">
@@ -68,6 +85,45 @@ export function BookmarksPanel({
       </h2>
       {remove.error ? <AccountRequestAlert error={remove.error} /> : null}
       {query.error ? <AccountRequestAlert error={query.error} /> : null}
+
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          <label className="grid gap-1 text-sm font-medium">
+            {t("bookmarks.filterCollection")}
+            <select
+              className="min-h-11 rounded-xl border border-input bg-surface px-3"
+              onChange={(event) =>
+                onFilterChange({ collection: event.target.value, tag })
+              }
+              value={collection}
+            >
+              <option value="">{t("bookmarks.allCollections")}</option>
+              {collections.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            {t("bookmarks.filterTag")}
+            <select
+              className="min-h-11 rounded-xl border border-input bg-surface px-3"
+              onChange={(event) =>
+                onFilterChange({ collection, tag: event.target.value })
+              }
+              value={tag}
+            >
+              <option value="">{t("bookmarks.allTags")}</option>
+              {tags.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {query.isPending ? (
         <Card>
@@ -89,7 +145,16 @@ export function BookmarksPanel({
         </Card>
       ) : (
         <ul className="grid gap-3">
-          {query.data?.data.items.map((bookmark) => {
+          {visibleItems.length === 0 ? (
+            <li>
+              <Card>
+                <CardContent className="p-5 text-sm text-muted-foreground">
+                  {t("bookmarks.noFilterMatches")}
+                </CardContent>
+              </Card>
+            </li>
+          ) : null}
+          {visibleItems.map((bookmark) => {
             const label = `${bookmark.repositoryOwner}/${bookmark.repositoryName}${
               bookmark.issueNumber ? `#${bookmark.issueNumber}` : ""
             }`;

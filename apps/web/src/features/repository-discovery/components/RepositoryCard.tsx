@@ -12,6 +12,7 @@ import {
   Tag,
   Users,
 } from "lucide-react";
+import { Link } from "react-router";
 
 import {
   Alert,
@@ -44,9 +45,13 @@ import {
   repositoryTechnologyComparison,
 } from "../model/repository-presentation";
 import { BookmarkAction } from "../../account/components/BookmarkAction";
+import { useAuth } from "../../auth/auth-context";
+import { discoveryIssueSearchHref } from "../model/discovery-issue-search";
+import type { RepositoryFilters } from "../model/repository-filters";
 
 type RepositoryCardProps = {
   contributorTechnologies?: readonly string[];
+  filters: RepositoryFilters;
   item: RepositoryDiscoveryItem;
   rank: number;
 };
@@ -70,9 +75,11 @@ function Signal({ available, label }: SignalProps) {
 
 export function RepositoryCard({
   contributorTechnologies = [],
+  filters,
   item,
   rank,
 }: RepositoryCardProps) {
+  const { session } = useAuth();
   const { locale, t } = useI18n();
   const readiness = readinessPresentation(item.readiness);
   const difficulty = difficultyPresentation(item.difficulty);
@@ -363,13 +370,27 @@ export function RepositoryCard({
                   className="rounded-xl border border-border bg-surface p-3"
                   key={starter.number}
                 >
-                  <a
+                  <Link
                     className="font-semibold outline-none hover:text-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    to={discoveryIssueSearchHref(filters, {
+                      labels: starter.labels,
+                      language: item.language,
+                      technologies: item.technologies,
+                      username: session?.user?.login,
+                    })}
+                  >
+                    #{starter.number} {starter.title}
+                  </Link>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("repository.searchIssues")}
+                  </p>
+                  <a
+                    className="mt-1 inline-flex text-xs font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                     href={starter.url}
                     rel="noreferrer"
                     target="_blank"
                   >
-                    #{starter.number} {starter.title}
+                    {t("bookmarks.openGitHub")}
                   </a>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {starter.labels.map((label) => (

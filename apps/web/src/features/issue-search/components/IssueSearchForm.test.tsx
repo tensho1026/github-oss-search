@@ -23,6 +23,7 @@ describe("IssueSearchForm", () => {
     await user.click(screen.getByRole("checkbox", { name: "Go" }));
     await user.keyboard("{Escape}");
 
+    await user.click(screen.getByRole("button", { name: "More filters" }));
     await user.click(screen.getByRole("button", { name: "Frameworks" }));
     await user.click(screen.getByRole("checkbox", { name: "React" }));
     await user.keyboard("{Escape}");
@@ -126,6 +127,30 @@ describe("IssueSearchForm", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent(/shared search URL/i);
+    expect(
+      screen.getByRole("textbox", { name: "GitHub username" }),
+    ).toHaveValue("octocat");
+  });
+
+  it("confirms a signed-in username instead of repeating the input", async () => {
+    const user = userEvent.setup();
+    render(
+      <IssueSearchForm
+        defaultValues={createDefaultSearchFilters("octocat")}
+        onSubmit={vi.fn()}
+        sessionUsername="octocat"
+      />,
+    );
+
+    expect(
+      screen.getByText("Matching public profile @octocat"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "GitHub username" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Search a different profile" }),
+    );
     expect(
       screen.getByRole("textbox", { name: "GitHub username" }),
     ).toHaveValue("octocat");

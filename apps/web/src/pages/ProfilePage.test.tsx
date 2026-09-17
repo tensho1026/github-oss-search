@@ -65,6 +65,19 @@ describe("ProfilePage", () => {
       "href",
       expect.stringMatching(/^\/repositories\?.*language=TypeScript/),
     );
+    expect(
+      screen.getByRole("link", { name: "Find matching issues" }),
+    ).toHaveAttribute("href", expect.stringMatching(/search=1/));
+    expect(
+      screen
+        .getByRole("link", { name: "Review filters first" })
+        .getAttribute("href"),
+    ).not.toMatch(/search=1/);
+    expect(
+      screen.getAllByRole("link", {
+        name: "Find issues to grow this skill",
+      })[0],
+    ).toHaveAttribute("href", expect.stringMatching(/search=1/));
     expect(request).toHaveBeenCalledTimes(1);
     for (const [, options] of request.mock.calls) {
       expect(options?.signal).toBeInstanceOf(AbortSignal);

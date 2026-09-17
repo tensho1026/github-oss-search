@@ -18,10 +18,12 @@ import { queryKeys } from "../../../shared/query/query-keys";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 import { formatDate } from "../../../shared/lib/format";
 import {
+  createSavedSearch,
   deleteSavedSearch,
   listSavedSearches,
   updateSavedSearch,
 } from "../api/account";
+import { duplicatedSavedSearchName } from "../../issue-search/model/saved-search-name";
 import { savedSearchRoute } from "../model/saved-search-route";
 import { AccountRequestAlert } from "./AccountRequestAlert";
 import { SavedSearchDifferenceChecker } from "./SavedSearchDifferenceChecker";
@@ -57,6 +59,7 @@ function SavedSearchRow({
   disabled,
   onSessionExpired,
   onDelete,
+  onDuplicate,
   onRename,
   search,
 }: {
@@ -64,6 +67,7 @@ function SavedSearchRow({
   disabled: boolean;
   onSessionExpired: () => Promise<void>;
   onDelete: (search: SavedSearch) => void;
+  onDuplicate: (search: SavedSearch) => void;
   onRename: (search: SavedSearch, name: string) => void;
   search: SavedSearch;
 }) {
@@ -103,6 +107,14 @@ function SavedSearchRow({
               variant="secondary"
             >
               {t("saved.rename")}
+            </Button>
+            <Button
+              disabled={disabled}
+              onClick={() => onDuplicate(search)}
+              size="small"
+              variant="outline"
+            >
+              {t("saved.duplicate")}
             </Button>
             <Button
               aria-label={t("saved.deleteLabel", { name: search.name })}
@@ -177,8 +189,27 @@ export function SavedSearchesPanel({
     onSuccess: refresh,
   });
 
-  const mutationError = update.error ?? remove.error;
-  const disabled = update.isPending || remove.isPending;
+  const duplicate = useMutation({
+    mutationFn: (search: SavedSearch) =>
+      createSavedSearch(
+        search.searchType === "issue"
+          ? {
+              filters: search.filters as IssueSearchRequest,
+              name: duplicatedSavedSearchName(search.name),
+              searchType: "issue",
+            }
+          : {
+              filters: search.filters,
+              name: duplicatedSavedSearchName(search.name),
+              searchType: "repository",
+            },
+        csrfToken,
+      ),
+    onError: handleError,
+    onSuccess: refresh,
+  });
+  const mutationError = update.error ?? remove.error ?? duplicate.error;
+  const disabled = update.isPending || remove.isPending || duplicate.isPending;
 
   return (
     <section aria-labelledby="saved-searches-heading" className="grid gap-5">
@@ -215,6 +246,7 @@ export function SavedSearchesPanel({
               disabled={disabled}
               key={`${search.id}-${search.version}`}
               onDelete={(item) => remove.mutate(item)}
+              onDuplicate={(item) => duplicate.mutate(item)}
               onRename={(item, nextName) =>
                 update.mutate({
                   id: item.id,

@@ -11,8 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { CopyLinkButton } from "../components/ui/copy-link-button";
 import { Icon } from "../components/ui/icon";
+import { AddIssueTasksButton } from "../features/account/components/AddIssueTasksButton";
 import { useIssueComparison } from "../features/issue-compare/api/useIssueComparison";
+import {
+  compareHighlightWinners,
+  issueHighlightKey,
+} from "../features/issue-compare/model/compare-highlights";
 import { decodeCompareLocation } from "../features/issue-compare/model/compare-location";
 import type { IssueDetail } from "../shared/api/generated";
 import { appRoutes, externalLinks } from "../shared/config/app-config";
@@ -51,6 +57,7 @@ export function IssueComparePage() {
   const issues = queries.flatMap((query) =>
     query.data ? [query.data.data] : [],
   );
+  const winners = compareHighlightWinners(issues);
 
   return (
     <div className="mx-auto min-h-[68vh] w-full max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
@@ -66,6 +73,14 @@ export function IssueComparePage() {
           {t("compare.title")}
         </h1>
         <p className="mt-4 text-muted-foreground">{t("compare.description")}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <CopyLinkButton label={t("compare.copyLink")} />
+          <AddIssueTasksButton
+            label={t("compare.addTasks")}
+            references={location.references}
+            returnTo={location.returnTo}
+          />
+        </div>
       </header>
       <div className="mt-8 overflow-x-auto pb-4">
         <div
@@ -76,6 +91,7 @@ export function IssueComparePage() {
         >
           {issues.map((issue) => (
             <ComparisonColumn
+              highlights={winners}
               issue={issue}
               key={`${issue.repository.owner}/${issue.repository.name}#${issue.issue.number}`}
               locale={locale}
@@ -92,14 +108,17 @@ export function IssueComparePage() {
 }
 
 function ComparisonColumn({
+  highlights,
   issue,
   locale,
 }: {
+  highlights: ReturnType<typeof compareHighlightWinners>;
   issue: IssueDetail;
   locale: string;
 }) {
   const { t } = useI18n();
   const response = issue.recommendation.maintainerResponse;
+  const key = issueHighlightKey(issue);
   return (
     <Card className="overflow-hidden">
       <CardHeader className="border-b border-border bg-muted/35">
@@ -115,6 +134,7 @@ function ComparisonColumn({
       <CardContent className="grid gap-5 p-5">
         <dl className="grid gap-4">
           <Metric
+            better={highlights.skillMatch === key}
             label={t("compare.skillMatch")}
             value={formatPercentage(issue.recommendation.skillMatch.percentage)}
           />
@@ -127,6 +147,7 @@ function ComparisonColumn({
             value={issue.analysis.effort.label}
           />
           <Metric
+            better={highlights.stale === key}
             label={t("compare.stale")}
             value={issue.recommendation.stale.state}
           />
@@ -139,6 +160,7 @@ function ComparisonColumn({
             }
           />
           <Metric
+            better={highlights.response === key}
             label={t("compare.response")}
             value={
               response.status === "available"
@@ -203,11 +225,27 @@ function ComparisonColumn({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  better = false,
+  label,
+  value,
+}: {
+  better?: boolean;
+  label: string;
+  value: string;
+}) {
+  const { t } = useI18n();
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 font-semibold">{value}</dd>
+      <dd className="mt-1 font-semibold">
+        {value}
+        {better ? (
+          <Badge className="ml-2" variant="success">
+            {t("compare.relativelyBetter")}
+          </Badge>
+        ) : null}
+      </dd>
     </div>
   );
 }

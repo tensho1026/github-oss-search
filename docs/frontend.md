@@ -21,11 +21,13 @@ flowchart LR
 The ownership rules are deliberate:
 
 - React Hook Form owns input value, validation messages, and submission state.
-- React Router owns profile usernames plus validated search filters and
-  pagination because both journeys must be linkable.
+- React Router owns profile usernames plus validated search filters,
+  pagination, comparison selection (`select`), and saved-search identity
+  (`saved`) because those journeys must be linkable.
 - TanStack Query owns remote data, cache lifetime, retry policy, and request
   cancellation.
-- Component state owns only transient presentation such as language ordering.
+- Component state owns only transient presentation such as language ordering
+  and collapsed filter panels.
 - The Go API owns analysis and recommendation rules. React components format
   evidence but do not recreate domain scoring.
 
@@ -116,18 +118,25 @@ than replacing the entire result with an error.
 The `/search` page uses the URL as the only durable client-side search state.
 Repeated `language`, `framework`, and `label` parameters preserve typed
 multi-select values; scalar criteria and `page`/`perPage` are validated before
-the query hook is enabled. `search=1` is the explicit execution marker. A
-prefilled profile link intentionally omits it so users can review the detected
-technologies before consuming GitHub API capacity.
+the query hook is enabled. `search=1` is the explicit execution marker.
+Primary profile hand-off links include it so the ranked search runs
+immediately; a separate “Review filters first” link omits it. Signed-in
+preferences supply the initial `perPage` when the URL does not. Comparison
+candidates persist as `select=owner/repo#n` (at most three). Active filters
+render as removable chips above the results; advanced fields stay collapsed
+until opened. After a mobile search, the form collapses so the result list
+owns the viewport.
 
 ```mermaid
 flowchart LR
-    Profile["Profile evidence"] --> Prefill["Prefilled /search URL"]
-    Prefill --> Form["Validated filter form"]
+    Profile["Profile evidence"] --> Execute["/search URL + search=1"]
+    Profile --> Review["Prefilled /search URL"]
+    Execute --> Query["Cancellation-aware POST query"]
+    Review --> Form["Validated filter form"]
     Form -->|submit| URL["Canonical query string + search=1"]
-    URL --> Query["Cancellation-aware POST query"]
+    URL --> Query
     Query --> API["Server ranking and pagination"]
-    API --> Cards["Ordered recommendation cards"]
+    API --> Cards["Compact recommendation cards"]
     Cards --> Detail["Lazy detail route"]
 ```
 
@@ -141,8 +150,8 @@ being repeated across cards.
 | Before search    | Editable prefilled/default criteria; zero search requests  |
 | Invalid URL      | Focused correction guidance; query remains disabled        |
 | Loading          | Named skeleton status without stale layout collapse        |
-| Success          | Ordered explainable cards and server pagination            |
-| No results       | Concrete suggestions for broadening filters                |
+| Success          | Ordered compact cards; evidence details stay collapsed     |
+| No results       | Concrete next-search links from the current filters        |
 | Partial evidence | Successful cards plus an explicit bounded-evidence warning |
 | User not found   | Username-specific correction without automatic retries     |
 | Rate limited     | Stable URL and reset guidance without retry storms         |
@@ -181,7 +190,9 @@ every feature before choosing a profile. The repository filter codec is shared
 by the profile handoff and repository route as a separate lazy chunk.
 
 Vite keeps the route chunks independent while grouping the always-shared UI,
-query, and search-presentation modules into `app-shared`. React Hook Form and
+query, and search-presentation modules into `app-shared`. Copy-link, filter
+chips, and saved-search identity stay on the routes that use them so the
+shared chunk does not absorb every convenience control. React Hook Form and
 the profile form that always consumes it share a lazy `form-runtime` chunk.
 This keeps initial-route boundaries intact and avoids paying separate gzip
 dictionary overhead for modules that are fetched together.
@@ -198,8 +209,9 @@ Measured gzip sizes on 2026-07-30:
 | English core with localization (2026-08-16)        |     216.70 KiB |  76.11 KiB |
 | Growth history, sharing, and Kanban (2026-08-23)   |     222.75 KiB |  77.25 KiB |
 | Comparison and workspace organization (2026-08-23) |     229.50 KiB |  78.96 KiB |
-| Optional Japanese locale chunk                     |      12.73 KiB |  12.73 KiB |
-| Enforced core maximum                              |     232.00 KiB |  80.00 KiB |
+| Discovery convenience across existing routes       |     237.62 KiB |  79.61 KiB |
+| Optional Japanese locale chunk                     |      15.04 KiB |  15.52 KiB |
+| Enforced core maximum                              |     238.00 KiB |  80.00 KiB |
 
 Run `pnpm run build:web && pnpm run bundle:check` after frontend dependency or
 route changes. The CI budget reads `config/quality-budgets.json`; changing the

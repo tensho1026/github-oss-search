@@ -145,10 +145,21 @@ export function WorkspaceDashboard({
         ) : null}
         {activeTab === "bookmarks" ? (
           <BookmarksPanel
+            collection={parameters.get("collection") ?? ""}
             csrfToken={csrfToken}
+            onFilterChange={({ collection, tag }) => {
+              const next = new URLSearchParams(parameters);
+              if (collection) next.set("collection", collection);
+              else next.delete("collection");
+              if (tag) next.set("tag", tag);
+              else next.delete("tag");
+              next.set(pageParameters.bookmarks, "1");
+              setParameters(next);
+            }}
             onPageChange={(page) => setPage("bookmarks", page)}
             onSessionExpired={onSessionExpired}
             page={readPage(parameters, pageParameters.bookmarks)}
+            tag={parameters.get("tag") ?? ""}
           />
         ) : null}
         {activeTab === "saved" ? (

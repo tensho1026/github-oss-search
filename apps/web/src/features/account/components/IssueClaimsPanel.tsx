@@ -13,6 +13,7 @@ import type {
   IssueClaimStatus,
   IssueClaimUpdateRequest,
 } from "../../../shared/api/generated";
+import { observeGitHubReference } from "../../../shared/api/references";
 import { appRoutes, externalLinks } from "../../../shared/config/app-config";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 import { queryKeys } from "../../../shared/query/query-keys";
@@ -105,6 +106,27 @@ export function IssueClaimsPanel({
     pr_submitted: t("claims.prSubmitted"),
     researching: t("claims.researching"),
   };
+  const observeVisible = useMutation({
+    mutationFn: async () => {
+      for (const claim of claims) {
+        await observeGitHubReference({
+          kind: "issue",
+          number: claim.issueNumber,
+          owner: claim.repositoryOwner,
+          repositoryName: claim.repositoryName,
+        });
+        if (claim.pullRequest) {
+          await observeGitHubReference({
+            kind: "pull_request",
+            number: claim.pullRequest.number,
+            owner: claim.pullRequest.repositoryOwner,
+            repositoryName: claim.pullRequest.repositoryName,
+          });
+        }
+      }
+    },
+    onError: handleError,
+  });
   const moveClaim = (claim: IssueClaim, status: IssueClaimStatus) => {
     setMoveError("");
     const move = claimMoveRequest(claim, status);
@@ -148,6 +170,16 @@ export function IssueClaimsPanel({
               </Button>
             ))}
           </div>
+          <Button
+            disabled={observeVisible.isPending || claims.length === 0}
+            onClick={() => observeVisible.mutate()}
+            size="small"
+            variant="outline"
+          >
+            {observeVisible.isPending
+              ? t("claims.observing")
+              : t("claims.observeVisible")}
+          </Button>
           <label className="grid gap-1 text-sm font-medium">
             {t("claims.show")}
             <select
@@ -191,6 +223,9 @@ export function IssueClaimsPanel({
 
       {update.error ? <AccountRequestAlert error={update.error} /> : null}
       {remove.error ? <AccountRequestAlert error={remove.error} /> : null}
+      {observeVisible.error ? (
+        <AccountRequestAlert error={observeVisible.error} />
+      ) : null}
       {query.error ? <AccountRequestAlert error={query.error} /> : null}
       {moveError ? (
         <p className="text-sm text-warning" role="alert">
