@@ -302,11 +302,14 @@ type ProfileAnalysisCache interface {
 // completes, the same entry may also contain the reusable post-analysis
 // ranking; pagination and user-visible ordering remain request-local.
 type IssueSearchCacheEntry struct {
-	Candidates                    []issue.Candidate
-	ExclusionCounts               map[issue.ExclusionReason]int
-	CandidatesChecked             int
-	UpstreamTotal                 int
-	IncompleteResults             bool
+	Candidates        []issue.Candidate
+	ExclusionCounts   map[issue.ExclusionReason]int
+	CandidatesChecked int
+	UpstreamTotal     int
+	IncompleteResults bool
+	// PartialMatches is true when Candidates were selected because they
+	// missed only ranking preferences, not because they passed every filter.
+	PartialMatches                bool
 	RateLimit                     RateLimit
 	RankedCandidates              []issue.RankedIssue
 	RankedCandidatesReady         bool

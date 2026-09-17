@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -46,6 +47,7 @@ type SearchIssuesOutput struct {
 	EnrichmentFailed              int
 	GitHubIncomplete              bool
 	EnrichmentIncomplete          bool
+	PartialMatches                bool
 	ContributionProfileStatus     issue.ContributionProfileStatus
 	ContributionProfileIncomplete bool
 	ContributionProfileCacheHit   bool
@@ -53,9 +55,11 @@ type SearchIssuesOutput struct {
 	CacheHit                      bool
 }
 
-// SearchIssues returns a post-filtered application page over one bounded
-// GitHub candidate window. Implementations must honor ctx and preserve
-// incomplete-result metadata.
+// SearchIssues returns a post-filtered application page over a bounded
+// GitHub candidate window. When exact preference filters would hide every
+// safe issue, implementations keep the closest remaining matches and may
+// perform one additional broadened GitHub search. Implementations must honor
+// ctx and preserve incomplete-result metadata.
 type SearchIssues interface {
 	// Execute returns a post-filtered page, collapses concurrent misses, bounds
 	// optional detail fan-out, and honors ctx.
@@ -212,16 +216,11 @@ func (usecase *searchIssues) Execute(
 			return port.IssueSearchCacheEntry{}, err
 		}
 
-		result, err := usecase.searcher.SearchIssues(
-			sharedContext,
-			input.Criteria,
-			usecase.resultLimit,
-		)
+		entry, err := usecase.loadCandidateWindow(sharedContext, input.Criteria)
 		if err != nil {
 			return port.IssueSearchCacheEntry{}, err
 		}
 
-		entry := filterIssueCandidates(input.Criteria, result, usecase.now())
 		_ = usecase.cache.Set(sharedContext, key, entry)
 		return entry, nil
 	})
@@ -236,22 +235,79 @@ func (usecase *searchIssues) Execute(
 	)
 }
 
+func (usecase *searchIssues) loadCandidateWindow(
+	ctx context.Context,
+	criteria issue.SearchCriteria,
+) (port.IssueSearchCacheEntry, error) {
+	result, err := usecase.searcher.SearchIssues(
+		ctx,
+		criteria,
+		usecase.resultLimit,
+	)
+	if err != nil {
+		return port.IssueSearchCacheEntry{}, err
+	}
+	entry := filterIssueCandidates(criteria, result, usecase.now())
+	if len(entry.Candidates) > 0 {
+		return entry, nil
+	}
+
+	relaxed := criteria.RelaxedDiscovery()
+	if relaxed.CacheKey() == criteria.CacheKey() {
+		return entry, nil
+	}
+	relaxedResult, err := usecase.searcher.SearchIssues(
+		ctx,
+		relaxed,
+		usecase.resultLimit,
+	)
+	if err != nil {
+		return port.IssueSearchCacheEntry{}, err
+	}
+	relaxedEntry := filterIssueCandidates(criteria, relaxedResult, usecase.now())
+	relaxedEntry.RateLimit = mergeRateLimits(entry.RateLimit, relaxedEntry.RateLimit)
+	relaxedEntry.IncompleteResults = entry.IncompleteResults ||
+		relaxedEntry.IncompleteResults
+	relaxedEntry.ExclusionCounts = mergeExclusionCounts(
+		entry.ExclusionCounts,
+		relaxedEntry.ExclusionCounts,
+	)
+	return relaxedEntry, nil
+}
+
 func filterIssueCandidates(
 	criteria issue.SearchCriteria,
 	result port.GitHubIssueSearchResult,
 	now time.Time,
 ) port.IssueSearchCacheEntry {
-	candidates := make([]issue.Candidate, 0, len(result.Candidates))
+	exact := make([]issue.Candidate, 0, len(result.Candidates))
+	partial := make([]issue.Candidate, 0, len(result.Candidates))
 	exclusionCounts := make(map[issue.ExclusionReason]int)
 	for _, candidate := range result.Candidates {
 		reasons := issue.ExclusionReasons(criteria, candidate, now)
 		if len(reasons) == 0 {
-			candidates = append(candidates, candidate)
+			exact = append(exact, candidate)
 			continue
 		}
 		for _, reason := range reasons {
 			exclusionCounts[reason]++
 		}
+		if issue.HasOnlyPreferenceExclusions(reasons) {
+			partial = append(partial, candidate)
+		}
+	}
+
+	candidates := exact
+	partialMatches := false
+	if len(exact) == 0 && len(partial) > 0 {
+		candidates = partial
+		partialMatches = true
+		slices.SortStableFunc(candidates, func(left, right issue.Candidate) int {
+			return cmp.Compare(
+				issue.PreferenceMatchCount(criteria, right, now),
+				issue.PreferenceMatchCount(criteria, left, now),
+			)
+		})
 	}
 
 	return port.IssueSearchCacheEntry{
@@ -260,6 +316,7 @@ func filterIssueCandidates(
 		CandidatesChecked: len(result.Candidates),
 		UpstreamTotal:     result.TotalCount,
 		IncompleteResults: result.IncompleteResults,
+		PartialMatches:    partialMatches,
 		RateLimit:         result.RateLimit,
 	}
 }
@@ -385,9 +442,21 @@ func (usecase *searchIssues) issueSearchOutput(
 			)
 		}
 	}
-	ranked, staleExcluded := filterRankedIssuesByStale(ranked, input.Criteria)
-	ranked = filterRankedIssuesByEffort(ranked, input.Criteria)
+	ranked, staleExcluded, partialMatches := applyPostAnalysisFilters(
+		ranked,
+		input.Criteria,
+		entry.PartialMatches,
+	)
 	ranked = issue.SortRankedIssues(ranked, input.Criteria.SortBy())
+	if partialMatches {
+		now := usecase.now()
+		slices.SortStableFunc(ranked, func(left, right issue.RankedIssue) int {
+			return cmp.Compare(
+				rankedPreferenceMatchCount(input.Criteria, right, now),
+				rankedPreferenceMatchCount(input.Criteria, left, now),
+			)
+		})
+	}
 	total := len(ranked)
 	totalPages := 0
 	if total > 0 {
@@ -425,12 +494,50 @@ func (usecase *searchIssues) issueSearchOutput(
 		EnrichmentFailed:              recommendationMeta.failed,
 		GitHubIncomplete:              entry.IncompleteResults,
 		EnrichmentIncomplete:          recommendationMeta.incomplete,
+		PartialMatches:                partialMatches,
 		ContributionProfileStatus:     profileMeta.status,
 		ContributionProfileIncomplete: profileMeta.incomplete,
 		ContributionProfileCacheHit:   profileMeta.cacheHit,
 		RateLimit:                     rateLimit,
 		CacheHit:                      cacheHit,
 	}, nil
+}
+
+func applyPostAnalysisFilters(
+	ranked []issue.RankedIssue,
+	criteria issue.SearchCriteria,
+	partialMatches bool,
+) ([]issue.RankedIssue, int, bool) {
+	unfiltered := ranked
+	filtered, staleExcluded := filterRankedIssuesByStale(ranked, criteria)
+	effortFiltered := filterRankedIssuesByEffort(filtered, criteria)
+	if len(effortFiltered) > 0 {
+		return effortFiltered, staleExcluded, partialMatches
+	}
+	if len(filtered) > 0 {
+		return filtered, staleExcluded, true
+	}
+	if len(unfiltered) > 0 {
+		return unfiltered, 0, true
+	}
+	return effortFiltered, staleExcluded, partialMatches
+}
+
+func rankedPreferenceMatchCount(
+	criteria issue.SearchCriteria,
+	ranked issue.RankedIssue,
+	now time.Time,
+) int {
+	score := issue.PreferenceMatchCount(criteria, ranked.Candidate, now)
+	if criteria.IncludesStale() ||
+		ranked.Recommendation.Stale.State != issue.StaleStale {
+		score++
+	}
+	if maximum, configured := criteria.MaximumEffort(); !configured ||
+		ranked.Analysis.Effort.Band.IsAtMost(maximum) {
+		score++
+	}
+	return score
 }
 
 func filterRankedIssuesByStale(
@@ -820,6 +927,17 @@ func cloneExclusionCounts(
 		cloned[reason] = count
 	}
 	return cloned
+}
+
+func mergeExclusionCounts(
+	left map[issue.ExclusionReason]int,
+	right map[issue.ExclusionReason]int,
+) map[issue.ExclusionReason]int {
+	merged := cloneExclusionCounts(left)
+	for reason, count := range right {
+		merged[reason] += count
+	}
+	return merged
 }
 
 func mapIssueSearchError(err error) error {

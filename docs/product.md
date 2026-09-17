@@ -83,8 +83,9 @@ safety. See [OSS health dashboard methodology](repository-health.md).
 ### Discovery journey
 
 The user selects bounded filters. The API performs one candidate search, applies
-eligibility rules, enriches only a bounded leader set, ranks deterministically,
-and paginates after analysis. The URL owns shareable search state.
+eligibility rules, keeps closest preference matches when an exact window is
+empty, enriches only a bounded leader set, ranks deterministically, and
+paginates after analysis. The URL owns shareable search state.
 
 ### Recommendation journey
 

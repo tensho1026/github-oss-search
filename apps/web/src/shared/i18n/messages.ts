@@ -121,6 +121,8 @@ export const enMessages = {
   "issueSearch.returnFirst": "Return to page 1",
   "issueSearch.broaden": "Broaden the filters",
   "search.relaxedTitle": "Showing partial matches",
+  "search.relaxedDescription":
+    "No result matched every selected filter, so IssueScout ranked the closest still-safe candidates first.",
   "issueSearch.rankedEyebrow": "Server-ranked recommendations",
   "issueSearch.eligibleCount": "{count} eligible issues",
   "issueSearch.checkedSummary": "{checked} checked · {enriched} enriched",

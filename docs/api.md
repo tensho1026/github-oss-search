@@ -164,11 +164,14 @@ content, or internal stack traces.
 - only the fields defined in OpenAPI.
 
 Discovery order is stable: build safe GitHub qualifiers, retrieve one bounded
-candidate window, apply eligibility, enrich at most 20 candidates, analyze,
-rank, filter stale and effort, then paginate. Equivalent condition ordering
-shares a five-minute cache. Page, effort, and stale inclusion do not change
-the upstream candidate key. Stale exclusion removes only explicit `stale`
-assessments; `unknown` evidence stays visible.
+candidate window, apply eligibility, keep the closest preference matches when
+the exact window is empty, optionally run one broadened GitHub search,
+enrich at most 20 candidates, analyze, rank, filter stale and effort, then
+paginate. Equivalent condition ordering shares a five-minute cache. Page,
+effort, and stale inclusion do not change the upstream candidate key. Stale
+exclusion removes only explicit `stale` assessments; `unknown` evidence stays
+visible. If stale or effort filters would hide every analyzed issue, the API
+keeps the closest remaining items and sets `searchSummary.partialMatches`.
 
 ## Contract maintenance
 

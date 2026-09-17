@@ -54,7 +54,7 @@ describe("useIssueSearch", () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
-  it("retries once with relaxed filters after an empty exact search", async () => {
+  it("sends one request even when the exact search is empty", async () => {
     const empty = structuredClone(issueSearchFixture);
     empty.data.items = [];
     empty.data.pagination = {
@@ -63,18 +63,12 @@ describe("useIssueSearch", () => {
       total: 0,
       totalPages: 0,
     };
-    const request = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(empty), {
-          headers: { "Content-Type": "application/json" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(issueSearchFixture), {
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
+    empty.data.searchSummary.partialMatches = false;
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(empty), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     vi.stubGlobal("fetch", request);
 
     const { result } = renderHook(() => useIssueSearch(location()), {
@@ -82,19 +76,8 @@ describe("useIssueSearch", () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.[1]).toBe(true);
-    expect(request).toHaveBeenCalledTimes(2);
-    const fallbackBody = JSON.parse(
-      request.mock.calls[1]?.[1]?.body as string,
-    ) as Record<string, unknown>;
-    expect(fallbackBody).toMatchObject({
-      frameworks: [],
-      includeStale: true,
-      languages: [],
-      maximumDifficulty: 5,
-      minimumStars: 0,
-      updatedWithinDays: 3650,
-    });
+    expect(result.current.data?.data.pagination.total).toBe(0);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it("does not request data before search or for invalid URL state", () => {

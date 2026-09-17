@@ -18,6 +18,7 @@
       "enrichmentAttempted": 0,
       "enrichmentFailed": 0,
       "excludedByReason": [],
+      "partialMatches": false,
       "upstreamTotal": 0
     },
     "warnings": []

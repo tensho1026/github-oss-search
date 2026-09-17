@@ -209,6 +209,26 @@ test("renders an explicit empty search from the built API", async ({
   ).toBeVisible();
 });
 
+test("shows closest matches when exact issue filters are empty", async ({
+  page,
+}) => {
+  await page.goto("/search?username=octocat&language=Rust&search=1");
+
+  await expect(
+    page.getByRole("heading", { name: "Showing partial matches" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "No result matched every selected filter, so IssueScout ranked the closest still-safe candidates first.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Improve keyboard navigation in the command palette",
+    }),
+  ).toBeVisible();
+});
+
 test("rejects malformed usernames without making an API request", async ({
   page,
 }) => {

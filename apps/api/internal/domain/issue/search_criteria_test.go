@@ -114,6 +114,48 @@ func TestNewSearchCriteriaNormalizesCollectionsAndCanonicalKey(t *testing.T) {
 	}
 }
 
+func TestRelaxedDiscoveryDropsPreferenceQualifiers(t *testing.T) {
+	minimumStars := 25
+	maximumDifficulty := 2
+	updatedWithinDays := 30
+	maximumEffort := string(EffortTwoHours)
+	criteria, err := NewSearchCriteria(SearchCriteriaOptions{
+		Username:          "octocat",
+		Languages:         []string{"Go"},
+		Frameworks:        []string{"Gin"},
+		Labels:            []string{"good first issue"},
+		MinimumStars:      &minimumStars,
+		MaximumDifficulty: &maximumDifficulty,
+		MaximumEffort:     &maximumEffort,
+		UpdatedWithinDays: &updatedWithinDays,
+	})
+	if err != nil {
+		t.Fatalf("NewSearchCriteria() error = %v", err)
+	}
+
+	relaxed := criteria.RelaxedDiscovery()
+	if len(relaxed.Languages()) != 0 ||
+		len(relaxed.Frameworks()) != 0 ||
+		len(relaxed.Labels()) != 0 ||
+		relaxed.MinimumStars() != 0 ||
+		relaxed.MaximumDifficulty().Int() != 5 ||
+		relaxed.UpdatedWithinDays() != MaximumUpdatedWithinDays ||
+		!relaxed.IncludesStale() ||
+		!relaxed.IncludesDocumentation() {
+		t.Fatalf("relaxed discovery = %+v", relaxed)
+	}
+	if _, configured := relaxed.MaximumEffort(); configured {
+		t.Fatal("relaxed discovery kept an effort ceiling")
+	}
+	if relaxed.CacheKey() == criteria.CacheKey() {
+		t.Fatal("relaxed discovery reused the exact cache key")
+	}
+	if relaxed.Username() != criteria.Username() ||
+		relaxed.ExcludesArchived() != criteria.ExcludesArchived() {
+		t.Fatal("relaxed discovery changed safety identity filters")
+	}
+}
+
 func TestNewSearchCriteriaRejectsInvalidInputs(t *testing.T) {
 	negativeStars := -1
 	zeroDifficulty := 0

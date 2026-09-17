@@ -100,9 +100,9 @@ export function IssueSearchPage() {
   } else if (query.data) {
     resultContent = (
       <IssueSearchResults
-        envelope={query.data[0]}
+        envelope={query.data}
         isFetching={query.isFetching}
-        relaxed={query.data[1]}
+        relaxed={query.data.data.searchSummary.partialMatches}
         onPageChange={changePage}
         onSortChange={changeSort}
         sortBy={location.filters.sortBy}

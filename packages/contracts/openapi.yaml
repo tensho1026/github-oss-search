@@ -2138,6 +2138,7 @@ components:
             enrichmentAttempted: 0
             enrichmentFailed: 0
             excludedByReason: []
+            partialMatches: false
             upstreamTotal: 0
           warnings: []
         meta:
@@ -5965,6 +5966,7 @@ components:
         - enrichmentAttempted
         - enrichmentFailed
         - excludedByReason
+        - partialMatches
         - upstreamTotal
       properties:
         candidatesChecked:
@@ -5998,6 +6000,13 @@ components:
           uniqueItems: true
           items:
             $ref: "#/components/schemas/ExclusionCount"
+        partialMatches:
+          type: boolean
+          description: |
+            True when the ranked page contains issues that missed at least one
+            preference filter, or when stale/effort filters were skipped
+            because they would have emptied the page. Safety filters such as
+            assignment, bots, and secrets still apply.
     ExclusionCount:
       type: object
       additionalProperties: false

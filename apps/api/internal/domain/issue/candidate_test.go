@@ -193,6 +193,45 @@ func TestFrameworkMatchingUsesTermBoundaries(t *testing.T) {
 	}
 }
 
+func TestPreferenceExclusionsKeepSafetyFiltersHard(t *testing.T) {
+	if !IsPreferenceExclusion(ExclusionLanguageMismatch) ||
+		IsPreferenceExclusion(ExclusionAlreadyAssigned) ||
+		IsPreferenceExclusion(ExclusionInsufficientDescription) {
+		t.Fatal("preference exclusion classification is incorrect")
+	}
+	if HasOnlyPreferenceExclusions(nil) ||
+		!HasOnlyPreferenceExclusions([]ExclusionReason{
+			ExclusionBelowMinimumStars,
+			ExclusionLabelMismatch,
+		}) ||
+		HasOnlyPreferenceExclusions([]ExclusionReason{
+			ExclusionBelowMinimumStars,
+			ExclusionAlreadyAssigned,
+		}) {
+		t.Fatal("HasOnlyPreferenceExclusions() rejected a safe partial match")
+	}
+}
+
+func TestPreferenceMatchCountRanksCloserCandidatesHigher(t *testing.T) {
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+	minimumStars := 50
+	criteria := testCriteria(t, SearchCriteriaOptions{
+		Username:     "octocat",
+		Languages:    []string{"Go"},
+		MinimumStars: &minimumStars,
+	})
+	closer := eligibleCandidate(now)
+	closer.Repository.Stars = 10
+	farther := closer
+	farther.Repository.MainLanguage = "Rust"
+	farther.Repository.Stars = 10
+
+	if got, want := PreferenceMatchCount(criteria, closer, now),
+		PreferenceMatchCount(criteria, farther, now); got <= want {
+		t.Fatalf("PreferenceMatchCount(closer) = %d, farther = %d", got, want)
+	}
+}
+
 func eligibleCandidate(now time.Time) Candidate {
 	return Candidate{
 		Repository: repository.Summary{
