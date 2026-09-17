@@ -246,6 +246,7 @@ type searchSummaryResponse struct {
 	EnrichmentAttempted int                      `json:"enrichmentAttempted"`
 	EnrichmentFailed    int                      `json:"enrichmentFailed"`
 	ExcludedByReason    []exclusionCountResponse `json:"excludedByReason"`
+	PartialMatches      bool                     `json:"partialMatches"`
 }
 
 type exclusionCountResponse struct {
@@ -352,6 +353,7 @@ func newIssueSearchResponse(
 			EnrichmentAttempted: output.EnrichmentAttempted,
 			EnrichmentFailed:    output.EnrichmentFailed,
 			ExcludedByReason:    exclusions,
+			PartialMatches:      output.PartialMatches,
 		},
 		ContributionProfile: contributionProfileResponse{
 			Status:   output.ContributionProfileStatus,

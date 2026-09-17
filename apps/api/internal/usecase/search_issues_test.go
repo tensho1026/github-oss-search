@@ -97,6 +97,127 @@ func TestSearchIssuesFiltersPaginatesAndCachesCandidates(t *testing.T) {
 	}
 }
 
+func TestSearchIssuesKeepsClosestPreferenceMatchesWhenExactWindowIsEmpty(
+	t *testing.T,
+) {
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+	languageMiss := searchCandidate(now, 1, 120)
+	languageMiss.Repository.MainLanguage = "Rust"
+	lowStars := searchCandidate(now, 2, 1)
+	assigned := searchCandidate(now, 3, 120)
+	assigned.Issue.Assignees = []string{"maintainer"}
+	searcher := &issueSearcherStub{
+		result: port.GitHubIssueSearchResult{
+			Candidates: []issue.Candidate{assigned, languageMiss, lowStars},
+			TotalCount: 3,
+		},
+	}
+	usecase := newIssueSearchUsecase(t, searcher, now)
+	minimumStars := 10
+	output, err := usecase.Execute(context.Background(), SearchIssuesInput{
+		Criteria: searchCriteria(t, issue.SearchCriteriaOptions{
+			Username:     "octocat",
+			Languages:    []string{"Go"},
+			MinimumStars: &minimumStars,
+		}),
+		Pagination: searchPagination(t, 1, 20),
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	numbers := make([]int, 0, len(output.Items))
+	for _, item := range output.Items {
+		numbers = append(numbers, item.Candidate.Issue.Number)
+	}
+	slices.Sort(numbers)
+	if !output.PartialMatches ||
+		len(output.Items) != 2 ||
+		numbers[0] != 1 ||
+		numbers[1] != 2 ||
+		searcher.callCount() != 1 {
+		t.Fatalf("output = %+v, calls = %d", output, searcher.callCount())
+	}
+}
+
+func TestSearchIssuesRetriesGitHubWithRelaxedDiscoveryWhenWindowHasNoSafeCandidates(
+	t *testing.T,
+) {
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+	assigned := searchCandidate(now, 1, 120)
+	assigned.Issue.Assignees = []string{"maintainer"}
+	eligible := searchCandidate(now, 2, 80)
+	eligible.Repository.Name = "relaxed-repo"
+	eligible.Repository.FullName = "example/relaxed-repo"
+	searcher := &issueSearcherStub{
+		results: []port.GitHubIssueSearchResult{
+			{Candidates: []issue.Candidate{assigned}, TotalCount: 1},
+			{Candidates: []issue.Candidate{eligible}, TotalCount: 4},
+		},
+	}
+	usecase := newIssueSearchUsecase(t, searcher, now)
+	output, err := usecase.Execute(context.Background(), SearchIssuesInput{
+		Criteria: searchCriteria(t, issue.SearchCriteriaOptions{
+			Username:  "octocat",
+			Languages: []string{"Go"},
+		}),
+		Pagination: searchPagination(t, 1, 20),
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if output.PartialMatches ||
+		len(output.Items) != 1 ||
+		output.Items[0].Candidate.Issue.Number != 2 ||
+		searcher.callCount() != 2 {
+		t.Fatalf("output = %+v, calls = %d", output, searcher.callCount())
+	}
+	second := searcher.requestedCriteria()[1]
+	if len(second.Languages()) != 0 ||
+		len(second.Frameworks()) != 0 ||
+		len(second.Labels()) != 0 {
+		t.Fatalf(
+			"relaxed criteria languages=%v frameworks=%v labels=%v",
+			second.Languages(),
+			second.Frameworks(),
+			second.Labels(),
+		)
+	}
+}
+
+func TestSearchIssuesMarksRelaxedWindowAsPartialWhenPreferencesStillMiss(
+	t *testing.T,
+) {
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+	assigned := searchCandidate(now, 1, 120)
+	assigned.Issue.Assignees = []string{"maintainer"}
+	mismatch := searchCandidate(now, 5, 50)
+	mismatch.Repository.MainLanguage = "Python"
+	searcher := &issueSearcherStub{
+		results: []port.GitHubIssueSearchResult{
+			{Candidates: []issue.Candidate{assigned}, TotalCount: 1},
+			{Candidates: []issue.Candidate{mismatch}, TotalCount: 8},
+		},
+	}
+	usecase := newIssueSearchUsecase(t, searcher, now)
+	output, err := usecase.Execute(context.Background(), SearchIssuesInput{
+		Criteria: searchCriteria(t, issue.SearchCriteriaOptions{
+			Username:  "octocat",
+			Languages: []string{"Go"},
+		}),
+		Pagination: searchPagination(t, 1, 20),
+	})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !output.PartialMatches ||
+		len(output.Items) != 1 ||
+		output.Items[0].Candidate.Issue.Number != 5 ||
+		searcher.callCount() != 2 {
+		t.Fatalf("output = %+v, calls = %d", output, searcher.callCount())
+	}
+}
+
 func TestSearchIssuesCanonicalCriteriaShareCache(t *testing.T) {
 	now := time.Now().UTC()
 	searcher := &issueSearcherStub{result: port.GitHubIssueSearchResult{
@@ -899,14 +1020,16 @@ func TestNewSearchIssuesRejectsInvalidDependencies(t *testing.T) {
 }
 
 type issueSearcherStub struct {
-	mu      sync.Mutex
-	result  port.GitHubIssueSearchResult
-	err     error
-	started chan struct{}
-	once    sync.Once
-	release chan struct{}
-	calls   int
-	limit   int
+	mu       sync.Mutex
+	result   port.GitHubIssueSearchResult
+	results  []port.GitHubIssueSearchResult
+	criteria []issue.SearchCriteria
+	err      error
+	started  chan struct{}
+	once     sync.Once
+	release  chan struct{}
+	calls    int
+	limit    int
 }
 
 type searchRecommenderStub struct {
@@ -1019,11 +1142,21 @@ func (stub *searchRecommenderStub) MaxActive() int {
 
 func (stub *issueSearcherStub) SearchIssues(
 	ctx context.Context,
-	_ issue.SearchCriteria,
+	criteria issue.SearchCriteria,
 	limit int,
 ) (port.GitHubIssueSearchResult, error) {
 	stub.mu.Lock()
 	stub.calls++
+	stub.criteria = append(stub.criteria, criteria)
+	index := stub.calls - 1
+	result := stub.result
+	if len(stub.results) > 0 {
+		if index < len(stub.results) {
+			result = stub.results[index]
+		} else {
+			result = stub.results[len(stub.results)-1]
+		}
+	}
 	stub.limit = limit
 	stub.mu.Unlock()
 	if stub.started != nil {
@@ -1036,7 +1169,7 @@ func (stub *issueSearcherStub) SearchIssues(
 			return port.GitHubIssueSearchResult{}, ctx.Err()
 		}
 	}
-	return stub.result, stub.err
+	return result, stub.err
 }
 
 func (stub *issueSearcherStub) callCount() int {
@@ -1049,6 +1182,12 @@ func (stub *issueSearcherStub) requestedLimit() int {
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
 	return stub.limit
+}
+
+func (stub *issueSearcherStub) requestedCriteria() []issue.SearchCriteria {
+	stub.mu.Lock()
+	defer stub.mu.Unlock()
+	return append([]issue.SearchCriteria(nil), stub.criteria...)
 }
 
 func newIssueSearchUsecase(

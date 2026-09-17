@@ -139,6 +139,69 @@ func ExclusionReasons(
 	return reasons
 }
 
+var preferenceExclusions = []ExclusionReason{
+	ExclusionOutsideUpdateWindow,
+	ExclusionBelowMinimumStars,
+	ExclusionLanguageMismatch,
+	ExclusionFrameworkMismatch,
+	ExclusionLabelMismatch,
+	ExclusionAboveMaximumDifficulty,
+	ExclusionEnglishNotAllowed,
+}
+
+// IsPreferenceExclusion reports whether a miss is a ranking preference
+// rather than a safety filter. Assigned, bot, secret, and closed issues
+// stay ineligible even during partial-match fallback.
+func IsPreferenceExclusion(reason ExclusionReason) bool {
+	switch reason {
+	case ExclusionOutsideUpdateWindow,
+		ExclusionBelowMinimumStars,
+		ExclusionLanguageMismatch,
+		ExclusionFrameworkMismatch,
+		ExclusionLabelMismatch,
+		ExclusionAboveMaximumDifficulty,
+		ExclusionEnglishNotAllowed:
+		return true
+	default:
+		return false
+	}
+}
+
+// HasOnlyPreferenceExclusions reports whether a candidate missed only
+// ranking preferences and remains safe to surface as a partial match.
+func HasOnlyPreferenceExclusions(reasons []ExclusionReason) bool {
+	if len(reasons) == 0 {
+		return false
+	}
+	for _, reason := range reasons {
+		if !IsPreferenceExclusion(reason) {
+			return false
+		}
+	}
+	return true
+}
+
+// PreferenceMatchCount scores how many preference dimensions a candidate
+// still satisfies. Unconfigured filters count as matches so ranking stays
+// comparable inside a single result window.
+func PreferenceMatchCount(
+	criteria SearchCriteria,
+	candidate Candidate,
+	now time.Time,
+) int {
+	failed := make(map[ExclusionReason]struct{}, len(preferenceExclusions))
+	for _, reason := range ExclusionReasons(criteria, candidate, now) {
+		failed[reason] = struct{}{}
+	}
+	score := 0
+	for _, reason := range preferenceExclusions {
+		if _, exists := failed[reason]; !exists {
+			score++
+		}
+	}
+	return score
+}
+
 // EstimateDifficulty derives a conservative preliminary difficulty solely
 // from explicit labels. Issue #6 replaces this discovery-time estimate with
 // full rule-based content and effort analysis.

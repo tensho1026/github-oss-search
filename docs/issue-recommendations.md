@@ -35,7 +35,10 @@ sequenceDiagram
         Rules-->>Detail: Shared ranked issue
         Detail-->>Search: Recommendation
     end
-    Search->>Rules: Candidate-only fallback when needed
+    Search->>Rules: Keep closest preference matches if exact filters are empty
+    opt Exact window empty
+        Search->>GitHub: One broadened search without preference qualifiers
+    end
     Search->>Search: Stable sort, stale/effort filters, then pagination
     Search-->>Browser: Ranked list with evidence and warnings
 ```
@@ -46,6 +49,15 @@ leader per repository and reuses the normalized repository/maintainer snapshot
 for sibling issues. `GITHUB_API_MAX_CONCURRENCY` bounds distinct-repository
 fan-out, and cancellation propagates through the group. A sibling's comment
 window is not inferred from the leader: its claim evidence stays unavailable.
+
+If no candidate survives every preference filter, search keeps issues that
+only missed ranking preferences such as language, framework, labels, stars,
+recency, difficulty, or English. Safety filters still drop assigned, bot,
+secret, pull-request, and closed work. When that window is also empty, search
+performs one additional broadened GitHub query without those preference
+qualifiers and ranks the closest remaining issues first. Stale and effort
+filters follow the same rule: they are skipped only when they would hide
+every analyzed issue. `searchSummary.partialMatches` is true in those cases.
 
 ## Score model
 

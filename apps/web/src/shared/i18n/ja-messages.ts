@@ -120,6 +120,8 @@ export const jaMessages = {
   "issueSearch.returnFirst": "1ページ目へ戻る",
   "issueSearch.broaden": "条件を広げる",
   "search.relaxedTitle": "一部一致の候補を表示しています",
+  "search.relaxedDescription":
+    "すべての条件を満たす結果は見つからなかったため、安全な範囲で最も近い候補を先に表示しています。",
   "issueSearch.rankedEyebrow": "サーバー順位による推薦",
   "issueSearch.eligibleCount": "対象Issue {count}件",
   "issueSearch.checkedSummary": "{checked}件確認 · {enriched}件を詳細分析",

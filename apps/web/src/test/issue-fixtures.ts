@@ -225,6 +225,7 @@ export const issueSearchFixture: IssueSearchEnvelope = {
           reason: "below_minimum_stars",
         },
       ],
+      partialMatches: false,
       upstreamTotal: 1200,
     },
     warnings: [

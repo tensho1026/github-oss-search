@@ -1224,6 +1224,14 @@ export type SearchSummary = {
    */
   enrichmentFailed: number;
   excludedByReason: Array<ExclusionCount>;
+  /**
+   * True when the ranked page contains issues that missed at least one
+   * preference filter, or when stale/effort filters were skipped
+   * because they would have emptied the page. Safety filters such as
+   * assignment, bots, and secrets still apply.
+   *
+   */
+  partialMatches: boolean;
 };
 
 export type ExclusionCount = {

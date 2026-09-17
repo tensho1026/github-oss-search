@@ -142,6 +142,7 @@ being repeated across cards.
 | Invalid URL      | Focused correction guidance; query remains disabled        |
 | Loading          | Named skeleton status without stale layout collapse        |
 | Success          | Ordered explainable cards and server pagination            |
+| Partial matches  | Closest still-safe cards plus an explicit fallback banner  |
 | No results       | Concrete suggestions for broadening filters                |
 | Partial evidence | Successful cards plus an explicit bounded-evidence warning |
 | User not found   | Username-specific correction without automatic retries     |

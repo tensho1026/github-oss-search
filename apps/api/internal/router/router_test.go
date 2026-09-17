@@ -350,6 +350,7 @@ func TestIssueSearchRouteUsesStandardEnvelope(t *testing.T) {
 		`"page":1`,
 		`"perPage":20`,
 		`"excludedByReason":[]`,
+		`"partialMatches":false`,
 		`"warnings":[]`,
 		`"rateLimitRemaining":40`,
 		`"requestId":"req_search"`,
