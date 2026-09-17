@@ -48,6 +48,62 @@ func TestFilterRankedIssuesByStaleCanExplicitlyIncludeStale(t *testing.T) {
 	}
 }
 
+func TestApplyPostAnalysisFiltersRestoresEffortWhenEveryIssueWouldBeHidden(
+	t *testing.T,
+) {
+	t.Parallel()
+	maximumEffort := string(issue.EffortThirtyMinutes)
+	criteria, err := issue.NewSearchCriteria(issue.SearchCriteriaOptions{
+		Username:      "octocat",
+		MaximumEffort: &maximumEffort,
+	})
+	if err != nil {
+		t.Fatalf("NewSearchCriteria() error = %v", err)
+	}
+	ranked := []issue.RankedIssue{{
+		Candidate: issue.Candidate{Issue: issue.Summary{Number: 7}},
+		Analysis: issue.Analysis{
+			Effort: issue.EffortEstimate{Band: issue.EffortThreeDays},
+		},
+		Recommendation: issue.Recommendation{
+			Stale: issue.StaleAssessment{State: issue.StaleFresh},
+		},
+	}}
+
+	got, excluded, partial := applyPostAnalysisFilters(ranked, criteria, false)
+	if !partial || excluded != 0 || len(got) != 1 ||
+		got[0].Candidate.Issue.Number != 7 {
+		t.Fatalf("applyPostAnalysisFilters() = %+v, %d, %t", got, excluded, partial)
+	}
+}
+
+func TestApplyPostAnalysisFiltersRestoresStaleWhenEveryIssueWouldBeHidden(
+	t *testing.T,
+) {
+	t.Parallel()
+	criteria, err := issue.NewSearchCriteria(issue.SearchCriteriaOptions{
+		Username: "octocat",
+	})
+	if err != nil {
+		t.Fatalf("NewSearchCriteria() error = %v", err)
+	}
+	ranked := []issue.RankedIssue{{
+		Candidate: issue.Candidate{Issue: issue.Summary{Number: 9}},
+		Analysis: issue.Analysis{
+			Effort: issue.EffortEstimate{Band: issue.EffortThirtyMinutes},
+		},
+		Recommendation: issue.Recommendation{
+			Stale: issue.StaleAssessment{State: issue.StaleStale},
+		},
+	}}
+
+	got, excluded, partial := applyPostAnalysisFilters(ranked, criteria, false)
+	if !partial || excluded != 0 || len(got) != 1 ||
+		got[0].Candidate.Issue.Number != 9 {
+		t.Fatalf("applyPostAnalysisFilters() = %+v, %d, %t", got, excluded, partial)
+	}
+}
+
 func staleRankedIssue(number int, state issue.StaleState) issue.RankedIssue {
 	return issue.RankedIssue{
 		Candidate: issue.Candidate{Issue: issue.Summary{Number: number}},

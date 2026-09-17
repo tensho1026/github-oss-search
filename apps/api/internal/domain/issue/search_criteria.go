@@ -330,6 +330,24 @@ func (criteria SearchCriteria) SortBy() SearchSort {
 	return criteria.sortBy
 }
 
+// RelaxedDiscovery returns a broader upstream search used only after the
+// exact candidate window has no safe issues. Preference qualifiers are
+// dropped so GitHub can still return a useful sample; local ranking still
+// scores those issues against the original criteria.
+func (criteria SearchCriteria) RelaxedDiscovery() SearchCriteria {
+	relaxed := criteria
+	relaxed.languages = nil
+	relaxed.frameworks = nil
+	relaxed.labels = nil
+	relaxed.minimumStars = 0
+	relaxed.maximumDifficulty = 5
+	relaxed.maximumEffort = nil
+	relaxed.updatedWithinDays = MaximumUpdatedWithinDays
+	relaxed.includeDocumentation = true
+	relaxed.includeStale = true
+	return relaxed
+}
+
 // CacheKey returns a stable hash for the validated discovery criteria.
 // Pagination, maximum effort, and stale inclusion are intentionally excluded
 // because they are applied after the reusable GitHub candidate window loads.

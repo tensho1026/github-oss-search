@@ -163,8 +163,9 @@ export function IssueSearchPage() {
     resultContent = (
       <IssueSearchResults
         emptyActions={emptyActions}
-        envelope={query.data[0]}
+        envelope={query.data}
         isFetching={query.isFetching}
+        relaxed={query.data.data.searchSummary.partialMatches}
         onPageChange={changePage}
         onSortChange={changeSort}
         sortBy={location.filters.sortBy}
@@ -188,7 +189,6 @@ export function IssueSearchPage() {
                 ),
           });
         }}
-        relaxed={query.data[1]}
         returnTo={`${routeLocation.pathname}${routeLocation.search}`}
         skills={[...location.filters.languages, ...location.filters.frameworks]}
       />

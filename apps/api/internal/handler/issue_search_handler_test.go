@@ -142,6 +142,7 @@ func TestIssueSearchHandlerReturnsNormalizedSearchResponse(t *testing.T) {
 		`"reason":"already_assigned","count":1`,
 		`"reason":"bot_generated","count":2`,
 		`"reason":"stale","count":3`,
+		`"partialMatches":false`,
 		`"code":"github_search_incomplete"`,
 		`"code":"issue_enrichment_incomplete"`,
 		`"rateLimitRemaining":29`,
@@ -189,6 +190,7 @@ func TestIssueSearchHandlerAppliesDefaults(t *testing.T) {
 		recorder.Header().Get(issueSearchCacheHeader) != issueSearchCacheMiss ||
 		!strings.Contains(recorder.Body.String(), `"items":[]`) ||
 		!strings.Contains(recorder.Body.String(), `"excludedByReason":[]`) ||
+		!strings.Contains(recorder.Body.String(), `"partialMatches":false`) ||
 		!strings.Contains(recorder.Body.String(), `"warnings":[]`) {
 		t.Fatalf(
 			"input = %+v, headers = %v, body = %s",

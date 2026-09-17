@@ -150,7 +150,8 @@ being repeated across cards.
 | Before search    | Editable prefilled/default criteria; zero search requests  |
 | Invalid URL      | Focused correction guidance; query remains disabled        |
 | Loading          | Named skeleton status without stale layout collapse        |
-| Success          | Ordered compact cards; evidence details stay collapsed     |
+| Success          | Ordered explainable cards, server pagination, collapsed evidence |
+| Partial matches  | Closest still-safe cards plus an explicit fallback banner  |
 | No results       | Concrete next-search links from the current filters        |
 | Partial evidence | Successful cards plus an explicit bounded-evidence warning |
 | User not found   | Username-specific correction without automatic retries     |

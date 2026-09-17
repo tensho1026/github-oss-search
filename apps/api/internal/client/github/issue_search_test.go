@@ -74,6 +74,31 @@ func TestBuildIssueSearchQueryUsesCanonicalSafeQualifiers(t *testing.T) {
 	}
 }
 
+func TestBuildIssueSearchQueryOmitsPreferenceQualifiersForRelaxedDiscovery(
+	t *testing.T,
+) {
+	criteria := issueSearchCriteria(t, issue.SearchCriteriaOptions{
+		Username:   "octocat",
+		Languages:  []string{"Go"},
+		Frameworks: []string{"Gin"},
+		Labels:     []string{"good first issue"},
+	})
+	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
+
+	query, err := buildIssueSearchQuery(criteria.RelaxedDiscovery(), now)
+	if err != nil {
+		t.Fatalf("buildIssueSearchQuery() error = %v", err)
+	}
+	wantDate := now.UTC().
+		AddDate(0, 0, -issue.MaximumUpdatedWithinDays).
+		Format(time.DateOnly)
+	want := "is:issue is:open is:public no:assignee archived:false updated:>=" +
+		wantDate
+	if query != want {
+		t.Fatalf("query =\n%s\nwant\n%s", query, want)
+	}
+}
+
 func TestSearchIssuesPostsGraphQLAndNormalizesPayload(t *testing.T) {
 	now := time.Date(2026, time.July, 30, 12, 0, 0, 0, time.UTC)
 	var requests atomic.Int32

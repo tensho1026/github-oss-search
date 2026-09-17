@@ -189,6 +189,7 @@ export function IssueSearchResults({
       {relaxed ? (
         <Alert variant="warning">
           <AlertTitle>{t("search.relaxedTitle")}</AlertTitle>
+          <AlertDescription>{t("search.relaxedDescription")}</AlertDescription>
         </Alert>
       ) : null}
 

@@ -222,6 +222,35 @@ describe("IssueSearchResults", () => {
     ).toHaveAttribute("href", "#search-filters");
   });
 
+  it("explains when the API returned partial matches", () => {
+    render(
+      <AppProviders>
+        <MemoryRouter>
+          <IssueSearchResults
+            envelope={{
+              ...issueSearchFixture,
+              data: {
+                ...issueSearchFixture.data,
+                searchSummary: {
+                  ...issueSearchFixture.data.searchSummary,
+                  partialMatches: true,
+                },
+              },
+            }}
+            isFetching={false}
+            onPageChange={vi.fn()}
+            relaxed
+          />
+        </MemoryRouter>
+      </AppProviders>,
+    );
+
+    expect(screen.getByText("Showing partial matches")).toBeInTheDocument();
+    expect(
+      screen.getByText(/closest still-safe candidates/i),
+    ).toBeInTheDocument();
+  });
+
   it("recovers when a shared page exceeds the changed server result set", async () => {
     const user = userEvent.setup();
     const onPageChange = vi.fn();
