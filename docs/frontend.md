@@ -145,19 +145,19 @@ The UI never sorts recommendation items. It uses the API's order and
 score tones, skill status, and warning severity live in one model rather than
 being repeated across cards.
 
-| Search state     | User experience                                            |
-| ---------------- | ---------------------------------------------------------- |
-| Before search    | Editable prefilled/default criteria; zero search requests  |
-| Invalid URL      | Focused correction guidance; query remains disabled        |
-| Loading          | Named skeleton status without stale layout collapse        |
+| Search state     | User experience                                                  |
+| ---------------- | ---------------------------------------------------------------- |
+| Before search    | Editable prefilled/default criteria; zero search requests        |
+| Invalid URL      | Focused correction guidance; query remains disabled              |
+| Loading          | Named skeleton status without stale layout collapse              |
 | Success          | Ordered explainable cards, server pagination, collapsed evidence |
-| Partial matches  | Closest still-safe cards plus an explicit fallback banner  |
-| No results       | Concrete next-search links from the current filters        |
-| Partial evidence | Successful cards plus an explicit bounded-evidence warning |
-| User not found   | Username-specific correction without automatic retries     |
-| Rate limited     | Stable URL and reset guidance without retry storms         |
-| Upstream/timeout | Request ID and a manual retry action                       |
-| Page transition  | Prior page remains visible while the next page is fetched  |
+| Partial matches  | Closest still-safe cards plus an explicit fallback banner        |
+| No results       | Concrete next-search links from the current filters              |
+| Partial evidence | Successful cards plus an explicit bounded-evidence warning       |
+| User not found   | Username-specific correction without automatic retries           |
+| Rate limited     | Stable URL and reset guidance without retry storms               |
+| Upstream/timeout | Request ID and a manual retry action                             |
+| Page transition  | Prior page remains visible while the next page is fetched        |
 
 ## Accessibility verification
 
