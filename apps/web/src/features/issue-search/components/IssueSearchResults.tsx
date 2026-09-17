@@ -24,19 +24,22 @@ import {
 import type { IssueSearchEnvelope } from "../../../shared/api/generated";
 import type { IssueSearchItem } from "../../../shared/api/generated";
 import { formatCompactNumber } from "../../../shared/lib/format";
+import type { CompareReference } from "../../issue-compare/model/compare-location";
+import { searchSelectionKey } from "../model/search-selection";
 import { RecommendationCard } from "./RecommendationCard";
 import { IssueSelectionToolbar } from "./IssueSelectionToolbar";
 import { searchFilterOptions, type IssueSort } from "../model/search-filters";
 import { useI18n } from "../../../shared/i18n/i18n-context";
 
 type IssueSearchResultsProps = {
+  emptyActions?: ReadonlyArray<{ href: string; label: string }>;
   envelope: IssueSearchEnvelope;
   isFetching: boolean;
   relaxed?: boolean;
   onPageChange: (page: number) => void;
   onSortChange?: (sort: IssueSort) => void;
   sortBy?: IssueSort;
-  selectedItems?: readonly IssueSearchItem[];
+  selectedItems?: readonly CompareReference[];
   onSelectionChange?: (item: IssueSearchItem, selected: boolean) => void;
   onClearSelection?: () => void;
   returnTo?: string;
@@ -44,6 +47,7 @@ type IssueSearchResultsProps = {
 };
 
 export function IssueSearchResults({
+  emptyActions = [],
   envelope,
   isFetching,
   relaxed,
@@ -87,12 +91,23 @@ export function IssueSearchResults({
               {t("issueSearch.returnFirst")}
             </Button>
           ) : (
-            <a
-              className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-              href="#search-filters"
-            >
-              {t("issueSearch.broaden")}
-            </a>
+            <div className="grid justify-items-center gap-3">
+              {emptyActions.map((action) => (
+                <a
+                  className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  href={action.href}
+                  key={action.href}
+                >
+                  {action.label}
+                </a>
+              ))}
+              <a
+                className="rounded-lg text-sm font-semibold text-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                href="#search-filters"
+              >
+                {t("issueSearch.broaden")}
+              </a>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -201,9 +216,14 @@ export function IssueSearchResults({
       <ol className="grid gap-5">
         {items.map((item, index) => {
           const rank = firstRank + index;
-          const key = issueKey(item);
+          const reference = {
+            issueNumber: item.issue.number,
+            owner: item.repository.owner,
+            repository: item.repository.name,
+          };
           const selected = selectedItems.some(
-            (candidate) => issueKey(candidate) === key,
+            (candidate) =>
+              searchSelectionKey(candidate) === searchSelectionKey(reference),
           );
           return (
             <li key={`${item.repository.fullName}#${item.issue.number}`}>
@@ -225,8 +245,8 @@ export function IssueSearchResults({
 
       {onClearSelection ? (
         <IssueSelectionToolbar
-          items={selectedItems}
           onClear={onClearSelection}
+          references={selectedItems}
           returnTo={returnTo}
           skills={skills}
         />
@@ -245,8 +265,4 @@ export function IssueSearchResults({
       </Card>
     </section>
   );
-}
-
-function issueKey(item: IssueSearchItem) {
-  return `${item.repository.owner.toLowerCase()}/${item.repository.name.toLowerCase()}#${item.issue.number}`;
 }

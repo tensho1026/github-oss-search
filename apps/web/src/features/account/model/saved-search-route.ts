@@ -4,6 +4,7 @@ import type {
   SavedSearch,
 } from "../../../shared/api/generated";
 import { appRoutes } from "../../../shared/config/app-config";
+import { appendSavedSearchId } from "../../../shared/lib/saved-search-location";
 import {
   createDefaultSearchFilters,
   encodeSearchParams,
@@ -29,6 +30,7 @@ export function savedSearchRoute(search: SavedSearch): string {
       minimumStars: filters.minimumStars ?? 10,
       updatedWithinDays: filters.updatedWithinDays ?? 180,
     });
+    appendSavedSearchId(parameters, search.id);
     return `${appRoutes.search}?${parameters.toString()}`;
   }
 
@@ -55,5 +57,6 @@ export function savedSearchRoute(search: SavedSearch): string {
     technologies: filters.technologies ?? [],
     updatedWithinDays: filters.updatedWithinDays ?? 365,
   });
+  appendSavedSearchId(parameters, search.id);
   return `${appRoutes.repositories}?${parameters.toString()}`;
 }

@@ -155,8 +155,8 @@ test("completes profile, search, and detail through the built API", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: "Find matching issues" }).click();
   await expect(page).toHaveURL(/\/search\?username=octocat/);
+  await expect(page).toHaveURL(/search=1/);
 
-  await page.getByRole("button", { name: "Find ranked issues" }).click();
   await expect(
     page.getByRole("heading", {
       name: "Improve keyboard navigation in the command palette",
@@ -206,6 +206,9 @@ test("renders an explicit empty search from the built API", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Broaden the filters" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Increase maximum difficulty" }),
   ).toBeVisible();
 });
 
@@ -366,6 +369,7 @@ test("submits accessible repository filters and explains partial evidence", asyn
   await expect(page.getByRole("button", { name: "Languages" })).toContainText(
     "TypeScript",
   );
+  await page.getByRole("button", { name: "More filters" }).click();
   await page.getByRole("combobox", { name: "Japanese README" }).click();
   await page.getByRole("option", { name: "Japanese detected" }).click();
   await page.getByRole("slider", { name: "Minimum readiness" }).fill("65");

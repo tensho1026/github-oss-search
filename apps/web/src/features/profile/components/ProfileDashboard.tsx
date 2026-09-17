@@ -95,7 +95,11 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
     [analysis],
   );
   const repositories = useMemo(() => featuredRepositories(user), [user]);
-  const technologyIssueTarget = (technology: string, framework: boolean) => {
+  const technologyIssueTarget = (
+    technology: string,
+    framework: boolean,
+    execute = true,
+  ) => {
     const filters = createDefaultSearchFilters(user.login);
     filters.maximumDifficulty = 4;
     if (framework) {
@@ -105,10 +109,21 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
     }
     return {
       pathname: appRoutes.search,
-      search: encodeSearchParams(filters, false).toString(),
+      search: encodeSearchParams(filters, execute).toString(),
     };
   };
   const issueSearchTarget = useMemo(() => {
+    const filters = createDefaultSearchFilters(user.login);
+    filters.languages = analysis.languages
+      .map((language) => language.name)
+      .slice(0, 10);
+    filters.frameworks = analysis.frameworks.slice(0, 10);
+    return {
+      pathname: appRoutes.search,
+      search: encodeSearchParams(filters, true).toString(),
+    };
+  }, [analysis.frameworks, analysis.languages, user.login]);
+  const issueSearchReviewTarget = useMemo(() => {
     const filters = createDefaultSearchFilters(user.login);
     filters.languages = analysis.languages
       .map((language) => language.name)
@@ -127,7 +142,7 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
     filters.technologies = analysis.frameworks.slice(0, 10);
     return {
       pathname: appRoutes.repositories,
-      search: encodeRepositorySearchParams(filters, false).toString(),
+      search: encodeRepositorySearchParams(filters, true).toString(),
     };
   }, [analysis.frameworks, analysis.languages]);
   const rateLimitRemaining = [
@@ -284,6 +299,11 @@ export function ProfileDashboard({ snapshot }: ProfileDashboardProps) {
               <Link to={issueSearchTarget}>
                 {t("profile.findIssues")}
                 <Icon icon={ArrowUpRight} />
+              </Link>
+            </Button>
+            <Button asChild className="shrink-0" variant="outline">
+              <Link to={issueSearchReviewTarget}>
+                {t("profile.reviewFilters")}
               </Link>
             </Button>
             <Button asChild className="shrink-0" variant="outline">

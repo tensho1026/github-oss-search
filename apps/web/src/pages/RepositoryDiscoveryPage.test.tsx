@@ -53,6 +53,25 @@ describe("RepositoryDiscoveryPage", () => {
     expect(
       screen.getByRole("link", { name: /example\/typed-service/i }),
     ).toHaveAttribute("href", "https://github.com/example/typed-service");
+    const starter = screen.getByRole("link", {
+      name: /#42 Add a focused parser test/,
+    });
+    expect(starter).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/search\?/),
+    );
+    expect(starter).toHaveAttribute(
+      "href",
+      expect.stringMatching(/language=TypeScript/),
+    );
+    expect(starter).toHaveAttribute(
+      "href",
+      expect.stringMatching(/framework=React/),
+    );
+    expect(starter).toHaveAttribute(
+      "href",
+      expect.stringMatching(/label=good(\+|%20)first(\+|%20)issue/),
+    );
     expect(screen.getByText(/Contribution ready · 88\/100/i)).toBeVisible();
     expect(screen.getByText("Japanese script detected")).toBeVisible();
     expect(
@@ -120,6 +139,9 @@ describe("RepositoryDiscoveryPage", () => {
     expect(
       screen.getByRole("link", { name: "Broaden the filters" }),
     ).toHaveAttribute("href", "#repository-filters");
+    expect(
+      screen.getByRole("link", { name: "Increase maximum difficulty" }),
+    ).toHaveAttribute("href", expect.stringContaining("maximumDifficulty=4"));
   });
 
   it("labels relaxed repository results as partial matches", async () => {

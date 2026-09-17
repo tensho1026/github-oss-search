@@ -42,8 +42,10 @@ from the canonical cache key.
 The lazy-loaded `/repositories` route is available from the primary navigation
 without signing in. A visitor can also begin on `/profiles/:username`: the
 profile dashboard creates a repository-discovery link from the analyzed
-language and technology evidence, but leaves the form unsubmitted so the
-visitor can review every condition first.
+language and technology evidence and executes immediately (`search=1`). A
+copy-link control, removable filter chips, collapsed advanced fields, and
+concrete empty-result searches keep the same URL contract. Starter issues on
+a result card continue into `/search` with the current discovery filters.
 
 One typed filter module owns form defaults, validation, request mapping, and
 the URL codec. A URL contains only canonical filter values plus `search=1`

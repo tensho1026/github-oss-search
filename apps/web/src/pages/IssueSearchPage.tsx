@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,10 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { CopyLinkButton } from "../components/ui/copy-link-button";
+import { FilterChipList } from "../components/ui/filter-chip-list";
 import { Icon } from "../components/ui/icon";
+import { usePreferredPageSize } from "../features/account/api/usePreferredPageSize";
+import { SaveSearchAction } from "../features/account/components/SaveSearchAction";
 import { useAuth } from "../features/auth/auth-context";
 import { useIssueSearch } from "../features/issue-search/api/useIssueSearch";
-import { SaveSearchAction } from "../features/account/components/SaveSearchAction";
 import { IssueSearchForm } from "../features/issue-search/components/IssueSearchForm";
 import { IssueSearchResults } from "../features/issue-search/components/IssueSearchResults";
 import {
@@ -22,26 +26,61 @@ import {
   IssueSearchInvalidState,
   IssueSearchLoadingState,
 } from "../features/issue-search/components/IssueSearchState";
+import { emptyIssueSearchActions } from "../features/issue-search/model/search-empty-actions";
+import { issueSearchFilterChips } from "../features/issue-search/model/search-filter-chips";
 import {
   decodeSearchParams,
   encodeSearchParams,
   toIssueSearchRequest,
   validateSearchFilters,
-  type SearchFilters,
   type IssueSort,
+  type SearchFilters,
 } from "../features/issue-search/model/search-filters";
+import {
+  appendSearchSelection,
+  decodeSearchSelection,
+  searchSelectionKey,
+  toggleSearchSelection,
+} from "../features/issue-search/model/search-selection";
+import type { CompareReference } from "../features/issue-compare/model/compare-location";
 import { useI18n } from "../shared/i18n/i18n-context";
-import type { IssueSearchItem } from "../shared/api/generated";
+import {
+  appendSavedSearchId,
+  decodeSavedSearchId,
+} from "../shared/lib/saved-search-location";
+import type { MessageKey } from "../shared/i18n/messages";
+
+const emptyActionLabels: Record<
+  ReturnType<typeof emptyIssueSearchActions>[number]["id"],
+  MessageKey
+> = {
+  "clear-effort": "search.emptyClearEffort",
+  "clear-frameworks": "search.emptyClearFrameworks",
+  "clear-stars": "search.emptyClearStars",
+  "raise-difficulty": "search.emptyRaiseDifficulty",
+  "relax-recency": "search.emptyRelaxRecency",
+};
 
 export function IssueSearchPage() {
   const { session } = useAuth();
   const { t } = useI18n();
   const routeLocation = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
-  const [selectedItems, setSelectedItems] = useState<IssueSearchItem[]>([]);
+  const [mobileFormOpen, setMobileFormOpen] = useState(false);
+  const preferredPageSize = usePreferredPageSize();
   const serializedSearch = searchParameters.toString();
+  const selected = useMemo(
+    () => decodeSearchSelection(new URLSearchParams(serializedSearch)),
+    [serializedSearch],
+  );
+  const savedSearchId = useMemo(
+    () => decodeSavedSearchId(new URLSearchParams(serializedSearch)),
+    [serializedSearch],
+  );
   const location = useMemo(() => {
-    const decoded = decodeSearchParams(new URLSearchParams(serializedSearch));
+    const decoded = decodeSearchParams(new URLSearchParams(serializedSearch), {
+      perPage: preferredPageSize,
+    });
     if (
       decoded.filters.username ||
       !session?.authenticated ||
@@ -57,28 +96,51 @@ export function IssueSearchPage() {
       filters,
       valid: Object.keys(errors).length === 0,
     };
-  }, [serializedSearch, session]);
+  }, [preferredPageSize, serializedSearch, session]);
   const query = useIssueSearch(location);
 
+  function writeLocation(
+    filters: SearchFilters,
+    options: {
+      savedSearchId?: string;
+      selected?: readonly CompareReference[];
+      shouldSearch?: boolean;
+    } = {},
+  ) {
+    const parameters = encodeSearchParams(
+      filters,
+      options.shouldSearch ?? true,
+    );
+    appendSearchSelection(parameters, options.selected ?? selected);
+    appendSavedSearchId(
+      parameters,
+      options.savedSearchId === undefined
+        ? savedSearchId
+        : options.savedSearchId,
+    );
+    setSearchParameters(parameters);
+  }
+
   function submit(filters: SearchFilters) {
-    setSelectedItems([]);
-    setSearchParameters(encodeSearchParams(filters));
+    writeLocation(filters);
+    setMobileFormOpen(false);
   }
 
   function changePage(page: number) {
-    setSearchParameters(
-      encodeSearchParams({
-        ...location.filters,
-        page,
-      }),
-    );
+    writeLocation({ ...location.filters, page });
   }
 
   function changeSort(sortBy: IssueSort) {
-    setSearchParameters(
-      encodeSearchParams({ ...location.filters, page: 1, sortBy }),
-    );
+    writeLocation({ ...location.filters, page: 1, sortBy });
   }
+
+  const chips = issueSearchFilterChips(location.filters);
+  const emptyActions = location.valid
+    ? emptyIssueSearchActions(location.filters).map((action) => ({
+        href: `/search?${encodeSearchParams(action.filters).toString()}`,
+        label: t(emptyActionLabels[action.id]),
+      }))
+    : [];
 
   let resultContent;
   if (location.shouldSearch && !location.valid) {
@@ -100,34 +162,32 @@ export function IssueSearchPage() {
   } else if (query.data) {
     resultContent = (
       <IssueSearchResults
+        emptyActions={emptyActions}
         envelope={query.data}
         isFetching={query.isFetching}
         relaxed={query.data.data.searchSummary.partialMatches}
         onPageChange={changePage}
         onSortChange={changeSort}
         sortBy={location.filters.sortBy}
-        selectedItems={selectedItems}
-        onClearSelection={() => setSelectedItems([])}
-        onSelectionChange={(item, selected) => {
-          const key = `${item.repository.owner.toLowerCase()}/${item.repository.name.toLowerCase()}#${item.issue.number}`;
-          setSelectedItems((current) =>
-            selected
-              ? current.length < 3
-                ? [
-                    ...current.filter(
-                      (candidate) =>
-                        `${candidate.repository.owner.toLowerCase()}/${candidate.repository.name.toLowerCase()}#${candidate.issue.number}` !==
-                        key,
-                    ),
-                    item,
-                  ]
-                : current
-              : current.filter(
+        selectedItems={selected}
+        onClearSelection={() =>
+          writeLocation(location.filters, { selected: [] })
+        }
+        onSelectionChange={(item, nextSelected) => {
+          const reference = {
+            issueNumber: item.issue.number,
+            owner: item.repository.owner,
+            repository: item.repository.name,
+          };
+          writeLocation(location.filters, {
+            selected: nextSelected
+              ? toggleSearchSelection(selected, reference)
+              : selected.filter(
                   (candidate) =>
-                    `${candidate.repository.owner.toLowerCase()}/${candidate.repository.name.toLowerCase()}#${candidate.issue.number}` !==
-                    key,
+                    searchSelectionKey(candidate) !==
+                    searchSelectionKey(reference),
                 ),
-          );
+          });
         }}
         returnTo={`${routeLocation.pathname}${routeLocation.search}`}
         skills={[...location.filters.languages, ...location.filters.frameworks]}
@@ -136,6 +196,8 @@ export function IssueSearchPage() {
   } else {
     resultContent = <IssueSearchLoadingState />;
   }
+
+  const showForm = !location.shouldSearch || mobileFormOpen;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
@@ -155,18 +217,48 @@ export function IssueSearchPage() {
           {t("issueSearch.description")}
         </p>
         {location.shouldSearch && location.valid ? (
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-2">
             <SaveSearchAction
               filters={toIssueSearchRequest(location.filters)}
+              savedSearchId={savedSearchId}
               searchType="issue"
             />
+            <CopyLinkButton />
           </div>
         ) : null}
       </header>
 
+      {chips.length > 0 ? (
+        <div className="mt-6">
+          <FilterChipList
+            chips={chips.map((chip) => ({
+              id: chip.id,
+              label: chip.label,
+              onRemove: () =>
+                writeLocation(chip.nextFilters, {
+                  shouldSearch: location.shouldSearch && location.valid,
+                }),
+            }))}
+          />
+        </div>
+      ) : null}
+
+      {location.shouldSearch ? (
+        <div className="mt-6 lg:hidden">
+          <Button
+            aria-expanded={showForm}
+            onClick={() => setMobileFormOpen((open) => !open)}
+            size="small"
+            variant="outline"
+          >
+            {showForm ? t("search.hideFilters") : t("search.showFilters")}
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mt-9 grid items-start gap-6 lg:grid-cols-[minmax(20rem,0.82fr)_minmax(0,1.18fr)]">
         <Card
-          className="overflow-hidden lg:sticky lg:top-24"
+          className={`overflow-hidden lg:sticky lg:top-24 ${showForm ? "" : "max-lg:hidden"}`}
           id="search-filters"
         >
           <CardHeader className="border-b border-border bg-muted/35">
@@ -186,6 +278,7 @@ export function IssueSearchPage() {
                 location.shouldSearch ? location.errors : undefined
               }
               onSubmit={submit}
+              sessionUsername={session?.user?.login}
             />
           </CardContent>
         </Card>

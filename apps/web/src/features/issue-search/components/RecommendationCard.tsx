@@ -1,4 +1,5 @@
 import { ArrowUpRight, Clock3, Code2, MessageCircle, Star } from "lucide-react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Alert, AlertDescription } from "../../../components/ui/alert";
@@ -48,6 +49,7 @@ export function RecommendationCard({
   selectionDisabled = false,
 }: RecommendationCardProps) {
   const { locale, t } = useI18n();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const location = useLocation();
   const score = scorePresentation(item.recommendation.score);
   const scoreLabel = t(
@@ -139,18 +141,10 @@ export function RecommendationCard({
             </span>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {item.repository.mainLanguage ? (
-            <Badge variant="info">
-              <Icon className="size-3.5" icon={Code2} />
-              {item.repository.mainLanguage}
-            </Badge>
-          ) : null}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
-            {t("recommendation.difficulty", {
-              label: item.difficulty.label,
-              level: item.difficulty.level,
-            })}
+            <Icon className="size-3.5" icon={Clock3} />
+            {item.effort.label}
           </Badge>
           <Badge
             aria-label={t("recommendation.staleStatus", {
@@ -162,52 +156,82 @@ export function RecommendationCard({
               state: item.recommendation.stale.state,
             })}
           </Badge>
-          <Badge variant="neutral">
-            <Icon className="size-3.5" icon={Clock3} />
-            {item.effort.label}
-          </Badge>
-          <Badge variant="neutral">
-            <Icon className="size-3.5" icon={MessageCircle} />
-            {t("recommendation.comments", {
-              count: formatCompactNumber(item.issue.comments, locale),
-            })}
-          </Badge>
-          {item.repository.isArchived ? (
-            <Badge variant="warning">{t("recommendation.archived")}</Badge>
-          ) : null}
+          <strong className="font-mono text-sm text-accent">
+            {formatPercentage(item.recommendation.skillMatch.percentage)}
+          </strong>
+          <Button
+            aria-expanded={detailsOpen}
+            onClick={() => setDetailsOpen((open) => !open)}
+            size="small"
+            type="button"
+            variant="ghost"
+          >
+            {detailsOpen
+              ? t("recommendation.hideDetails")
+              : t("recommendation.showDetails")}
+          </Button>
         </div>
-        <div
-          aria-label={t("recommendation.healthSummary")}
-          className="mt-2 flex flex-wrap gap-2"
-        >
-          {item.healthSummary.map((category) => (
-            <Badge key={category.name} variant="neutral">
-              {healthLabels[category.name]}{" "}
-              {category.score === null ? "?" : category.score}
-            </Badge>
-          ))}
-        </div>
+        {detailsOpen ? (
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {item.repository.mainLanguage ? (
+                <Badge variant="info">
+                  <Icon className="size-3.5" icon={Code2} />
+                  {item.repository.mainLanguage}
+                </Badge>
+              ) : null}
+              <Badge variant="neutral">
+                {t("recommendation.difficulty", {
+                  label: item.difficulty.label,
+                  level: item.difficulty.level,
+                })}
+              </Badge>
+              <Badge variant="neutral">
+                <Icon className="size-3.5" icon={MessageCircle} />
+                {t("recommendation.comments", {
+                  count: formatCompactNumber(item.issue.comments, locale),
+                })}
+              </Badge>
+              {item.repository.isArchived ? (
+                <Badge variant="warning">{t("recommendation.archived")}</Badge>
+              ) : null}
+            </div>
+            <div
+              aria-label={t("recommendation.healthSummary")}
+              className="mt-2 flex flex-wrap gap-2"
+            >
+              {item.healthSummary.map((category) => (
+                <Badge key={category.name} variant="neutral">
+                  {healthLabels[category.name]}{" "}
+                  {category.score === null ? "?" : category.score}
+                </Badge>
+              ))}
+            </div>
+          </>
+        ) : null}
       </CardHeader>
 
       <CardContent className="grid gap-5 p-5 sm:p-6">
-        <section aria-label={t("recommendation.issueLabels")}>
-          <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-            {t("recommendation.labels")}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {item.issue.labels.length > 0 ? (
-              item.issue.labels.map((label) => (
-                <Badge key={label} variant="accent">
-                  {label}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                {t("recommendation.noLabels")}
-              </span>
-            )}
-          </div>
-        </section>
+        {detailsOpen ? (
+          <section aria-label={t("recommendation.issueLabels")}>
+            <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+              {t("recommendation.labels")}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.issue.labels.length > 0 ? (
+                item.issue.labels.map((label) => (
+                  <Badge key={label} variant="accent">
+                    {label}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  {t("recommendation.noLabels")}
+                </span>
+              )}
+            </div>
+          </section>
+        ) : null}
 
         <section
           aria-labelledby={`skill-match-${rank}`}
@@ -234,113 +258,129 @@ export function RecommendationCard({
               {formatPercentage(item.recommendation.skillMatch.percentage)}
             </strong>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {item.recommendation.skillMatch.skills.length > 0 ? (
-              item.recommendation.skillMatch.skills.map((skill) => (
-                <Badge
-                  key={`${skill.technology}-${skill.status}`}
-                  variant={skillPresentation(skill.status)}
-                >
-                  {skill.technology}: {skill.status}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                {t("recommendation.noSkillEvidence")}
-              </span>
-            )}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            {item.recommendation.skillMatch.personalized
-              ? t("recommendation.personalizedEvidence", {
-                  status: item.recommendation.skillMatch.status,
-                  version: item.recommendation.skillMatch.version,
-                })
-              : t("recommendation.explicitEvidence")}
-          </p>
-        </section>
-
-        <section
-          aria-labelledby={`maintainer-response-${rank}`}
-          className="rounded-xl border border-border bg-muted/35 p-4"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold" id={`maintainer-response-${rank}`}>
-                {t("recommendation.maintainerResponse")}
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("recommendation.maintainerResponseDescription")}
-              </p>
-            </div>
-            {maintainerResponse.status === "available" ? (
-              <div className="text-right">
-                <strong
-                  aria-label={t("recommendation.rating", {
-                    label: maintainerResponse.label,
-                    level: maintainerResponse.level,
-                  })}
-                  className="block tracking-[0.08em] text-accent"
-                >
-                  {formatRating(maintainerResponse.level)}
-                </strong>
-                <span className="text-xs font-semibold">
-                  {maintainerResponse.label}
-                </span>
+          {detailsOpen ? (
+            <>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {item.recommendation.skillMatch.skills.length > 0 ? (
+                  item.recommendation.skillMatch.skills.map((skill) => (
+                    <Badge
+                      key={`${skill.technology}-${skill.status}`}
+                      variant={skillPresentation(skill.status)}
+                    >
+                      {skill.technology}: {skill.status}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {t("recommendation.noSkillEvidence")}
+                  </span>
+                )}
               </div>
-            ) : (
-              <Badge variant="neutral">{t("recommendation.unavailable")}</Badge>
-            )}
-          </div>
-          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-xs text-muted-foreground">
-                {t("recommendation.medianFirstResponse")}
-              </dt>
-              <dd className="mt-1 font-medium">
-                {durationValue(
-                  maintainerResponse.firstIssueResponse,
-                  locale,
-                  t("recommendation.unavailable"),
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">
-                {t("recommendation.prMergeTime")}
-              </dt>
-              <dd className="mt-1 font-medium">
-                {durationValue(
-                  maintainerResponse.pullRequestMerge,
-                  locale,
-                  t("recommendation.unavailable"),
-                )}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            {t("recommendation.maintainerSample", {
-              confidence: maintainerResponse.confidence,
-              count: formatCompactNumber(maintainerResponse.sampleSize, locale),
-            })}
-          </p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {item.recommendation.skillMatch.personalized
+                  ? t("recommendation.personalizedEvidence", {
+                      status: item.recommendation.skillMatch.status,
+                      version: item.recommendation.skillMatch.version,
+                    })
+                  : t("recommendation.explicitEvidence")}
+              </p>
+            </>
+          ) : null}
         </section>
 
-        <section aria-labelledby={`reasons-${rank}`}>
-          <h3 className="font-semibold" id={`reasons-${rank}`}>
-            {t("recommendation.reasons")}
-          </h3>
-          <ul className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground">
-            {item.recommendation.reasons.map((reason) => (
-              <li className="flex gap-2" key={reason}>
-                <span aria-hidden="true" className="text-accent">
-                  •
-                </span>
-                <span>{reason}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {detailsOpen ? (
+          <>
+            <section
+              aria-labelledby={`maintainer-response-${rank}`}
+              className="rounded-xl border border-border bg-muted/35 p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="font-semibold"
+                    id={`maintainer-response-${rank}`}
+                  >
+                    {t("recommendation.maintainerResponse")}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("recommendation.maintainerResponseDescription")}
+                  </p>
+                </div>
+                {maintainerResponse.status === "available" ? (
+                  <div className="text-right">
+                    <strong
+                      aria-label={t("recommendation.rating", {
+                        label: maintainerResponse.label,
+                        level: maintainerResponse.level,
+                      })}
+                      className="block tracking-[0.08em] text-accent"
+                    >
+                      {formatRating(maintainerResponse.level)}
+                    </strong>
+                    <span className="text-xs font-semibold">
+                      {maintainerResponse.label}
+                    </span>
+                  </div>
+                ) : (
+                  <Badge variant="neutral">
+                    {t("recommendation.unavailable")}
+                  </Badge>
+                )}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("recommendation.medianFirstResponse")}
+                  </dt>
+                  <dd className="mt-1 font-medium">
+                    {durationValue(
+                      maintainerResponse.firstIssueResponse,
+                      locale,
+                      t("recommendation.unavailable"),
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("recommendation.prMergeTime")}
+                  </dt>
+                  <dd className="mt-1 font-medium">
+                    {durationValue(
+                      maintainerResponse.pullRequestMerge,
+                      locale,
+                      t("recommendation.unavailable"),
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                {t("recommendation.maintainerSample", {
+                  confidence: maintainerResponse.confidence,
+                  count: formatCompactNumber(
+                    maintainerResponse.sampleSize,
+                    locale,
+                  ),
+                })}
+              </p>
+            </section>
+
+            <section aria-labelledby={`reasons-${rank}`}>
+              <h3 className="font-semibold" id={`reasons-${rank}`}>
+                {t("recommendation.reasons")}
+              </h3>
+              <ul className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground">
+                {item.recommendation.reasons.map((reason) => (
+                  <li className="flex gap-2" key={reason}>
+                    <span aria-hidden="true" className="text-accent">
+                      •
+                    </span>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        ) : null}
 
         {item.recommendation.warnings.length > 0 ? (
           <section

@@ -1,5 +1,5 @@
 import { RotateCcw, Search } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Controller,
   useForm,
@@ -25,6 +25,7 @@ import {
 import { Slider } from "../../../components/ui/slider";
 import { validateGitHubUsername } from "../../../shared/lib/github-username";
 import { useI18n } from "../../../shared/i18n/i18n-context";
+import { hasAdvancedIssueFilters } from "../model/search-filter-chips";
 import {
   createDefaultSearchFilters,
   normalizeSearchFilters,
@@ -39,6 +40,7 @@ type IssueSearchFormProps = {
   disabled?: boolean;
   locationErrors?: SearchFilterErrors;
   onSubmit: (filters: SearchFilters) => void;
+  sessionUsername?: string;
 };
 
 type ToggleProps = {
@@ -83,8 +85,13 @@ export function IssueSearchForm({
   disabled,
   locationErrors,
   onSubmit,
+  sessionUsername,
 }: IssueSearchFormProps) {
   const { t } = useI18n();
+  const hasAdvanced = hasAdvancedIssueFilters(defaultValues);
+  const [manuallyOpen, setManuallyOpen] = useState(false);
+  const advancedOpen = hasAdvanced || manuallyOpen;
+  const [usernameUnlocked, setUsernameUnlocked] = useState(false);
   const {
     control,
     formState: { errors },
@@ -100,6 +107,11 @@ export function IssueSearchForm({
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
+  const sessionLogin = sessionUsername?.trim() ?? "";
+  const usernameLocked =
+    Boolean(sessionLogin) &&
+    defaultValues.username.toLowerCase() === sessionLogin.toLowerCase() &&
+    !usernameUnlocked;
   const difficulty =
     useWatch({ control, name: "maximumDifficulty" }) ??
     defaultValues.maximumDifficulty;
@@ -183,93 +195,80 @@ export function IssueSearchForm({
         htmlFor="search-username"
         label={t("profileForm.username")}
       >
-        <Input
-          aria-describedby={fieldDescribedBy(
-            "search-username",
-            true,
-            Boolean(usernameError),
-          )}
-          aria-invalid={Boolean(usernameError)}
-          autoCapitalize="none"
-          autoComplete="username"
-          id="search-username"
-          placeholder="octocat"
-          spellCheck={false}
-          {...register("username", {
-            validate(value) {
-              const result = validateGitHubUsername(value);
-              if (result.valid) {
-                return true;
-              }
-              return t(
-                result.code === "empty"
-                  ? "profileForm.required"
-                  : result.code === "too_long"
-                    ? "profileForm.tooLong"
-                    : "profileForm.invalid",
-                { maximum: 39 },
-              );
-            },
-          })}
-        />
+        {usernameLocked ? (
+          <div className="grid gap-3">
+            <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm font-medium">
+              {t("issueForm.usingProfile", { login: sessionLogin })}
+            </p>
+            <input type="hidden" {...register("username")} />
+            <Button
+              onClick={() => setUsernameUnlocked(true)}
+              size="small"
+              type="button"
+              variant="ghost"
+            >
+              {t("issueForm.differentProfile")}
+            </Button>
+          </div>
+        ) : (
+          <Input
+            aria-describedby={fieldDescribedBy(
+              "search-username",
+              true,
+              Boolean(usernameError),
+            )}
+            aria-invalid={Boolean(usernameError)}
+            autoCapitalize="none"
+            autoComplete="username"
+            id="search-username"
+            placeholder="octocat"
+            spellCheck={false}
+            {...register("username", {
+              validate(value) {
+                const result = validateGitHubUsername(value);
+                if (result.valid) {
+                  return true;
+                }
+                return t(
+                  result.code === "empty"
+                    ? "profileForm.required"
+                    : result.code === "too_long"
+                      ? "profileForm.tooLong"
+                      : "profileForm.invalid",
+                  { maximum: 39 },
+                );
+              },
+            })}
+          />
+        )}
       </Field>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Controller
-          control={control}
-          name="languages"
-          render={({ field }) => (
-            <Field
-              description={t("issueForm.languagesDescription")}
-              error={languagesError}
-              htmlFor="search-languages"
-              label={t("issueForm.languages")}
-            >
-              <MultiSelect
-                aria-describedby={fieldDescribedBy(
-                  "search-languages",
-                  true,
-                  Boolean(languagesError),
-                )}
-                aria-invalid={Boolean(languagesError)}
-                id="search-languages"
-                onValuesChange={field.onChange}
-                options={searchFilterOptions.languages}
-                placeholder={t("issueForm.anyLanguage")}
-                searchLabel={t("issueForm.searchLanguages")}
-                values={field.value}
-              />
-            </Field>
-          )}
-        />
-        <Controller
-          control={control}
-          name="frameworks"
-          render={({ field }) => (
-            <Field
-              description={t("issueForm.frameworksDescription")}
-              error={frameworksError}
-              htmlFor="search-frameworks"
-              label={t("issueForm.frameworks")}
-            >
-              <MultiSelect
-                aria-describedby={fieldDescribedBy(
-                  "search-frameworks",
-                  true,
-                  Boolean(frameworksError),
-                )}
-                aria-invalid={Boolean(frameworksError)}
-                id="search-frameworks"
-                onValuesChange={field.onChange}
-                options={searchFilterOptions.frameworks}
-                placeholder={t("issueForm.anyFramework")}
-                searchLabel={t("issueForm.searchFrameworks")}
-                values={field.value}
-              />
-            </Field>
-          )}
-        />
-      </div>
+      <Controller
+        control={control}
+        name="languages"
+        render={({ field }) => (
+          <Field
+            description={t("issueForm.languagesDescription")}
+            error={languagesError}
+            htmlFor="search-languages"
+            label={t("issueForm.languages")}
+          >
+            <MultiSelect
+              aria-describedby={fieldDescribedBy(
+                "search-languages",
+                true,
+                Boolean(languagesError),
+              )}
+              aria-invalid={Boolean(languagesError)}
+              id="search-languages"
+              onValuesChange={field.onChange}
+              options={searchFilterOptions.languages}
+              placeholder={t("issueForm.anyLanguage")}
+              searchLabel={t("issueForm.searchLanguages")}
+              values={field.value}
+            />
+          </Field>
+        )}
+      />
 
       <Controller
         control={control}
@@ -301,32 +300,6 @@ export function IssueSearchForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
-          description={t("issueForm.minimumStarsDescription")}
-          error={minimumStarsError}
-          htmlFor="search-minimum-stars"
-          label={t("issueForm.minimumStars")}
-        >
-          <Input
-            aria-describedby={fieldDescribedBy(
-              "search-minimum-stars",
-              true,
-              Boolean(minimumStarsError),
-            )}
-            aria-invalid={Boolean(minimumStarsError)}
-            id="search-minimum-stars"
-            inputMode="numeric"
-            min={0}
-            type="number"
-            {...register("minimumStars", {
-              min: {
-                message: t("issueForm.minimumStarsError"),
-                value: 0,
-              },
-              valueAsNumber: true,
-            })}
-          />
-        </Field>
-        <Field
           description={t("issueForm.recencyDescription")}
           error={recencyError}
           htmlFor="search-recency"
@@ -353,36 +326,6 @@ export function IssueSearchForm({
                 message: t("issueForm.recencyMinError"),
                 value: 1,
               },
-              valueAsNumber: true,
-            })}
-          />
-        </Field>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field
-          description={t("issueForm.currentMaximum", {
-            label: difficultyLabel,
-          })}
-          error={difficultyError}
-          htmlFor="search-difficulty"
-          label={t("issueForm.maximumDifficulty")}
-        >
-          <Slider
-            aria-describedby={fieldDescribedBy(
-              "search-difficulty",
-              true,
-              Boolean(difficultyError),
-            )}
-            aria-invalid={Boolean(difficultyError)}
-            aria-valuetext={difficultyLabel}
-            id="search-difficulty"
-            max={5}
-            min={1}
-            step={1}
-            {...register("maximumDifficulty", {
-              max: 5,
-              min: 1,
               valueAsNumber: true,
             })}
           />
@@ -431,107 +374,202 @@ export function IssueSearchForm({
         />
       </div>
 
-      <fieldset className="grid gap-3">
-        <legend className="mb-2 text-sm font-semibold">
-          {t("issueForm.eligibility")}
-        </legend>
-        <div className="grid gap-3 xl:grid-cols-4">
-          <Controller
-            control={control}
-            name="includeDocumentation"
-            render={({ field }) => (
-              <Toggle
-                checked={field.value}
-                description={t("issueForm.includeDocumentationDescription")}
-                id="search-documentation"
-                label={t("issueForm.includeDocumentation")}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="includeStale"
-            render={({ field }) => (
-              <Toggle
-                checked={field.value}
-                description="Show issues classified as stale-v1; unknown evidence stays visible."
-                id="search-stale"
-                label="Include stale issues"
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="includeEnglish"
-            render={({ field }) => (
-              <Toggle
-                checked={field.value}
-                description={t("issueForm.includeEnglishDescription")}
-                id="search-english"
-                label={t("issueForm.includeEnglish")}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="excludeArchived"
-            render={({ field }) => (
-              <Toggle
-                checked={field.value}
-                description={t("issueForm.excludeArchivedDescription")}
-                id="search-archived"
-                label={t("issueForm.excludeArchived")}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </div>
-      </fieldset>
+      <Button
+        aria-expanded={advancedOpen}
+        onClick={() => setManuallyOpen((open) => !open)}
+        size="small"
+        type="button"
+        variant="ghost"
+      >
+        {advancedOpen ? t("search.fewerFilters") : t("search.moreFilters")}
+      </Button>
 
-      <Controller
-        control={control}
-        name="perPage"
-        render={({ field }) => (
-          <Field
-            className="max-w-xs"
-            description={t("issueForm.pageSizeDescription")}
-            error={pageSizeError}
-            htmlFor="search-page-size"
-            label={t("issueForm.pageSize")}
-          >
-            <Select
-              onValueChange={(value) => field.onChange(Number(value))}
-              value={field.value.toString()}
+      <div className={advancedOpen ? "grid gap-6" : "hidden"}>
+        <Controller
+          control={control}
+          name="frameworks"
+          render={({ field }) => (
+            <Field
+              description={t("issueForm.frameworksDescription")}
+              error={frameworksError}
+              htmlFor="search-frameworks"
+              label={t("issueForm.frameworks")}
             >
-              <SelectTrigger
+              <MultiSelect
                 aria-describedby={fieldDescribedBy(
-                  "search-page-size",
+                  "search-frameworks",
                   true,
-                  Boolean(pageSizeError),
+                  Boolean(frameworksError),
                 )}
-                aria-invalid={Boolean(pageSizeError)}
-                className="w-full rounded-xl"
-                id="search-page-size"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {searchFilterOptions.pageSizes.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value.toString()}
-                  >
-                    {t("issueForm.perPage", { count: option.value })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                aria-invalid={Boolean(frameworksError)}
+                id="search-frameworks"
+                onValuesChange={field.onChange}
+                options={searchFilterOptions.frameworks}
+                placeholder={t("issueForm.anyFramework")}
+                searchLabel={t("issueForm.searchFrameworks")}
+                values={field.value}
+              />
+            </Field>
+          )}
+        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            description={t("issueForm.minimumStarsDescription")}
+            error={minimumStarsError}
+            htmlFor="search-minimum-stars"
+            label={t("issueForm.minimumStars")}
+          >
+            <Input
+              aria-describedby={fieldDescribedBy(
+                "search-minimum-stars",
+                true,
+                Boolean(minimumStarsError),
+              )}
+              aria-invalid={Boolean(minimumStarsError)}
+              id="search-minimum-stars"
+              inputMode="numeric"
+              min={0}
+              type="number"
+              {...register("minimumStars", {
+                min: {
+                  message: t("issueForm.minimumStarsError"),
+                  value: 0,
+                },
+                valueAsNumber: true,
+              })}
+            />
           </Field>
-        )}
-      />
+          <Field
+            description={t("issueForm.currentMaximum", {
+              label: difficultyLabel,
+            })}
+            error={difficultyError}
+            htmlFor="search-difficulty"
+            label={t("issueForm.maximumDifficulty")}
+          >
+            <Slider
+              aria-describedby={fieldDescribedBy(
+                "search-difficulty",
+                true,
+                Boolean(difficultyError),
+              )}
+              aria-invalid={Boolean(difficultyError)}
+              aria-valuetext={difficultyLabel}
+              id="search-difficulty"
+              max={5}
+              min={1}
+              step={1}
+              {...register("maximumDifficulty", {
+                max: 5,
+                min: 1,
+                valueAsNumber: true,
+              })}
+            />
+          </Field>
+        </div>
+
+        <fieldset className="grid gap-3">
+          <legend className="mb-2 text-sm font-semibold">
+            {t("issueForm.eligibility")}
+          </legend>
+          <div className="grid gap-3 xl:grid-cols-4">
+            <Controller
+              control={control}
+              name="includeDocumentation"
+              render={({ field }) => (
+                <Toggle
+                  checked={field.value}
+                  description={t("issueForm.includeDocumentationDescription")}
+                  id="search-documentation"
+                  label={t("issueForm.includeDocumentation")}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="includeStale"
+              render={({ field }) => (
+                <Toggle
+                  checked={field.value}
+                  description={t("issueForm.includeStaleDescription")}
+                  id="search-stale"
+                  label={t("issueForm.includeStale")}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="includeEnglish"
+              render={({ field }) => (
+                <Toggle
+                  checked={field.value}
+                  description={t("issueForm.includeEnglishDescription")}
+                  id="search-english"
+                  label={t("issueForm.includeEnglish")}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="excludeArchived"
+              render={({ field }) => (
+                <Toggle
+                  checked={field.value}
+                  description={t("issueForm.excludeArchivedDescription")}
+                  id="search-archived"
+                  label={t("issueForm.excludeArchived")}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+        </fieldset>
+
+        <Controller
+          control={control}
+          name="perPage"
+          render={({ field }) => (
+            <Field
+              className="max-w-xs"
+              description={t("issueForm.pageSizeDescription")}
+              error={pageSizeError}
+              htmlFor="search-page-size"
+              label={t("issueForm.pageSize")}
+            >
+              <Select
+                onValueChange={(value) => field.onChange(Number(value))}
+                value={field.value.toString()}
+              >
+                <SelectTrigger
+                  aria-describedby={fieldDescribedBy(
+                    "search-page-size",
+                    true,
+                    Boolean(pageSizeError),
+                  )}
+                  aria-invalid={Boolean(pageSizeError)}
+                  className="w-full rounded-xl"
+                  id="search-page-size"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {searchFilterOptions.pageSizes.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value.toString()}
+                    >
+                      {t("issueForm.perPage", { count: option.value })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+        />
+      </div>
 
       <div className="grid gap-3 border-t border-border pt-5 xs:flex xs:flex-wrap">
         <Button className="w-full xs:w-auto" disabled={disabled} type="submit">
@@ -542,7 +580,11 @@ export function IssueSearchForm({
           className="w-full xs:w-auto"
           disabled={disabled}
           onClick={() =>
-            reset(createDefaultSearchFilters(defaultValues.username))
+            reset(
+              createDefaultSearchFilters(defaultValues.username, {
+                perPage: defaultValues.perPage,
+              }),
+            )
           }
           type="button"
           variant="ghost"

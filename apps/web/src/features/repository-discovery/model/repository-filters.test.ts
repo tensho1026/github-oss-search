@@ -109,4 +109,16 @@ describe("repository discovery filters", () => {
     });
     expect(normalized.languages).toEqual(["Go", "typescript"]);
   });
+
+  it("keeps a saved-search identifier and preference page size", () => {
+    const decoded = decodeRepositorySearchParams(
+      new URLSearchParams(
+        "search=1&saved=00000000-0000-4000-8000-000000000001",
+      ),
+      { perPage: 10 },
+    );
+    expect(decoded.valid).toBe(true);
+    expect(decoded.shouldSearch).toBe(true);
+    expect(decoded.filters.perPage).toBe(10);
+  });
 });

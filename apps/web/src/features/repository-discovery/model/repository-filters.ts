@@ -3,6 +3,7 @@ import type {
   RepositoryDiscoveryRequest,
   SupportedSpdxLicense,
 } from "../../../shared/api/generated";
+import { savedSearchParameterName } from "../../../shared/lib/saved-search-location";
 
 export type JapaneseReadmeFilter = "any" | "no" | "yes";
 export type ForkPolicy = NonNullable<RepositoryDiscoveryRequest["forkPolicy"]>;
@@ -149,7 +150,13 @@ export const repositoryFilterDescriptions = Object.freeze({
     "Every selected term must appear in public topics or bounded README evidence.",
 });
 
-export function createDefaultRepositoryFilters(): RepositoryFilters {
+export type RepositoryFilterDefaults = {
+  perPage?: number;
+};
+
+export function createDefaultRepositoryFilters(
+  defaults: RepositoryFilterDefaults = {},
+): RepositoryFilters {
   return {
     categories: [],
     excludeArchived: true,
@@ -164,7 +171,7 @@ export function createDefaultRepositoryFilters(): RepositoryFilters {
     minimumReadiness: 40,
     minimumStars: 10,
     page: 1,
-    perPage: 20,
+    perPage: defaults.perPage ?? 20,
     technologies: [],
     updatedWithinDays: 365,
   };
@@ -213,7 +220,10 @@ const parameterNames = Object.freeze({
   updatedWithinDays: "updatedWithinDays",
 });
 
-const allowedParameterNames = new Set<string>(Object.values(parameterNames));
+const allowedParameterNames = new Set<string>([
+  ...Object.values(parameterNames),
+  savedSearchParameterName,
+]);
 
 export function validateRepositoryFilters(
   filters: RepositoryFilters,
@@ -297,8 +307,9 @@ export function validateRepositoryFilters(
 
 export function decodeRepositorySearchParams(
   parameters: URLSearchParams,
+  options: RepositoryFilterDefaults = {},
 ): DecodedRepositoryLocation {
-  const defaults = createDefaultRepositoryFilters();
+  const defaults = createDefaultRepositoryFilters(options);
   const locationErrors: string[] = [];
   for (const name of new Set(parameters.keys())) {
     if (!allowedParameterNames.has(name)) {

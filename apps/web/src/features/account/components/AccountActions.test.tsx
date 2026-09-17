@@ -148,7 +148,9 @@ describe("optional account actions", () => {
       await screen.findByRole("button", { name: "Bookmarked" }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save this search" }));
-    await user.type(screen.getByLabelText("Saved-search name"), "My search");
+    const name = screen.getByLabelText("Saved-search name");
+    await user.clear(name);
+    await user.type(name, "My search");
     await user.click(screen.getByRole("button", { name: "Save search" }));
     expect(
       await screen.findByRole("button", { name: "Search saved" }),
