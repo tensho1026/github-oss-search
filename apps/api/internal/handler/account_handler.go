@@ -2,16 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/account"
-	"github.com/tensho1026/github-issue-search/apps/api/internal/platform/apperror"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/platform/authhttp"
-	"github.com/tensho1026/github-issue-search/apps/api/internal/platform/requestcontext"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/transport/response"
 	"github.com/tensho1026/github-issue-search/apps/api/internal/usecase"
 )
@@ -25,50 +21,6 @@ type AccountHandler struct {
 	workspace usecase.AccountWorkspace
 	cookies   authhttp.Policy
 	responder response.Responder
-}
-
-// ListProfileSnapshots returns the authenticated account's bounded monthly history.
-func (handler AccountHandler) ListProfileSnapshots(ctx *gin.Context) {
-	accountID, ok := handler.accountID(ctx)
-	if !ok {
-		return
-	}
-	snapshots, err := handler.workspace.ListProfileSnapshots(ctx.Request.Context(), accountID)
-	if err != nil {
-		handler.responder.Error(ctx, err)
-		return
-	}
-	handler.responder.Data(ctx, http.StatusOK, struct {
-		Items []profileSnapshotResponse `json:"items"`
-	}{Items: profileSnapshotResponses(snapshots)})
-}
-
-// UpsertProfileSnapshot stores or replaces the current UTC calendar month.
-func (handler AccountHandler) UpsertProfileSnapshot(ctx *gin.Context) {
-	accountID, ok := handler.accountID(ctx)
-	if !ok {
-		return
-	}
-	request, err := decodeAccountBody[profileSnapshotWriteRequest](ctx)
-	if err != nil {
-		handler.invalidRequest(ctx, err)
-		return
-	}
-	proficiency := make([]account.SnapshotProficiency, len(request.Proficiency))
-	for index, value := range request.Proficiency {
-		proficiency[index] = account.SnapshotProficiency{Name: value.Name, Level: value.Level}
-	}
-	snapshot, err := handler.workspace.UpsertProfileSnapshot(ctx.Request.Context(), accountID, usecase.ProfileSnapshotInput{
-		Languages: request.Languages, Frameworks: request.Frameworks,
-		OSSActivity: request.OSSActivity, MergedPullRequests: request.MergedPullRequests,
-		Proficiency: proficiency, CompletedQuests: request.CompletedQuests,
-		CurrentStreak: request.CurrentStreak, LongestStreak: request.LongestStreak,
-	})
-	if err != nil {
-		handler.responder.Error(ctx, err)
-		return
-	}
-	handler.responder.Data(ctx, http.StatusOK, newProfileSnapshotResponse(snapshot))
 }
 
 // ListIssueClaims returns an owned contribution task page and status summary.
@@ -541,71 +493,6 @@ func (handler AccountHandler) DeleteAccount(ctx *gin.Context) {
 	})
 }
 
-func (handler AccountHandler) accountID(
-	ctx *gin.Context,
-) (account.ID, bool) {
-	if handler.workspace == nil {
-		handler.responder.Error(ctx, apperror.New(
-			apperror.CodeAuthUnavailable,
-			"Account features are not configured",
-			http.StatusServiceUnavailable,
-		))
-		return account.ID{}, false
-	}
-	principal, ok := requestcontext.Principal(ctx.Request.Context())
-	if !ok {
-		handler.responder.Error(ctx, apperror.New(
-			apperror.CodeAuthentication,
-			"Authentication is required",
-			http.StatusUnauthorized,
-		))
-		return account.ID{}, false
-	}
-	return principal.Session.AccountID, true
-}
-
-func (handler AccountHandler) ownedMutationTarget(
-	ctx *gin.Context,
-) (account.ID, account.ResourceID, int64, bool) {
-	accountID, ok := handler.accountID(ctx)
-	if !ok {
-		return account.ID{}, account.ResourceID{}, 0, false
-	}
-	rawID := ctx.Param("bookmarkID")
-	if rawID == "" {
-		rawID = ctx.Param("savedSearchID")
-	}
-	if rawID == "" {
-		rawID = ctx.Param("issueClaimID")
-	}
-	resourceID, err := account.ParseResourceID(rawID)
-	if err != nil {
-		handler.invalidRequest(ctx, err)
-		return account.ID{}, account.ResourceID{}, 0, false
-	}
-	version, err := parseRequiredVersion(ctx)
-	if err != nil {
-		handler.invalidRequest(ctx, err)
-		return account.ID{}, account.ResourceID{}, 0, false
-	}
-	return accountID, resourceID, version, true
-}
-
-func (handler AccountHandler) invalidRequest(
-	ctx *gin.Context,
-	err error,
-) {
-	if err == nil {
-		err = account.ErrInvalidFeatureInput
-	}
-	handler.responder.Error(ctx, apperror.Wrap(
-		apperror.CodeInvalidRequest,
-		"Account feature request is invalid",
-		http.StatusBadRequest,
-		err,
-	))
-}
-
 type bookmarkWriteRequest struct {
 	TargetType      string `json:"targetType"`
 	RepositoryOwner string `json:"repositoryOwner"`
@@ -906,52 +793,6 @@ type accountExportResponse struct {
 	ProfileSnapshots []profileSnapshotResponse `json:"profileSnapshots"`
 }
 
-type profileSnapshotProficiencyResponse struct {
-	Name  string `json:"name"`
-	Level int    `json:"level"`
-}
-
-type profileSnapshotResponse struct {
-	Month              time.Time                            `json:"month"`
-	Languages          []string                             `json:"languages"`
-	Frameworks         []string                             `json:"frameworks"`
-	OSSActivity        int                                  `json:"ossActivity"`
-	MergedPullRequests int                                  `json:"mergedPullRequests"`
-	Proficiency        []profileSnapshotProficiencyResponse `json:"proficiency"`
-	CompletedQuests    int                                  `json:"completedQuests"`
-	CurrentStreak      int                                  `json:"currentStreak"`
-	LongestStreak      int                                  `json:"longestStreak"`
-	CreatedAt          time.Time                            `json:"createdAt"`
-	UpdatedAt          time.Time                            `json:"updatedAt"`
-}
-
-type profileSnapshotWriteRequest struct {
-	Languages          []string                             `json:"languages"`
-	Frameworks         []string                             `json:"frameworks"`
-	OSSActivity        int                                  `json:"ossActivity"`
-	MergedPullRequests int                                  `json:"mergedPullRequests"`
-	Proficiency        []profileSnapshotProficiencyResponse `json:"proficiency"`
-	CompletedQuests    int                                  `json:"completedQuests"`
-	CurrentStreak      int                                  `json:"currentStreak"`
-	LongestStreak      int                                  `json:"longestStreak"`
-}
-
-func newProfileSnapshotResponse(snapshot account.ProfileSnapshot) profileSnapshotResponse {
-	proficiency := make([]profileSnapshotProficiencyResponse, len(snapshot.Proficiency))
-	for index, value := range snapshot.Proficiency {
-		proficiency[index] = profileSnapshotProficiencyResponse{Name: value.Name, Level: value.Level}
-	}
-	return profileSnapshotResponse{Month: snapshot.Month, Languages: append([]string(nil), snapshot.Languages...), Frameworks: append([]string(nil), snapshot.Frameworks...), OSSActivity: snapshot.OSSActivity, MergedPullRequests: snapshot.MergedPullRequests, Proficiency: proficiency, CompletedQuests: snapshot.CompletedQuests, CurrentStreak: snapshot.CurrentStreak, LongestStreak: snapshot.LongestStreak, CreatedAt: snapshot.CreatedAt, UpdatedAt: snapshot.UpdatedAt}
-}
-
-func profileSnapshotResponses(snapshots []account.ProfileSnapshot) []profileSnapshotResponse {
-	result := make([]profileSnapshotResponse, len(snapshots))
-	for index, snapshot := range snapshots {
-		result[index] = newProfileSnapshotResponse(snapshot)
-	}
-	return result
-}
-
 func newAccountExportResponse(export account.Export) accountExportResponse {
 	bookmarks := make([]bookmarkResponse, len(export.Bookmarks))
 	for index, bookmark := range export.Bookmarks {
@@ -994,84 +835,4 @@ type ownedDataSummaryResponse struct {
 type accountDeleteResponse struct {
 	Deleted bool                     `json:"deleted"`
 	Removed ownedDataSummaryResponse `json:"removed"`
-}
-
-func decodeAccountBody[T any](ctx *gin.Context) (T, error) {
-	return decodeStrictJSONBody[T](ctx, strictJSONOptions{
-		description:  "account request",
-		maximumBytes: maximumAccountRequestBytes,
-	})
-}
-
-func parseAccountPage(ctx *gin.Context) (account.Page, error) {
-	page, perPage, err := parsePaginationQuery(
-		ctx,
-		1,
-		account.DefaultPageSize,
-	)
-	if err != nil {
-		return account.Page{}, err
-	}
-	return account.NewPage(page, perPage)
-}
-
-func parseIssueClaimListQuery(
-	ctx *gin.Context,
-) (account.Page, account.IssueClaimFilter, error) {
-	query := ctx.Request.URL.Query()
-	for key := range query {
-		if key != "page" && key != "perPage" && key != "filter" {
-			return account.Page{}, "", fmt.Errorf(
-				"unsupported query parameter %q",
-				key,
-			)
-		}
-	}
-	pageNumber, err := parseSingleQueryInteger(query["page"], 1)
-	if err != nil {
-		return account.Page{}, "", fmt.Errorf("page: %w", err)
-	}
-	perPage, err := parseSingleQueryInteger(
-		query["perPage"],
-		account.DefaultPageSize,
-	)
-	if err != nil {
-		return account.Page{}, "", fmt.Errorf("perPage: %w", err)
-	}
-	page, err := account.NewPage(pageNumber, perPage)
-	if err != nil {
-		return account.Page{}, "", err
-	}
-	filterValue := "all"
-	if values, exists := query["filter"]; exists {
-		if len(values) != 1 || values[0] == "" {
-			return account.Page{}, "", fmt.Errorf(
-				"filter must be provided exactly once",
-			)
-		}
-		filterValue = values[0]
-	}
-	filter, err := account.NewIssueClaimFilter(filterValue)
-	if err != nil {
-		return account.Page{}, "", err
-	}
-	return page, filter, nil
-}
-
-func parseRequiredVersion(ctx *gin.Context) (int64, error) {
-	query := ctx.Request.URL.Query()
-	for key := range query {
-		if key != "version" {
-			return 0, fmt.Errorf("unsupported query parameter %q", key)
-		}
-	}
-	values := query["version"]
-	if len(values) != 1 || values[0] == "" {
-		return 0, fmt.Errorf("version must be provided exactly once")
-	}
-	version, err := strconv.ParseInt(values[0], 10, 64)
-	if err != nil || version < 1 {
-		return 0, fmt.Errorf("version must be a positive integer")
-	}
-	return version, nil
 }

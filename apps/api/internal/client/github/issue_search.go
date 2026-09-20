@@ -1,15 +1,12 @@
 package github
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
@@ -125,26 +122,7 @@ func (c *Client) SearchIssues(
 		)
 	}
 
-	endpoint := *c.baseURL
-	endpoint.Path = path.Join(endpoint.Path, "graphql")
-	endpoint.RawQuery = ""
-	response, err := c.doRequest(
-		ctx,
-		operationSearchIssues,
-		func() (*http.Request, error) {
-			request, requestErr := c.newRequest(
-				ctx,
-				http.MethodPost,
-				endpoint.String(),
-				bytes.NewReader(requestPayload),
-			)
-			if requestErr != nil {
-				return nil, requestErr
-			}
-			request.Header.Set("Content-Type", "application/json")
-			return request, nil
-		},
-	)
+	response, err := c.graphQLRequest(ctx, operationSearchIssues, requestPayload)
 	if err != nil {
 		return port.GitHubIssueSearchResult{}, err
 	}

@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 
 import {
@@ -9,17 +9,11 @@ import {
 } from "../../../components/ui/alert";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
+import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 import { Icon } from "../../../components/ui/icon";
 import type {
   CountAggregate,
   DurationAggregate,
-  Evidence,
   IssueDetailEnvelope,
   RatioAggregate,
 } from "../../../shared/api/generated";
@@ -49,6 +43,8 @@ import {
   signalPresentation,
 } from "../model/detail-presentation";
 import { SafeIssueBody } from "./SafeIssueBody";
+import { RepositoryHealthDashboard } from "./RepositoryHealthDashboard";
+import { EvidenceList, Facts, Section } from "./detail-section";
 
 type Props = {
   envelope: IssueDetailEnvelope;
@@ -59,133 +55,6 @@ type Sample = Pick<
   CountAggregate,
   "confidence" | "sampleSize" | "truncated" | "windowDays"
 >;
-
-function Section({
-  children,
-  id,
-  title,
-}: {
-  children: ReactNode;
-  id?: string;
-  title: string;
-}) {
-  return (
-    <Card className="min-w-0 overflow-hidden" id={id}>
-      <CardHeader className="border-b border-border bg-muted/25">
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-5 sm:p-6">{children}</CardContent>
-    </Card>
-  );
-}
-
-function EvidenceList({ items }: { items: Evidence[] }) {
-  return items.length > 0 ? (
-    <ul className="mt-2 grid gap-1 text-xs leading-5 text-muted-foreground">
-      {items.map((item) => (
-        <li key={`${item.ruleId}-${item.source}-${item.description}`}>
-          {item.description}
-        </li>
-      ))}
-    </ul>
-  ) : null;
-}
-
-function Facts({ items }: { items: Array<[string, ReactNode]> }) {
-  return (
-    <dl className="grid grid-cols-2 gap-4">
-      {items.map(([label, value]) => (
-        <div key={label}>
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-1 font-medium">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function RepositoryHealthDashboard({
-  dashboard,
-}: {
-  dashboard: IssueDetailEnvelope["data"]["healthDashboard"];
-}) {
-  const { locale, t } = useI18n();
-  const healthCategoryLabels = {
-    activity: t("detail.healthActivity"),
-    beginner_friendly: t("detail.healthBeginner"),
-    community: t("detail.healthCommunity"),
-    security: t("detail.healthSecurity"),
-  } as const;
-  return (
-    <Section title={t("detail.healthTitle")}>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {t("detail.healthDescription", { version: dashboard.scoreVersion })}
-      </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {dashboard.categories.map((category) => (
-          <details
-            className="rounded-xl border border-border bg-muted/25 p-3"
-            key={category.name}
-          >
-            <summary className="cursor-pointer font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              {healthCategoryLabels[category.name]}{" "}
-              {category.score === null
-                ? t("detail.unavailable")
-                : category.score}
-              <Badge className="ml-2" variant="neutral">
-                {t("detail.healthStatus", {
-                  confidence: category.confidence,
-                  status: category.status,
-                })}
-              </Badge>
-            </summary>
-            <ul className="mt-3 grid gap-2 text-xs">
-              {category.components.map((component) => (
-                <li key={component.key}>
-                  <span className="font-semibold">
-                    {t("detail.healthWeight", {
-                      component: component.key.replaceAll("_", " "),
-                      weight: component.weight,
-                    })}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    ·{" "}
-                    {component.score === null
-                      ? t("detail.unavailable")
-                      : component.score}{" "}
-                    · {component.source}
-                  </span>
-                  <p className="text-muted-foreground">
-                    {component.description}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            {category.warnings.map((warning) => (
-              <p className="mt-2 text-xs text-warning" key={warning}>
-                {warning}
-              </p>
-            ))}
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t("detail.healthAnalyzed", {
-                date: formatDate(category.analyzedAt, locale),
-              })}
-              {category.sourceVersion
-                ? ` · ${t("detail.healthUpstream", {
-                    version: category.sourceVersion,
-                  })}`
-                : ""}
-            </p>
-          </details>
-        ))}
-      </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        {t("detail.healthSecurityNote")}
-      </p>
-    </Section>
-  );
-}
 
 function Metric({
   detail,

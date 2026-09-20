@@ -393,7 +393,7 @@ test("submits accessible repository filters and explains partial evidence", asyn
   });
 
   const confidence = page.getByRole("button", { name: "Medium confidence" });
-  await confidence.focus();
+  await confidence.hover();
   await expect(page.getByRole("tooltip")).toContainText(/Heuristic only/i);
 
   const overflow =
