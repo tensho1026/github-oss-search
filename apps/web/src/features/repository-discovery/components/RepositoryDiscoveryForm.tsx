@@ -9,9 +9,9 @@ import {
 
 import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Button } from "../../../components/ui/button";
-import { Checkbox } from "../../../components/ui/checkbox";
 import { Field } from "../../../components/ui/field";
 import { fieldDescribedBy } from "../../../components/ui/field-utils";
+import { FilterToggle } from "../../../components/ui/filter-toggle";
 import { Icon } from "../../../components/ui/icon";
 import { Input } from "../../../components/ui/input";
 import { MultiSelect } from "../../../components/ui/multi-select";
@@ -40,35 +40,6 @@ type RepositoryDiscoveryFormProps = {
   locationErrors?: RepositoryFilterErrors;
   onSubmit: (filters: RepositoryFilters) => void;
 };
-
-type ToggleProps = {
-  checked: boolean;
-  description: string;
-  id: string;
-  label: string;
-  onChange: (checked: boolean) => void;
-};
-
-function Toggle({ checked, description, id, label, onChange }: ToggleProps) {
-  return (
-    <label
-      className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 transition-colors hover:border-accent/35 hover:bg-muted"
-      htmlFor={id}
-    >
-      <Checkbox
-        checked={checked}
-        id={id}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      <span>
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-          {description}
-        </span>
-      </span>
-    </label>
-  );
-}
 
 function messageFor(
   errors: FieldErrors<RepositoryFilters>,
@@ -578,7 +549,7 @@ export function RepositoryDiscoveryForm({
             control={control}
             name="excludeArchived"
             render={({ field }) => (
-              <Toggle
+              <FilterToggle
                 checked={field.value}
                 description={t("repositoryForm.excludeArchivedDescription")}
                 id="repository-exclude-archived"

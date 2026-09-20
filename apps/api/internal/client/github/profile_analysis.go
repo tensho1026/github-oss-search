@@ -1,14 +1,11 @@
 package github
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"path"
 	"strings"
 	"time"
 
@@ -297,26 +294,7 @@ func (c *Client) GetProfileAnalysis(
 		)
 	}
 
-	endpoint := *c.baseURL
-	endpoint.Path = path.Join(endpoint.Path, "graphql")
-	endpoint.RawQuery = ""
-	response, err := c.doRequest(
-		ctx,
-		operationAnalyzeProfile,
-		func() (*http.Request, error) {
-			request, requestErr := c.newRequest(
-				ctx,
-				http.MethodPost,
-				endpoint.String(),
-				bytes.NewReader(requestPayload),
-			)
-			if requestErr != nil {
-				return nil, requestErr
-			}
-			request.Header.Set("Content-Type", "application/json")
-			return request, nil
-		},
-	)
+	response, err := c.graphQLRequest(ctx, operationAnalyzeProfile, requestPayload)
 	if err != nil {
 		return port.GitHubProfileAnalysisResult{}, err
 	}

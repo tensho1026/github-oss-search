@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -88,6 +89,29 @@ func NewClient(
 		backoff: exponentialBackoff,
 		now:     time.Now,
 	}
+}
+
+func (c *Client) graphQLRequest(
+	ctx context.Context,
+	operation string,
+	payload []byte,
+) (*http.Response, error) {
+	endpoint := *c.baseURL
+	endpoint.Path = path.Join(endpoint.Path, "graphql")
+	endpoint.RawQuery = ""
+	return c.doRequest(ctx, operation, func() (*http.Request, error) {
+		request, err := c.newRequest(
+			ctx,
+			http.MethodPost,
+			endpoint.String(),
+			bytes.NewReader(payload),
+		)
+		if err != nil {
+			return nil, err
+		}
+		request.Header.Set("Content-Type", "application/json")
+		return request, nil
+	})
 }
 
 // GetUser fetches one normalized public profile. It propagates cancellation,

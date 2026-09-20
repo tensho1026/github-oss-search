@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"path"
 	"slices"
 	"strconv"
@@ -136,7 +135,11 @@ func (c *Client) EnrichRepositories(
 		)
 	}
 
-	response, err := c.graphQLRequest(ctx, requestPayload)
+	response, err := c.graphQLRequest(
+		ctx,
+		operationEnrichRepositories,
+		requestPayload,
+	)
 	if err != nil {
 		return port.GitHubRepositoryEnrichmentResult{}, err
 	}
@@ -202,28 +205,6 @@ func (c *Client) EnrichRepositories(
 		IncompleteResults: incomplete,
 		RateLimit:         rateLimit,
 	}, nil
-}
-
-func (c *Client) graphQLRequest(
-	ctx context.Context,
-	payload []byte,
-) (*http.Response, error) {
-	endpoint := *c.baseURL
-	endpoint.Path = path.Join(endpoint.Path, "graphql")
-	endpoint.RawQuery = ""
-	return c.doRequest(ctx, operationEnrichRepositories, func() (*http.Request, error) {
-		request, err := c.newRequest(
-			ctx,
-			http.MethodPost,
-			endpoint.String(),
-			bytes.NewReader(payload),
-		)
-		if err != nil {
-			return nil, err
-		}
-		request.Header.Set("Content-Type", "application/json")
-		return request, nil
-	})
 }
 
 func buildRepositorySearchQuery(

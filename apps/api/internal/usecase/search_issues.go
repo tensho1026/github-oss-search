@@ -235,92 +235,6 @@ func (usecase *searchIssues) Execute(
 	)
 }
 
-func (usecase *searchIssues) loadCandidateWindow(
-	ctx context.Context,
-	criteria issue.SearchCriteria,
-) (port.IssueSearchCacheEntry, error) {
-	result, err := usecase.searcher.SearchIssues(
-		ctx,
-		criteria,
-		usecase.resultLimit,
-	)
-	if err != nil {
-		return port.IssueSearchCacheEntry{}, err
-	}
-	entry := filterIssueCandidates(criteria, result, usecase.now())
-	if len(entry.Candidates) > 0 {
-		return entry, nil
-	}
-
-	relaxed := criteria.RelaxedDiscovery()
-	if relaxed.CacheKey() == criteria.CacheKey() {
-		return entry, nil
-	}
-	relaxedResult, err := usecase.searcher.SearchIssues(
-		ctx,
-		relaxed,
-		usecase.resultLimit,
-	)
-	if err != nil {
-		return port.IssueSearchCacheEntry{}, err
-	}
-	relaxedEntry := filterIssueCandidates(criteria, relaxedResult, usecase.now())
-	relaxedEntry.RateLimit = mergeRateLimits(entry.RateLimit, relaxedEntry.RateLimit)
-	relaxedEntry.IncompleteResults = entry.IncompleteResults ||
-		relaxedEntry.IncompleteResults
-	relaxedEntry.ExclusionCounts = mergeExclusionCounts(
-		entry.ExclusionCounts,
-		relaxedEntry.ExclusionCounts,
-	)
-	return relaxedEntry, nil
-}
-
-func filterIssueCandidates(
-	criteria issue.SearchCriteria,
-	result port.GitHubIssueSearchResult,
-	now time.Time,
-) port.IssueSearchCacheEntry {
-	exact := make([]issue.Candidate, 0, len(result.Candidates))
-	partial := make([]issue.Candidate, 0, len(result.Candidates))
-	exclusionCounts := make(map[issue.ExclusionReason]int)
-	for _, candidate := range result.Candidates {
-		reasons := issue.ExclusionReasons(criteria, candidate, now)
-		if len(reasons) == 0 {
-			exact = append(exact, candidate)
-			continue
-		}
-		for _, reason := range reasons {
-			exclusionCounts[reason]++
-		}
-		if issue.HasOnlyPreferenceExclusions(reasons) {
-			partial = append(partial, candidate)
-		}
-	}
-
-	candidates := exact
-	partialMatches := false
-	if len(exact) == 0 && len(partial) > 0 {
-		candidates = partial
-		partialMatches = true
-		slices.SortStableFunc(candidates, func(left, right issue.Candidate) int {
-			return cmp.Compare(
-				issue.PreferenceMatchCount(criteria, right, now),
-				issue.PreferenceMatchCount(criteria, left, now),
-			)
-		})
-	}
-
-	return port.IssueSearchCacheEntry{
-		Candidates:        candidates,
-		ExclusionCounts:   exclusionCounts,
-		CandidatesChecked: len(result.Candidates),
-		UpstreamTotal:     result.TotalCount,
-		IncompleteResults: result.IncompleteResults,
-		PartialMatches:    partialMatches,
-		RateLimit:         result.RateLimit,
-	}
-}
-
 func (usecase *searchIssues) issueSearchOutput(
 	ctx context.Context,
 	entry port.IssueSearchCacheEntry,
@@ -503,62 +417,6 @@ func (usecase *searchIssues) issueSearchOutput(
 	}, nil
 }
 
-func applyPostAnalysisFilters(
-	ranked []issue.RankedIssue,
-	criteria issue.SearchCriteria,
-	partialMatches bool,
-) ([]issue.RankedIssue, int, bool) {
-	unfiltered := ranked
-	filtered, staleExcluded := filterRankedIssuesByStale(ranked, criteria)
-	effortFiltered := filterRankedIssuesByEffort(filtered, criteria)
-	if len(effortFiltered) > 0 {
-		return effortFiltered, staleExcluded, partialMatches
-	}
-	if len(filtered) > 0 {
-		return filtered, staleExcluded, true
-	}
-	if len(unfiltered) > 0 {
-		return unfiltered, 0, true
-	}
-	return effortFiltered, staleExcluded, partialMatches
-}
-
-func rankedPreferenceMatchCount(
-	criteria issue.SearchCriteria,
-	ranked issue.RankedIssue,
-	now time.Time,
-) int {
-	score := issue.PreferenceMatchCount(criteria, ranked.Candidate, now)
-	if criteria.IncludesStale() ||
-		ranked.Recommendation.Stale.State != issue.StaleStale {
-		score++
-	}
-	if maximum, configured := criteria.MaximumEffort(); !configured ||
-		ranked.Analysis.Effort.Band.IsAtMost(maximum) {
-		score++
-	}
-	return score
-}
-
-func filterRankedIssuesByStale(
-	ranked []issue.RankedIssue,
-	criteria issue.SearchCriteria,
-) ([]issue.RankedIssue, int) {
-	if criteria.IncludesStale() {
-		return ranked, 0
-	}
-	filtered := make([]issue.RankedIssue, 0, len(ranked))
-	excluded := 0
-	for _, candidate := range ranked {
-		if candidate.Recommendation.Stale.State == issue.StaleStale {
-			excluded++
-			continue
-		}
-		filtered = append(filtered, candidate)
-	}
-	return filtered, excluded
-}
-
 func (usecase *searchIssues) loadContributionProfile(
 	ctx context.Context,
 	criteria issue.SearchCriteria,
@@ -579,24 +437,6 @@ func (usecase *searchIssues) loadContributionProfile(
 	}
 	profile, meta := contributionProfileFromAnalysis(output.Analysis, output.CacheHit)
 	return profile, meta, output.RateLimit
-}
-
-func filterRankedIssuesByEffort(
-	ranked []issue.RankedIssue,
-	criteria issue.SearchCriteria,
-) []issue.RankedIssue {
-	maximum, configured := criteria.MaximumEffort()
-	if !configured {
-		return ranked
-	}
-
-	filtered := make([]issue.RankedIssue, 0, len(ranked))
-	for _, candidate := range ranked {
-		if candidate.Analysis.Effort.Band.IsAtMost(maximum) {
-			filtered = append(filtered, candidate)
-		}
-	}
-	return filtered
 }
 
 type issueRecommendationMeta struct {
