@@ -1,12 +1,12 @@
 module github.com/tensho1026/github-issue-search/apps/api
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/gin-gonic/gin v1.12.0
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/swaggest/swgui v1.8.9
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
