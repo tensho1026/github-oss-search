@@ -443,59 +443,61 @@ export function IssueSearchForm({
           <legend className="mb-2 text-sm font-semibold">
             {t("issueForm.eligibility")}
           </legend>
-          <div className="grid gap-3 xl:grid-cols-4">
-            <Controller
-              control={control}
-              name="includeDocumentation"
-              render={({ field }) => (
-                <FilterToggle
-                  checked={field.value}
-                  description={t("issueForm.includeDocumentationDescription")}
-                  id="search-documentation"
-                  label={t("issueForm.includeDocumentation")}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="includeStale"
-              render={({ field }) => (
-                <FilterToggle
-                  checked={field.value}
-                  description={t("issueForm.includeStaleDescription")}
-                  id="search-stale"
-                  label={t("issueForm.includeStale")}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="includeEnglish"
-              render={({ field }) => (
-                <FilterToggle
-                  checked={field.value}
-                  description={t("issueForm.includeEnglishDescription")}
-                  id="search-english"
-                  label={t("issueForm.includeEnglish")}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="excludeArchived"
-              render={({ field }) => (
-                <FilterToggle
-                  checked={field.value}
-                  description={t("issueForm.excludeArchivedDescription")}
-                  id="search-archived"
-                  label={t("issueForm.excludeArchived")}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <div className="@container">
+            <div className="grid gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
+              <Controller
+                control={control}
+                name="includeDocumentation"
+                render={({ field }) => (
+                  <FilterToggle
+                    checked={field.value}
+                    description={t("issueForm.includeDocumentationDescription")}
+                    id="search-documentation"
+                    label={t("issueForm.includeDocumentation")}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="includeStale"
+                render={({ field }) => (
+                  <FilterToggle
+                    checked={field.value}
+                    description={t("issueForm.includeStaleDescription")}
+                    id="search-stale"
+                    label={t("issueForm.includeStale")}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="includeEnglish"
+                render={({ field }) => (
+                  <FilterToggle
+                    checked={field.value}
+                    description={t("issueForm.includeEnglishDescription")}
+                    id="search-english"
+                    label={t("issueForm.includeEnglish")}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="excludeArchived"
+                render={({ field }) => (
+                  <FilterToggle
+                    checked={field.value}
+                    description={t("issueForm.excludeArchivedDescription")}
+                    id="search-archived"
+                    label={t("issueForm.excludeArchived")}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
           </div>
         </fieldset>
 
