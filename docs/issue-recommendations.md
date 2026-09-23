@@ -39,7 +39,8 @@ sequenceDiagram
     opt Exact window empty
         Search->>GitHub: One broadened search without preference qualifiers
     end
-    Search->>Search: Stable sort, stale/effort filters, then pagination
+    Search->>Search: Apply filters and stable sort
+    Search->>Search: Keep at most 3 issues per repository, then paginate
     Search-->>Browser: Ranked list with evidence and warnings
 ```
 
@@ -218,6 +219,11 @@ the stable recommendation order above for ties. Shorter effort and lower
 difficulty sort first; faster maintainer response and newer updates sort first.
 Unavailable maintainer evidence sorts after available evidence. Changing only
 the ordering reuses the canonical candidate cache.
+
+After ranking and preference ordering, search keeps at most the first three
+issues from each repository in the bounded result window. This happens before
+pagination, so a repository cannot occupy more than three positions across the
+search's pages, and pagination totals count only the retained results.
 
 ## Available-time filtering
 

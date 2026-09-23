@@ -256,7 +256,9 @@ paths:
         most 50 candidates and retrieves the required repository fields in the
         same request. It then applies repository and issue eligibility rules
         before bounded detail enrichment, effort filtering, stable ranking,
-        and application pagination. Equivalent validated discovery filter
+        and a limit of three issues per repository before application
+        pagination. The highest-ranked issues are retained for each
+        repository. Equivalent validated discovery filter
         orderings share a five-minute in-memory candidate cache. At most 20
         candidates are enriched with bounded concurrency, and effort-only
         changes reuse the candidate window. The endpoint never follows
@@ -270,7 +272,7 @@ paths:
         - name: page
           in: query
           required: false
-          description: One-based page over eligible candidates.
+          description: One-based page over ranked results after the repository limit.
           schema:
             type: integer
             minimum: 1
@@ -279,7 +281,7 @@ paths:
         - name: perPage
           in: query
           required: false
-          description: Maximum eligible candidates returned on this page.
+          description: Maximum ranked results returned on this page after the repository limit.
           schema:
             type: integer
             minimum: 1
@@ -5952,6 +5954,7 @@ components:
           type: integer
           minimum: 0
           maximum: 50
+          description: Eligible ranked results after limiting each repository to three issues.
         totalPages:
           type: integer
           minimum: 0
