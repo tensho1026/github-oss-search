@@ -18,6 +18,8 @@ import (
 	"github.com/tensho1026/github-issue-search/apps/api/internal/port"
 )
 
+const maximumSearchIssuesPerRepository = 3
+
 // SearchIssuesInput contains validated domain criteria and the requested
 // application-level page.
 type SearchIssuesInput struct {
@@ -371,6 +373,7 @@ func (usecase *searchIssues) issueSearchOutput(
 			)
 		})
 	}
+	ranked = limitIssuesPerRepository(ranked)
 	total := len(ranked)
 	totalPages := 0
 	if total > 0 {

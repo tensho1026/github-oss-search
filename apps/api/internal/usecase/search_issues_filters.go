@@ -1,10 +1,44 @@
 package usecase
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tensho1026/github-issue-search/apps/api/internal/domain/issue"
 )
+
+func limitIssuesPerRepository(
+	ranked []issue.RankedIssue,
+) []issue.RankedIssue {
+	counts := make(map[string]int)
+	limited := make([]issue.RankedIssue, 0, len(ranked))
+	for _, candidate := range ranked {
+		key := rankedRepositoryKey(candidate)
+		if key != "" && counts[key] >= maximumSearchIssuesPerRepository {
+			continue
+		}
+		if key != "" {
+			counts[key]++
+		}
+		limited = append(limited, candidate)
+	}
+	return limited
+}
+
+func rankedRepositoryKey(candidate issue.RankedIssue) string {
+	repository := candidate.Candidate.Repository
+	if repository.ID != 0 {
+		return "id:" + strconv.FormatInt(repository.ID, 10)
+	}
+	if fullName := strings.ToLower(strings.TrimSpace(repository.FullName)); fullName != "" {
+		return "name:" + fullName
+	}
+	if url := strings.ToLower(strings.TrimSpace(repository.URL)); url != "" {
+		return "url:" + url
+	}
+	return ""
+}
 
 func applyPostAnalysisFilters(
 	ranked []issue.RankedIssue,

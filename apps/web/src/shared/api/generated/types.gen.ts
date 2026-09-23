@@ -1194,6 +1194,9 @@ export type IssueSearchIssue = {
 export type SearchPagination = {
   page: number;
   perPage: number;
+  /**
+   * Eligible ranked results after limiting each repository to three issues.
+   */
   total: number;
   totalPages: number;
   hasNext: boolean;
@@ -2039,11 +2042,11 @@ export type SearchGitHubIssuesData = {
   path?: never;
   query?: {
     /**
-     * One-based page over eligible candidates.
+     * One-based page over ranked results after the repository limit.
      */
     page?: number;
     /**
-     * Maximum eligible candidates returned on this page.
+     * Maximum ranked results returned on this page after the repository limit.
      */
     perPage?: number;
   };
