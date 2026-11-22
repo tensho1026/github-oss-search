@@ -66,20 +66,20 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           cache-dependency-path: apps/api/go.sum
           go-version-file: apps/api/go.mod
@@ -139,13 +139,13 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload frontend evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: warn
           name: frontend-evidence-${{ github.run_id }}
@@ -194,12 +194,12 @@ jobs:
           persist-credentials: false
 
       - name: Install Node.js for quality budgets
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           cache-dependency-path: apps/api/go.sum
           go-version-file: apps/api/go.mod
@@ -230,7 +230,7 @@ jobs:
 
       - name: Upload backend evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: warn
           name: backend-evidence-${{ github.run_id }}
@@ -251,13 +251,13 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
@@ -270,7 +270,7 @@ jobs:
         run: pnpm run contracts:check
 
       - name: Upload validated contract
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openapi-contract-${{ github.run_id }}
           path: |
@@ -292,20 +292,20 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           cache-dependency-path: apps/api/go.sum
           go-version-file: apps/api/go.mod
@@ -335,7 +335,7 @@ jobs:
 
       - name: Upload release-build evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: warn
           name: release-build-${{ github.run_id }}
@@ -356,13 +356,13 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
@@ -388,20 +388,20 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           run_install: false
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           cache-dependency-path: apps/api/go.sum
           go-version-file: apps/api/go.mod
@@ -422,7 +422,7 @@ jobs:
 
       - name: Upload E2E failure evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           if-no-files-found: warn
           name: e2e-evidence-${{ github.run_id }}
